@@ -1,0 +1,3440 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>BizRoleplay - 비즈니스 영어 실전 롤플레잉 & 플래시카드 올인원 플랫폼</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS (xlsx) CDN -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- Google Fonts: Pretendard / Inter -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .stt-recording {
+      animation: pulseRing 1.5s infinite;
+    }
+    .flashcard-half {
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ==================== WHITE (LIGHT) THEME PALETTE OVERRIDES ==================== */
+    body.theme-light {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+    }
+    body.theme-light .bg-slate-950,
+    body.theme-light .bg-slate-950\/95,
+    body.theme-light .bg-slate-950\/90,
+    body.theme-light .bg-slate-950\/70,
+    body.theme-light .bg-slate-950\/60,
+    body.theme-light .bg-slate-950\/50,
+    body.theme-light .bg-slate-950\/40 {
+      background-color: #f8fafc !important;
+    }
+    body.theme-light .bg-slate-900,
+    body.theme-light .bg-slate-900\/95,
+    body.theme-light .bg-slate-900\/90,
+    body.theme-light .bg-slate-900\/80,
+    body.theme-light .bg-slate-900\/70,
+    body.theme-light .bg-slate-900\/60 {
+      background-color: #ffffff !important;
+    }
+    body.theme-light .bg-slate-800,
+    body.theme-light .bg-slate-800\/80,
+    body.theme-light .bg-slate-800\/70,
+    body.theme-light .hover\:bg-slate-800:hover,
+    body.theme-light .hover\:bg-slate-800\/70:hover,
+    body.theme-light .hover\:bg-slate-700:hover {
+      background-color: #f1f5f9 !important;
+    }
+    body.theme-light .from-slate-900\/90.to-slate-950 {
+      background-image: linear-gradient(to bottom, #ffffff, #f1f5f9) !important;
+    }
+    body.theme-light .border-slate-800,
+    body.theme-light .border-slate-800\/90,
+    body.theme-light .border-slate-800\/80,
+    body.theme-light .border-slate-700,
+    body.theme-light .border-slate-700\/90,
+    body.theme-light .border-slate-700\/70 {
+      border-color: #cbd5e1 !important;
+    }
+    body.theme-light .text-slate-100,
+    body.theme-light .text-slate-200 {
+      color: #0f172a !important;
+    }
+    body.theme-light .text-slate-300 {
+      color: #334155 !important;
+    }
+    body.theme-light .text-slate-400,
+    body.theme-light .text-slate-500 {
+      color: #64748b !important;
+    }
+    body.theme-light .text-white {
+      color: #0f172a !important;
+    }
+    /* Preserve white text on solid accent buttons and avatars in Light Mode */
+    body.theme-light .bg-indigo-600,
+    body.theme-light .bg-indigo-600 .text-white,
+    body.theme-light .bg-emerald-600,
+    body.theme-light .bg-rose-600,
+    body.theme-light .bg-sky-600,
+    body.theme-light #activePartnerAvatar,
+    body.theme-light .from-indigo-600.to-sky-500,
+    body.theme-light .from-indigo-500.to-violet-600 i {
+      color: #ffffff !important;
+    }
+    body.theme-light .from-white.to-slate-300 {
+      background-image: linear-gradient(to right, #1e1b4b, #4338ca) !important;
+    }
+    body.theme-light .text-amber-200,
+    body.theme-light .text-amber-200\/90,
+    body.theme-light .text-amber-300,
+    body.theme-light .text-amber-400 {
+      color: #b45309 !important;
+    }
+    body.theme-light .text-emerald-200,
+    body.theme-light .text-emerald-300,
+    body.theme-light .text-emerald-400 {
+      color: #047857 !important;
+    }
+    body.theme-light .text-indigo-200,
+    body.theme-light .text-indigo-300,
+    body.theme-light .text-indigo-400 {
+      color: #4338ca !important;
+    }
+    body.theme-light .text-sky-300,
+    body.theme-light .text-sky-400 {
+      color: #0369a1 !important;
+    }
+    body.theme-light .text-rose-200,
+    body.theme-light .text-rose-300,
+    body.theme-light .text-rose-400 {
+      color: #be123c !important;
+    }
+    body.theme-light .bg-indigo-950\/80,
+    body.theme-light .bg-indigo-950\/40 {
+      background-color: #eef2ff !important;
+    }
+    body.theme-light .bg-emerald-950\/95 {
+      background-color: #ecfdf5 !important;
+    }
+    body.theme-light .bg-rose-950\/95,
+    body.theme-light .bg-rose-950\/50 {
+      background-color: #fff1f2 !important;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 select-none md:select-auto">
+
+  <!-- ==================== TOP NAVIGATION BAR (GNB) ==================== -->
+  <header class="h-14 shrink-0 bg-slate-900/95 border-b border-slate-800 px-3 md:px-5 flex items-center justify-between gap-2 z-30">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <button id="btnMobileMenu" onclick="toggleMobileSidebar()" class="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition" title="메뉴 열기">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+          <i data-lucide="messages-square" class="w-4 h-4 text-white"></i>
+        </div>
+        <span class="font-bold text-base md:text-lg tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent hidden sm:inline">BizRoleplay</span>
+      </div>
+
+      <div class="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block"></div>
+
+      <!-- Current Active Session Indicator -->
+      <div class="flex items-center gap-2 min-w-0">
+        <span id="gnbSessionTitle" class="text-xs md:text-sm font-semibold text-slate-200 truncate max-w-[140px] sm:max-w-[220px] md:max-w-[300px]">세션 로딩 중...</span>
+        <span id="gnbDifficultyBadge" class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">Intermediate</span>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-1.5 md:gap-2.5 shrink-0">
+      <!-- Target Filter Quick Selector -->
+      <div class="hidden xl:flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/70 rounded-lg px-2.5 py-1 text-xs">
+        <i data-lucide="target" class="w-3.5 h-3.5 text-indigo-400"></i>
+        <span class="text-slate-400">타깃:</span>
+        <select id="gnbTargetFilterSelect" onchange="handleQuickTargetFilterChange(this.value)" class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer max-w-[160px] truncate">
+          <option value="ALL">전체 문장</option>
+        </select>
+      </div>
+
+      <!-- Flashcard Mode Trigger Button -->
+      <button onclick="openFlashcardModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs md:text-sm shadow-lg shadow-amber-500/15 transition transform active:scale-95">
+        <i data-lucide="layers" class="w-4 h-4"></i>
+        <span>플래시카드</span>
+        <span id="gnbSentenceCountBadge" class="px-1.5 py-0.2 bg-slate-950/25 rounded text-[11px] font-extrabold">0</span>
+      </button>
+
+      <!-- DB Manage Quick Button -->
+      <button onclick="openDBManagerModal()" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="통합 문장 DB 관리 및 추가">
+        <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+        <span class="hidden md:inline">문장 DB</span>
+      </button>
+
+      <!-- Quick Theme Toggle Button (Dark <-> White) -->
+      <button id="btnThemeQuickToggle" onclick="toggleThemeQuick()" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="화면 테마 전환 (Dark / White)">
+        <i id="gnbThemeIcon" data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
+        <span id="gnbThemeLabel" class="hidden md:inline">White</span>
+      </button>
+
+      <!-- Security / Cloud Sync / API Settings Button -->
+      <button onclick="openSecurityModal('api')" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="AI API 키 및 E2EE 보안 동기화 설정">
+        <i id="gnbLockIcon" data-lucide="shield-check" class="w-4 h-4 text-sky-400"></i>
+        <span class="hidden md:inline">보안·API 설정</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN WORKSPACE BODY ==================== -->
+  <div class="flex-1 flex min-h-0 relative overflow-hidden">
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="mobileSidebarBackdrop" onclick="closeMobileSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 hidden lg:hidden"></div>
+
+    <!-- ==================== LEFT SIDEBAR: SESSIONS & SENTENCE DB ==================== -->
+    <aside id="leftSidebar" class="w-80 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col z-40 fixed lg:static inset-y-0 left-0 -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+      
+      <!-- Sidebar Top: Multi-Session Manager -->
+      <div class="p-3.5 border-b border-slate-800 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <i data-lucide="briefcase" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>내 롤플레잉 세션 프리셋</span>
+          </div>
+          <button onclick="closeMobileSidebar()" class="lg:hidden p-1 text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <button onclick="openSessionModal(null)" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>새 롤플레잉 시나리오 세션 추가</span>
+        </button>
+      </div>
+
+      <!-- Session List Scroll Area -->
+      <div id="sessionListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-1.5 min-h-[160px] max-h-[46%]">
+        <!-- Dynamically rendered by renderSessionList() -->
+      </div>
+
+      <!-- Sidebar Bottom: Unified Sentence DB & Multi-Excel Upload -->
+      <div class="flex-1 border-t border-slate-800 flex flex-col min-h-0 bg-slate-900/60">
+        <div class="p-3 pb-2 flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <i data-lucide="book-open-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>통합 문장 DB (<span id="sidebarTotalSentences">0</span>문장)</span>
+          </div>
+          <button onclick="openDBManagerModal()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-0.5">
+            <span>전체 관리</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <!-- Dual Quick Ingest Buttons: Bulk Text Paste & Multi-Excel Upload -->
+        <div class="px-3 grid grid-cols-2 gap-1.5 mb-2">
+          <button onclick="openBulkAddModal()" class="py-2 px-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1 transition" title="한글+영어 문장 세트를 복사·붙여넣기 또는 직접 입력">
+            <i data-lucide="file-plus-2" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="truncate">텍스트 세트 입력</span>
+          </button>
+
+          <label class="py-2 px-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-indigo-500/50 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition" title="복수의 .xlsx, .xls, .csv 파일 일괄 업로드">
+            <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+            <span class="truncate">엑셀/CSV 업로드</span>
+            <input id="excelFileInput" type="file" accept=".xlsx,.xls,.csv" multiple class="hidden" onchange="handleExcelFilesUpload(event)" />
+          </label>
+        </div>
+
+        <!-- Category / Source Filter Tags List -->
+        <div id="sidebarFilterTagsContainer" class="flex-1 overflow-y-auto px-3 py-1 space-y-1 text-xs">
+          <!-- Dynamically rendered by renderSidebarDBSummary() -->
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="p-3 border-t border-slate-800/80 bg-slate-950/40 flex items-center justify-between gap-2">
+          <button onclick="exportSentencesToExcel('ALL')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>전체 DB 엑셀 내보내기</span>
+          </button>
+          <button onclick="openSecurityModal('sync')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition" title="클라우드 암호화 동기화 및 백업">
+            <i data-lucide="cloud" class="w-4 h-4 text-sky-400"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== RIGHT MAIN CHAT & ROLEPLAY WORKSPACE ==================== -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-950 relative">
+
+      <!-- API Key Status Notification Bar (shown if no API key configured) -->
+      <div id="apiKeyNoticeBanner" class="bg-indigo-950/80 border-b border-indigo-500/30 px-4 py-1.5 flex items-center justify-between gap-2 text-xs hidden">
+        <div class="flex items-center gap-2 text-indigo-200 truncate">
+          <span class="px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 font-semibold text-[11px] shrink-0">시뮬레이션 체험 모드 작동 중</span>
+          <span class="truncate">현재 API 키가 입력되지 않아 내장 비즈니스 시뮬레이션 엔진으로 동작 중입니다. 실제 Gemini/OpenAI 연동은 우측 버튼을 눌러 설정하세요.</span>
+        </div>
+        <button onclick="openSecurityModal('api')" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shrink-0 transition">
+          API 키 설정
+        </button>
+      </div>
+
+      <!-- Scenario Context Header & Action Toolbar -->
+      <section class="bg-slate-900/80 border-b border-slate-800/90 px-4 py-2.5 shrink-0">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <!-- Partner & Scenario Summary -->
+          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-inner" id="activePartnerAvatar">
+              JM
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <h2 id="activePartnerName" class="text-sm font-bold text-white truncate">John Miller (Purchasing Director)</h2>
+                <button onclick="openSessionModal(AppState.activeSessionId)" class="text-xs text-slate-400 hover:text-indigo-400 flex items-center gap-0.5 shrink-0" title="현재 세션 시나리오 및 파트너 설정 수정">
+                  <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+                  <span class="hidden sm:inline">시나리오 설정</span>
+                </button>
+              </div>
+              <p id="activeBusinessContext" class="text-xs text-slate-400 truncate mt-0.5"></p>
+            </div>
+          </div>
+
+          <!-- Proactive Action Controls -->
+          <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
+            <button id="btnAiFirstTrigger" onclick="triggerPartnerFirstMessage()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 text-xs font-semibold flex items-center gap-1.5 transition" title="AI 파트너가 먼저 비즈니스 질문이나 협상 의제를 던집니다">
+              <i data-lucide="dices" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>AI가 먼저 질문 던지기</span>
+            </button>
+
+            <button onclick="toggleHintDrawer()" id="btnToggleHintDrawer" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition" title="이번 세션에서 연습할 타깃 한/영 표현 힌트 보기">
+              <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>타깃 표현 힌트</span>
+              <span id="hintTargetCountBadge" class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[11px]">0</span>
+            </button>
+
+            <button onclick="resetActiveSessionHistory()" class="p-1.5 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-medium flex items-center gap-1 transition" title="시나리오 설정은 유지하고 현재 대화 기록만 비웁니다">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span class="hidden md:inline">대화 비우기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible Target Expression Hint Drawer -->
+        <div id="targetHintDrawer" class="hidden mt-2.5 pt-2.5 border-t border-slate-800/90">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2 text-xs">
+              <span class="font-bold text-amber-300 flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                이번 세션 목표 표현 (대화 중 자연스럽게 활용해 보세요)
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 text-[11px] text-slate-400 cursor-pointer">
+                <input type="checkbox" id="chkShowHintEnglish" checked onchange="renderTargetHintDrawer()" class="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-0" />
+                <span>영어 정답 함께 보기</span>
+              </label>
+              <button onclick="openFlashcardModalWithCurrentFilter()" class="text-[11px] text-amber-400 hover:underline font-medium">
+                이 범위만 플래시카드 암기 →
+              </button>
+            </div>
+          </div>
+          <div id="targetHintList" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+            <!-- Dynamically rendered by renderTargetHintDrawer() -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Messenger Chat History Stream -->
+      <div id="chatMessagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+        <!-- Dynamically rendered by renderChatMessages() -->
+      </div>
+
+      <!-- Typing / Loading Indicator -->
+      <div id="partnerTypingIndicator" class="hidden px-6 pb-2 text-xs text-slate-400 flex items-center gap-2">
+        <div class="flex space-x-1">
+          <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
+          <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
+          <span class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
+        </div>
+        <span id="partnerTypingText">파트너가 답변을 작성 중입니다...</span>
+      </div>
+
+      <!-- Message Composer Footer -->
+      <footer class="p-3 md:p-4 bg-slate-900/95 border-t border-slate-800 shrink-0">
+        <div class="max-w-4xl mx-auto flex items-end gap-2">
+          <!-- STT Voice Input Button -->
+          <button id="btnSttMic" onclick="toggleSpeechRecognition()" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition shrink-0" title="음성으로 영어 문장 말하기 (Web Speech STT)">
+            <i data-lucide="mic" class="w-5 h-5"></i>
+          </button>
+
+          <!-- English Message Textarea -->
+          <div class="flex-1 relative">
+            <textarea
+              id="chatInputTextarea"
+              rows="2"
+              placeholder="비즈니스 파트너에게 영어로 답변을 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+              onkeydown="handleChatInputKeydown(event)"
+              oninput="handleChatInputSaveDraft(this.value)"
+              class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 resize-none focus:outline-none leading-relaxed"
+            ></textarea>
+          </div>
+
+          <!-- Send Button -->
+          <button id="btnSendMessage" onclick="sendUserRoleplayMessage()" class="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/25 transition shrink-0">
+            <span>전송</span>
+            <i data-lucide="send" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="max-w-4xl mx-auto mt-1.5 flex items-center justify-between text-[11px] text-slate-500 px-1">
+          <span>💡 대화 도중에는 교정이 개입하지 않습니다. 내 말풍선 아래의 <strong class="text-slate-400">[💬 피드백]</strong>을 누를 때만 코칭 댓글이 열립니다.</span>
+          <span id="sttStatusText" class="text-rose-400 font-medium hidden">🎙️ 음성 인식 중... 영어로 말씀해 주세요</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ==================== FULL-SCREEN 2-STAGE SPLIT FLASHCARD MODAL (z-index: 50) ==================== -->
+  <div id="flashcardModal" class="fixed inset-0 z-50 bg-slate-950 flex flex-col hidden">
+    <!-- Flashcard Top Header -->
+    <div class="h-14 shrink-0 bg-slate-900 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-amber-400 font-bold text-sm md:text-base shrink-0">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+          <span>Flashcard Mode</span>
+        </div>
+
+        <div class="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block"></div>
+
+        <!-- Flashcard Scope Filter -->
+        <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
+          <span class="text-slate-400 hidden sm:inline">학습 범위:</span>
+          <select id="fcFilterSelect" onchange="changeFlashcardFilter(this.value)" class="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer max-w-[160px] sm:max-w-[240px] truncate">
+            <option value="ALL">전체 문장</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Center Progress & Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="fcProgressBadge" class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200">
+          0 / 0
+        </span>
+
+        <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hidden md:flex items-center gap-1 transition" title="문제 출제 방향 전환 (한글->영어 / 영어->한글)">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span id="fcDirectionText">한 ➔ 영</span>
+        </button>
+
+        <button id="btnFcShuffle" onclick="toggleFlashcardShuffle()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="카드 순서 랜덤 셔플">
+          <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
+          <span id="fcShuffleText" class="hidden sm:inline">셔플 OFF</span>
+        </button>
+
+        <!-- TTS Speed Selector -->
+        <select id="fcTtsSpeedSelect" onchange="updateTtsSpeed(this.value)" class="hidden sm:block bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none">
+          <option value="0.85">🔊 0.85x</option>
+          <option value="1.0" selected>🔊 1.0x</option>
+          <option value="1.15">🔊 1.15x</option>
+        </select>
+
+        <!-- Exit Flashcard Overlay Button -->
+        <button onclick="closeFlashcardModal()" class="ml-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs md:text-sm flex items-center gap-1 shadow-lg shadow-rose-600/20 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+          <span>Exit 복귀</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress Bar Line -->
+    <div class="w-full h-1 bg-slate-900 shrink-0">
+      <div id="fcProgressBar" class="h-full bg-gradient-to-r from-amber-500 to-indigo-500 transition-all duration-300" style="width: 0%"></div>
+    </div>
+
+    <!-- 50:50 Vertical Split Container -->
+    <div class="flex-1 flex flex-col min-h-0 select-none">
+
+      <!-- TOP 50%: KOREAN PROMPT AREA -->
+      <div onclick="handleFlashcardAreaClick()" class="h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-6 md:p-10 flex flex-col justify-between items-center text-center cursor-pointer relative group">
+        <!-- Top Badges Row -->
+        <div class="w-full max-w-4xl flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span id="fcTopCategoryBadge" class="px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold">카테고리</span>
+            <span id="fcTopSourceBadge" class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400">출처 파일</span>
+          </div>
+          <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+            <span id="fcPracticeCountBadge" class="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">인출 연습 0회</span>
+            <button id="btnFcStar" onclick="toggleCurrentFlashcardStar()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition" title="중요/미암기 별표 북마크 (단축키: B)">
+              <i data-lucide="star" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Center Korean Sentence -->
+        <div class="my-auto max-w-4xl px-2">
+          <div class="text-xs font-bold uppercase tracking-widest text-amber-400/80 mb-3" id="fcTopLabel">STEP 1. 제시된 의미를 보고 영어로 즉시 말해보세요</div>
+          <h1 id="fcTopPromptText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-white leading-snug tracking-tight break-keep">
+            문장을 불러오는 중입니다...
+          </h1>
+        </div>
+
+        <!-- Bottom Guide Label -->
+        <div class="text-xs text-slate-400 flex items-center gap-1.5">
+          <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>머릿속으로 영작하거나 입 밖으로 말해본 뒤 <strong>화면 아무 곳이나 클릭(또는 Space바)</strong>하세요</span>
+        </div>
+      </div>
+
+      <!-- BOTTOM 50%: ENGLISH ANSWER REVEAL AREA -->
+      <div onclick="handleFlashcardAreaClick()" class="h-1/2 bg-slate-950 p-6 md:p-10 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-y-auto">
+        
+        <!-- Stage 1: Hidden Cover State -->
+        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-3 py-8">
+          <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 shadow-inner">
+            <i data-lucide="eye" class="w-7 h-7"></i>
+          </div>
+          <p class="text-base md:text-lg font-bold text-slate-300">클릭(탭)하거나 <kbd class="px-2 py-0.5 text-xs bg-slate-800 border border-slate-700 rounded text-amber-300">Space</kbd> 바를 눌러 영어 정답 확인</p>
+          <p class="text-xs text-slate-500">먼저 스스로 문장을 인출(Retrieval)해 봐야 실전 롤플레잉에서 입이 떨어집니다</p>
+        </div>
+
+        <!-- Stage 2: Revealed Answer State -->
+        <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full">
+          <div class="text-xs font-bold uppercase tracking-widest text-emerald-400">STEP 2. 원어민 비즈니스 영어 정답 확인 및 소리 내어 읽기</div>
+
+          <div class="my-auto py-3">
+            <h2 id="fcBottomAnswerText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-emerald-300 leading-snug tracking-tight">
+              English sentence goes here.
+            </h2>
+            <p id="fcBottomNotesText" class="mt-4 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 inline-block max-w-2xl"></p>
+          </div>
+
+          <!-- Action Buttons inside Revealed State -->
+          <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2" onclick="event.stopPropagation()">
+            <button onclick="speakCurrentFlashcard()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
+              <i data-lucide="volume-2" class="w-4 h-4"></i>
+              <span>발음 듣기 (TTS · S)</span>
+            </button>
+
+            <button onclick="markCurrentFlashcardPracticed()" class="px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              <span>암기 완료 체크 (+1회 · 다음 카드)</span>
+            </button>
+
+            <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition">
+              <i data-lucide="star" class="w-4 h-4"></i>
+              <span>중요 별표 북마크 (B)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flashcard Bottom Navigation Bar -->
+    <div class="h-16 shrink-0 bg-slate-900 border-t border-slate-800 px-4 md:px-8 flex items-center justify-between gap-3">
+      <button onclick="prevFlashcard()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        <span>이전 카드 (←)</span>
+      </button>
+
+      <button onclick="handleFlashcardAreaClick()" id="btnFcMainStep" class="flex-1 max-w-md py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 transition">
+        <span>정답 확인 / 다음 단계 (Space / 클릭)</span>
+      </button>
+
+      <button onclick="nextFlashcard()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+        <span>다음 카드 (→)</span>
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 1: SESSION CREATE / EDIT MODAL ==================== -->
+  <div id="sessionModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h3 id="sessionModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="briefcase" class="w-4 h-4 text-indigo-400"></i>
+          <span>롤플레잉 시나리오 세션 설정</span>
+        </h3>
+        <button onclick="closeSessionModal()" class="p-1 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm">
+        <input type="hidden" id="sessionModalId" />
+
+        <!-- Quick Scenario Preset Buttons -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">⚡ 빠른 비즈니스 프리셋 불러오기 (선택사항)</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="applySessionTemplate('buyer')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-950 border border-slate-700 text-xs text-slate-300">해외 바이어 단가 인하 방어</button>
+            <button type="button" onclick="applySessionTemplate('delay')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-950 border border-slate-700 text-xs text-slate-300">글로벌 PM 프로젝트 일정 조율</button>
+            <button type="button" onclick="applySessionTemplate('vc')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-950 border border-slate-700 text-xs text-slate-300">VC 파트너 투자유치 Q&A</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">세션 제목 *</label>
+          <input id="inputSessionTitle" type="text" placeholder="예: A사 바이어 John - Q4 단가 인하 방어" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">상대 파트너 이름 및 직함 *</label>
+            <input id="inputPartnerName" type="text" placeholder="예: John Miller (Purchasing Director)" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">대화 난이도 (Difficulty)</label>
+            <select id="inputSessionDifficulty" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
+              <option value="Beginner">Beginner (초급 - 협조적·명확한 질문)</option>
+              <option value="Intermediate" selected>Intermediate (중급 - 실무 비즈니스 속도)</option>
+              <option value="Advanced">Advanced (고급 - 압박 질문·날카로운 반론)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">상대 파트너 성향 및 역할 (Persona)</label>
+          <input id="inputPartnerPersona" type="text" placeholder="예: 비용 절감 압박을 받아 단가 10% 인하를 강하게 요구하는 노련한 바이어" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">비즈니스 상황 및 나의 목표 (Business Context)</label>
+          <textarea id="inputBusinessContext" rows="3" placeholder="예: 연간 재계약 협상 미팅. 원자재 가격 상승으로 10% 인하는 불가하며, 대신 물량 확대 시 5% 추가 할인을 역제안해야 함." class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none resize-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">이 세션에서 집중 연습할 문장 세트 (Target Filter)</label>
+          <select id="inputSessionTargetFilter" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
+            <option value="ALL">전체 문장</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-end gap-2">
+        <button onclick="closeSessionModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">취소</button>
+        <button onclick="saveSessionFromModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20">세션 저장 및 적용</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: BULK TEXT PASTE & QUICK SENTENCE ADD ==================== -->
+  <div id="bulkAddModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="file-plus-2" class="w-4 h-4 text-emerald-400"></i>
+          <span>공부할 "영어문장 + 한국어" 세트 입력</span>
+        </h3>
+        <button onclick="closeBulkAddModal()" class="p-1 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">문장 세트 이름 (출처 태그명) *</label>
+            <input id="bulkSetTitleInput" type="text" value="내 학습 문장 세트" placeholder="예: 해외바이어_협상표현" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">카테고리 분류</label>
+            <input id="bulkCategoryInput" type="text" value="비즈니스회화" placeholder="예: 단가협상, 일정조율, 이메일" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-emerald-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Bulk Text Paste Section -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-emerald-300">방식 1. 여러 문장 한꺼번에 복사·붙여넣기 (자동 한/영 분리)</label>
+            <span id="bulkPreviewCountBadge" class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">인식된 문장: 0개</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            엑셀에서 두 열을 복사해 붙여넣거나(탭 구분), <code>영어 | 한국어</code>, <code>한국어 - 영어</code>, 또는 <strong>영어 한 줄 + 한국어 한 줄 교차 형태</strong>로 자유롭게 붙여넣으세요. 한글/영어 순서는 자동으로 판별합니다.
+          </p>
+          <textarea
+            id="bulkPasteTextarea"
+            rows="7"
+            oninput="updateBulkPreviewCount()"
+            placeholder="예시 1 (구분자 사용):&#10;If you increase the order volume, we can consider a 5% discount. | 주문 물량을 늘려주신다면 5% 할인을 검토해 보겠습니다.&#10;Let's touch base again next Tuesday. | 다음 주 화요일에 다시 상황 공유하시죠.&#10;&#10;예시 2 (줄바꿈 교차):&#10;Could you share the revised quotation by Friday?&#10;금요일까지 수정된 견적서를 공유해 주실 수 있을까요?"
+            class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs md:text-sm text-slate-100 focus:border-emerald-500 focus:outline-none font-mono leading-relaxed"
+          ></textarea>
+        </div>
+
+        <!-- Single Quick Add Section -->
+        <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+          <label class="text-xs font-bold text-indigo-300 block">방식 2. 단일 문장 직접 입력 (선택사항)</label>
+          <div class="grid grid-cols-1 gap-2">
+            <input id="singleKorInput" type="text" placeholder="한국어 의미 입력 (예: 금주 내로 확정안을 공유드리겠습니다.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+            <input id="singleEngInput" type="text" placeholder="영어 문장 입력 (예: We will share the finalized plan by the end of this week.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+            <input id="singleNoteInput" type="text" placeholder="메모 / 핵심 뉘앙스 (선택사항)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+        <label class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+          <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>엑셀/CSV 파일로 업로드</span>
+          <input type="file" accept=".xlsx,.xls,.csv" multiple class="hidden" onchange="handleExcelFilesUpload(event); closeBulkAddModal();" />
+        </label>
+        <div class="flex items-center gap-2">
+          <button onclick="closeBulkAddModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">닫기</button>
+          <button onclick="submitBulkAndSingleSentences()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20">문장 DB에 일괄 등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: UNIFIED SENTENCE DB MANAGER ==================== -->
+  <div id="dbManagerModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col h-[88vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
+          <h3 class="text-base font-bold text-white">통합 문장 데이터베이스 관리</h3>
+          <span id="dbModalCountBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-xs font-bold text-emerald-400">0문장</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="closeDBManagerModal(); openBulkAddModal();" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>새 문장 세트 추가</span>
+          </button>
+          <button onclick="exportSentencesToExcel(document.getElementById('dbModalFilterSelect').value)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>현재 목록 엑셀 저장</span>
+          </button>
+          <button onclick="closeDBManagerModal()" class="p-1 text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter & Search Bar -->
+      <div class="px-5 py-3 bg-slate-950/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div class="flex items-center gap-2 flex-1 min-w-[220px]">
+          <select id="dbModalFilterSelect" onchange="renderDBManagerTable()" class="rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-slate-200 font-medium focus:outline-none">
+            <option value="ALL">전체 문장 보기</option>
+          </select>
+          <div class="relative flex-1 max-w-md">
+            <input id="dbModalSearchInput" type="text" oninput="renderDBManagerTable()" placeholder="한글 의미, 영어 표현, 메모 검색..." class="w-full rounded-lg bg-slate-900 border border-slate-700 pl-3 pr-8 py-2 text-slate-200 focus:border-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+        <button onclick="deleteFilteredSentencesInDBModal()" class="px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 text-xs font-medium">
+          현재 필터 문장 전체 삭제
+        </button>
+      </div>
+
+      <!-- Sentences Table List -->
+      <div id="dbModalTableContainer" class="flex-1 overflow-y-auto p-4 space-y-2">
+        <!-- Dynamically rendered by renderDBManagerTable() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 4: API SETTINGS & ZERO-KNOWLEDGE E2EE CLOUD SYNC ==================== -->
+  <div id="securityModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Modal Header & Tabs -->
+      <div class="px-5 pt-4 border-b border-slate-800 bg-slate-950/50">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-5 h-5 text-sky-400"></i>
+            <span>AI 엔진 설정 & Zero-Knowledge E2EE 보안 동기화</span>
+          </h3>
+          <button onclick="closeSecurityModal()" class="p-1 text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="flex gap-4 text-xs font-bold">
+          <button id="tabBtnApi" onclick="switchSecurityModalTab('api')" class="pb-2.5 border-b-2 border-indigo-500 text-indigo-400">🤖 LLM API & 음성 설정</button>
+          <button id="tabBtnSync" onclick="switchSecurityModalTab('sync')" class="pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200">🔐 E2EE 암호화 & 클라우드 동기화</button>
+        </div>
+      </div>
+
+      <!-- Tab 1: LLM API Settings -->
+      <div id="tabContentApi" class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm">
+        <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3.5 text-xs text-indigo-200 leading-relaxed">
+          💡 <strong>이원화 프롬프트(Dual-Prompt) 엔진 안내:</strong> 입력하신 API 키는 외부 서버를 거치지 않고 브라우저에서 Google Gemini 또는 OpenAI 엔드포인트로 직접 호출됩니다. 마스터 비밀번호 설정 시 API 키까지 함께 <code>AES-GCM 256-bit</code>로 암호화되어 보호됩니다.
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">AI 공급자 (Provider)</label>
+            <select id="settingProviderSelect" onchange="handleProviderSelectChange()" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
+              <option value="gemini">Google Gemini API (권장)</option>
+              <option value="openai">OpenAI 호환 API (GPT-4o 등)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">모델 선택 (Model)</label>
+            <select id="settingModelSelect" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
+              <option value="gemini-2.5-flash">gemini-2.5-flash (빠름·추천)</option>
+              <option value="gemini-2.5-pro">gemini-2.5-pro (고성능 코칭)</option>
+              <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+              <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+              <option value="gpt-4o">gpt-4o (OpenAI)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">API Key 입력</label>
+          <div class="flex gap-2">
+            <input id="settingApiKeyInput" type="password" placeholder="AIzaSy... 또는 sk-..." class="flex-1 rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none font-mono" />
+            <button type="button" onclick="toggleApiKeyVisibility()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs">보기/숨기기</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">화면 테마 설정 (Display Theme)</label>
+          <select id="settingThemeSelect" onchange="handleThemeSelectChange(this.value)" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
+            <option value="dark">🌙 Dark 화면 (기본 어두운 테마)</option>
+            <option value="light">☀️ White 화면 (밝은 화이트 테마)</option>
+          </select>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button onclick="saveApiSettings()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20">API 및 테마 설정 저장</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Zero-Knowledge E2EE & Cloud Sync -->
+      <div id="tabContentSync" class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-sky-400 flex items-center gap-1.5">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+              <span>1. 마스터 비밀번호 (AES-GCM 256-bit E2EE 잠금)</span>
+            </span>
+            <span id="e2eeStatusBadge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold">미설정 (평문 빠른 시작)</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            마스터 Passcode를 설정하면 브라우저 내장 <code>Web Crypto API (PBKDF2 100,000회 + AES-GCM 256-bit)</code>로 모든 세션·문장 DB·API 키를 암호화합니다.
+          </p>
+          <div class="flex gap-2 pt-1">
+            <input id="masterPasscodeInput" type="password" placeholder="마스터 Passcode 입력 (설정/변경/동기화용)" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-sky-500 focus:outline-none" />
+            <button onclick="applyMasterPasscode()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shrink-0">암호화 적용</button>
+            <button onclick="clearMasterPasscode()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 text-xs shrink-0" title="로컬 암호화 잠금 해제">잠금 해제</button>
+          </div>
+        </div>
+
+        <!-- Cloud Sync Section -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+          <span class="font-bold text-indigo-400 flex items-center gap-1.5">
+            <i data-lucide="cloud" class="w-4 h-4"></i>
+            <span>2. Serverless 클라우드 실시간 동기화 (PC ↔ 모바일 연동)</span>
+          </span>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Firebase Realtime DB REST URL(예: <code>https://your-project.firebaseio.com/bizroleplay.json</code>) 또는 Custom JSON PUT/GET 엔드포인트를 입력하면, <strong>오직 E2EE 암호화된 페이로드만</strong> 전송되어 서버 해킹 시에도 내용은 절대 노출되지 않습니다.
+          </p>
+          <input id="cloudSyncUrlInput" type="url" placeholder="https://your-db-id.firebaseio.com/bizroleplay_vault.json" class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none font-mono" />
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="pushEncryptedToCloud()" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              <span>클라우드로 암호화 백업 (Push)</span>
+            </button>
+            <button onclick="pullEncryptedFromCloud()" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+              <i data-lucide="download-cloud" class="w-4 h-4"></i>
+              <span>클라우드에서 복원 (Pull)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Local Encrypted File Backup / Restore -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
+          <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+            <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
+            <span>3. 암호화 백업 파일 내보내기 / 불러오기 (.bizenc.json)</span>
+          </span>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="exportEncryptedBackupFile()" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5">
+              <i data-lucide="save" class="w-4 h-4 text-emerald-400"></i>
+              <span>암호화 백업 파일 저장 (.bizenc.json)</span>
+            </button>
+            <label class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+              <i data-lucide="folder-open" class="w-4 h-4 text-amber-400"></i>
+              <span>백업 파일 불러오기</span>
+              <input type="file" accept=".json,.bizenc" class="hidden" onchange="importEncryptedBackupFile(event)" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 5: E2EE PASSCODE UNLOCK GATE ==================== -->
+  <div id="unlockGateModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl text-center space-y-4">
+      <div class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center mx-auto text-sky-400">
+        <i data-lucide="key-round" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white">Zero-Knowledge E2EE 보안 잠금</h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        로컬 저장소에 <code>AES-GCM 256-bit</code>로 암호화된 학습 데이터가 있습니다.<br/>마스터 Passcode를 입력하여 데이터를 복호화하세요.
+      </p>
+      <input id="unlockGatePasscodeInput" type="password" onkeydown="if(event.key==='Enter') unlockVaultWithPasscode()" placeholder="마스터 Passcode 입력" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-4 py-2.5 text-sm text-center text-white focus:border-sky-500 focus:outline-none" />
+      <div class="flex gap-2">
+        <button onclick="resetVaultIfForgotten()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 text-xs text-slate-400 hover:text-rose-300">초기화 후 시작</button>
+        <button onclick="unlockVaultWithPasscode()" class="flex-1 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">잠금 해제 및 복원</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== APPLICATION LOGIC (VANILLA JS) ==================== -->
+  <script>
+    /*************************************************************************
+     * 1. DEFAULT ONBOARDING PRESETS & APPLICATION STATE (AppState)
+     *************************************************************************/
+    const STORAGE_KEY = 'BIZROLEPLAY_VAULT_V1';
+    let runtimePasscode = ''; // Kept only in memory during active session
+
+    function getInitialOnboardingData() {
+      const now = Date.now();
+      return {
+        sentencesDB: [
+          {
+            id: 'sent_init_01',
+            source_file: '해외바이어_단가협상.xlsx',
+            category: '단가협상',
+            korean: '주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.',
+            english: 'If you increase the order volume, we can consider an additional 5% discount.',
+            notes: '무조건적인 단가 인하 요구에 물량 확대를 조건으로 역제안하는 핵심 협상 표현',
+            practice_count: 2,
+            is_starred: true,
+            created_at: now - 86400000
+          },
+          {
+            id: 'sent_init_02',
+            source_file: '해외바이어_단가협상.xlsx',
+            category: '단가협상',
+            korean: '원자재 가격 상승으로 인해 10% 단가 인하는 현실적으로 어렵습니다.',
+            english: 'A 10% unit price reduction is challenging due to rising raw material costs.',
+            notes: "'too hard' 대신 'challenging due to ~'를 사용하여 전문적인 톤 유지",
+            practice_count: 1,
+            is_starred: true,
+            created_at: now - 85000000
+          },
+          {
+            id: 'sent_init_03',
+            source_file: '해외바이어_단가협상.xlsx',
+            category: '단가협상',
+            korean: '장기적인 파트너십을 고려하여 결제 조건을 완화하는 대안을 제안드립니다.',
+            english: 'Considering our long-term partnership, we would like to propose more flexible payment terms as an alternative.',
+            notes: '가격 인하 대신 결제 조건(Payment terms)으로 협상 프레임을 전환할 때 활용',
+            practice_count: 0,
+            is_starred: false,
+            created_at: now - 84000000
+          },
+          {
+            id: 'sent_init_04',
+            source_file: '해외바이어_단가협상.xlsx',
+            category: '단가협상',
+            korean: '연간 최소 발주 수량(MOQ)을 보장해 주시면 해당 단가를 맞춰드리겠습니다.',
+            english: 'If you can guarantee the annual minimum order quantity, we can meet your target price.',
+            notes: '타깃 단가 수용 조건으로 MOQ 개런티를 요구할 때 사용',
+            practice_count: 0,
+            is_starred: false,
+            created_at: now - 83000000
+          },
+          {
+            id: 'sent_init_05',
+            source_file: '글로벌PM_일정조율.xlsx',
+            category: '일정조율',
+            korean: '품질 검증 강화를 위해 정식 출시 일정을 2주 연기하는 것을 제안드립니다.',
+            english: 'To ensure thorough quality assurance, we propose pushing back the official launch date by two weeks.',
+            notes: "일정 지연('delay') 대신 'push back ~ to ensure quality'로 긍정적 프레이밍",
+            practice_count: 1,
+            is_starred: true,
+            created_at: now - 82000000
+          },
+          {
+            id: 'sent_init_06',
+            source_file: '글로벌PM_일정조율.xlsx',
+            category: '일정조율',
+            korean: '핵심 기능부터 1차로 먼저 배포하고, 부가 기능은 다음 스프린트에 반영하겠습니다.',
+            english: 'We will roll out the core features in Phase 1 and include the add-on features in the next sprint.',
+            notes: '일정 압박 시 단계적 배포(Phased rollout)로 타협안을 제시하는 표현',
+            practice_count: 0,
+            is_starred: false,
+            created_at: now - 81000000
+          },
+          {
+            id: 'sent_init_07',
+            source_file: '글로벌PM_일정조율.xlsx',
+            category: '일정조율',
+            korean: '다음 주 화요일에 다시 진행 상황을 점검하시죠.',
+            english: "Let's touch base again next Tuesday to review our progress.",
+            notes: "'touch base'는 실무 미팅에서 가장 자주 쓰이는 '상황을 공유/점검하다' 관용구",
+            practice_count: 3,
+            is_starred: false,
+            created_at: now - 80000000
+          },
+          {
+            id: 'sent_init_08',
+            source_file: '비즈니스_이메일필수.csv',
+            category: '이메일/보고',
+            korean: '요청하신 수정 견적서를 첨부파일로 공유해 드립니다.',
+            english: 'Please find attached the revised quotation you requested.',
+            notes: '첨부파일 전달 시 정중한 표준 비즈니스 표현',
+            practice_count: 2,
+            is_starred: false,
+            created_at: now - 79000000
+          },
+          {
+            id: 'sent_init_09',
+            source_file: 'chat_feedback',
+            category: '대화피드백',
+            korean: '현재 내부 승인 절차를 밟고 있으며 금주 내로 확정안을 공유드리겠습니다.',
+            english: 'We are currently going through internal approval and will share the finalized plan by the end of this week.',
+            notes: '[원래 내 문장] We are checking inside and will tell you this week. -> 비즈니스 격식체로 교정',
+            practice_count: 0,
+            is_starred: true,
+            created_at: now - 3600000
+          },
+          {
+            id: 'sent_init_10',
+            source_file: 'chat_feedback',
+            category: '대화피드백',
+            korean: '말씀하신 우려 사항은 충분히 이해합니다만, 품질 유지를 위한 마지노선입니다.',
+            english: 'I fully understand your concern, but this is our bottom line to maintain product quality.',
+            notes: '[원래 내 문장] I know your worry, but we cannot go down more for quality. -> bottom line 활용 교정',
+            practice_count: 1,
+            is_starred: true,
+            created_at: now - 1800000
+          }
+        ],
+        sessionsDB: [
+          {
+            session_id: 'sess_001',
+            title: 'A사 바이어 John - Q4 단가 인하 방어',
+            partner_name: 'John Miller (Purchasing Director)',
+            partner_persona: '비용 절감 압박을 받고 있어 단가 10% 인하를 강하게 요구하는 노련한 미국 바이어',
+            business_context: '연간 재계약 협상 미팅. 당사는 원자재 가격 상승으로 10% 단가 인하가 불가능하며, 대신 주문 물량 확대 시 5% 추가 할인이나 결제 조건 완화를 역제안해야 함.',
+            difficulty: 'Intermediate',
+            target_filter: '해외바이어_단가협상.xlsx',
+            updated_at: now - 600000,
+            messages: [
+              {
+                msg_id: 'm_init_01',
+                role: 'partner',
+                text: 'Thanks for joining today. Being completely transparent, we need a 10% unit price reduction for Q4 to keep you as our primary vendor. How much room do you have here?',
+                timestamp: now - 660000
+              },
+              {
+                msg_id: 'm_init_02',
+                role: 'user',
+                text: '10% is too hard for us because material cost went up. But if you order more, we can give 5% discount.',
+                timestamp: now - 600000,
+                feedback: {
+                  is_open: true,
+                  target_used: true,
+                  matched_sentence_id: 'sent_init_01',
+                  evaluation: "핵심 협상 논리(원자재 상승 + 물량 조건부 5% 할인)는 훌륭하게 전달되었으나, 임원급 미팅에서는 'too hard'나 'give discount'보다 격식 있는 표현이 설득력을 높입니다.",
+                  recommended_korean: '원자재 가격 상승으로 10% 인하는 어렵습니다만, 주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.',
+                  better_alternative: 'A 10% reduction is challenging due to rising raw material costs. However, if you increase the order volume, we can consider an additional 5% discount.',
+                  nuance_tip: "'too hard' 대신 'challenging'을, 'give discount' 대신 'consider an additional discount'를 사용하면 협상 주도권을 유지할 수 있습니다.",
+                  saved_to_db: false
+                }
+              },
+              {
+                msg_id: 'm_init_03',
+                role: 'partner',
+                text: 'I hear you on the raw material costs, but 5% only works for us if the volume threshold is realistic. What kind of volume increase are you looking for, and could we also look at extending our payment terms?',
+                timestamp: now - 540000
+              }
+            ]
+          },
+          {
+            session_id: 'sess_002',
+            title: '글로벌 PM Sarah - 런칭 일정 2주 연기 조율',
+            partner_name: 'Sarah Jenkins (Global Product Lead)',
+            partner_persona: '마케팅 캠페인 일정에 맞춰 정시 출시를 중요하게 생각하지만 합리적인 대안에는 열려 있는 글로벌 PM',
+            business_context: '신규 서비스 글로벌 출시 점검 미팅. QA 단계에서 발견된 이슈 해결을 위해 전체 일정을 2주 연기하거나, 핵심 기능만 Phase 1으로 먼저 배포하는 대안을 설득해야 함.',
+            difficulty: 'Intermediate',
+            target_filter: '글로벌PM_일정조율.xlsx',
+            updated_at: now - 7200000,
+            messages: [
+              {
+                msg_id: 'm_init_201',
+                role: 'partner',
+                text: "Hi there! Marketing is ready to kick off the campaign next Monday as scheduled. Are we still on track for the full release, or is there any risk I should know about?",
+                timestamp: now - 7200000
+              }
+            ]
+          }
+        ],
+        activeSessionId: 'sess_001',
+        settings: {
+          provider: 'gemini',
+          model: 'gemini-2.5-flash',
+          apiKey: '',
+          ttsSpeed: 1.0,
+          theme: 'dark',
+          cloudSyncUrl: '',
+          e2eeEnabled: false
+        },
+        uiState: {
+          hintDrawerOpen: false,
+          draftInputs: {},
+          savedScrollTop: 0,
+          flashcard: {
+            isOpen: false,
+            filter: 'ALL',
+            currentIndex: 0,
+            isRevealed: false,
+            isShuffle: false,
+            direction: 'KR_TO_EN', // 'KR_TO_EN' | 'EN_TO_KR'
+            deckIds: []
+          }
+        }
+      };
+    }
+
+    let AppState = getInitialOnboardingData();
+
+    /*************************************************************************
+     * 2. ZERO-KNOWLEDGE E2EE (WEB CRYPTO API: PBKDF2 + AES-GCM 256-BIT)
+     *************************************************************************/
+    function bufToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    function base64ToBuf(base64) {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    async function deriveAesGcmKey(passcode, saltUint8) {
+      const enc = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode(passcode),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      return window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: saltUint8,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptStateWithPasscode(stateObj, passcode) {
+      const enc = new TextEncoder();
+      const salt = window.crypto.getRandomValues(new Uint8Array(16));
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveAesGcmKey(passcode, salt);
+      const plaintextBytes = enc.encode(JSON.stringify(stateObj));
+      const cipherBuffer = await window.crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        plaintextBytes
+      );
+      return {
+        app: 'BizRoleplay',
+        version: 1,
+        encrypted: true,
+        updated_at: Date.now(),
+        salt: bufToBase64(salt.buffer),
+        iv: bufToBase64(iv.buffer),
+        ciphertext: bufToBase64(cipherBuffer)
+      };
+    }
+
+    async function decryptStateWithPasscode(envelope, passcode) {
+      const saltBuf = new Uint8Array(base64ToBuf(envelope.salt));
+      const ivBuf = new Uint8Array(base64ToBuf(envelope.iv));
+      const cipherBuf = base64ToBuf(envelope.ciphertext);
+      const key = await deriveAesGcmKey(passcode, saltBuf);
+      const decryptedBuffer = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: ivBuf },
+        key,
+        cipherBuf
+      );
+      const dec = new TextDecoder();
+      return JSON.parse(dec.decode(decryptedBuffer));
+    }
+
+    /*************************************************************************
+     * 3. PERSISTENCE, LOCALSTORAGE & CLOUD SYNC
+     *************************************************************************/
+    async function saveAppState() {
+      try {
+        if (AppState.settings.e2eeEnabled && runtimePasscode) {
+          const encryptedEnvelope = await encryptStateWithPasscode(AppState, runtimePasscode);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(encryptedEnvelope));
+        } else {
+          const plainEnvelope = {
+            app: 'BizRoleplay',
+            version: 1,
+            encrypted: false,
+            updated_at: Date.now(),
+            data: AppState
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(plainEnvelope));
+        }
+        updateSecurityBadges();
+      } catch (err) {
+        console.error('Failed to save state:', err);
+      }
+    }
+
+    async function loadAppStateOnStartup() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        AppState = getInitialOnboardingData();
+        await saveAppState();
+        renderAll();
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.encrypted === true) {
+          document.getElementById('unlockGateModal').classList.remove('hidden');
+          setTimeout(() => document.getElementById('unlockGatePasscodeInput').focus(), 100);
+        } else if (parsed && parsed.data) {
+          AppState = mergeWithDefaultState(parsed.data);
+          renderAll();
+        } else {
+          AppState = getInitialOnboardingData();
+          renderAll();
+        }
+      } catch (e) {
+        console.error('Corrupted local storage, loading defaults:', e);
+        AppState = getInitialOnboardingData();
+        renderAll();
+      }
+    }
+
+    function mergeWithDefaultState(loaded) {
+      const def = getInitialOnboardingData();
+      return {
+        sentencesDB: Array.isArray(loaded.sentencesDB) ? loaded.sentencesDB : def.sentencesDB,
+        sessionsDB: Array.isArray(loaded.sessionsDB) && loaded.sessionsDB.length > 0 ? loaded.sessionsDB : def.sessionsDB,
+        activeSessionId: loaded.activeSessionId || (loaded.sessionsDB?.[0]?.session_id ?? def.activeSessionId),
+        settings: { ...def.settings, ...(loaded.settings || {}) },
+        uiState: {
+          ...def.uiState,
+          ...(loaded.uiState || {}),
+          flashcard: { ...def.uiState.flashcard, ...(loaded.uiState?.flashcard || {}), isOpen: false }
+        }
+      };
+    }
+
+    async function unlockVaultWithPasscode() {
+      const pass = document.getElementById('unlockGatePasscodeInput').value.trim();
+      if (!pass) {
+        showToast('마스터 Passcode를 입력해 주세요.', 'error');
+        return;
+      }
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        const decrypted = await decryptStateWithPasscode(raw, pass);
+        runtimePasscode = pass;
+        AppState = mergeWithDefaultState(decrypted);
+        AppState.settings.e2eeEnabled = true;
+        document.getElementById('unlockGateModal').classList.add('hidden');
+        renderAll();
+        showToast('🔐 E2EE 암호화 볼트 잠금이 해제되었습니다.', 'success');
+      } catch (err) {
+        showToast('비밀번호가 일치하지 않거나 복호화에 실패했습니다.', 'error');
+      }
+    }
+
+    function resetVaultIfForgotten() {
+      if (!confirm('기존 암호화된 데이터를 초기화하고 기본 샘플 데이터로 새로 시작하시겠습니까?')) return;
+      runtimePasscode = '';
+      localStorage.removeItem(STORAGE_KEY);
+      AppState = getInitialOnboardingData();
+      document.getElementById('unlockGateModal').classList.add('hidden');
+      saveAppState();
+      renderAll();
+      showToast('초기 샘플 상태로 초기화되었습니다.', 'info');
+    }
+
+    async function applyMasterPasscode() {
+      const pass = document.getElementById('masterPasscodeInput').value.trim();
+      if (!pass || pass.length < 4) {
+        showToast('마스터 Passcode는 최소 4자 이상 입력해 주세요.', 'error');
+        return;
+      }
+      runtimePasscode = pass;
+      AppState.settings.e2eeEnabled = true;
+      await saveAppState();
+      showToast('🔐 AES-GCM 256-bit 종단간 암호화(E2EE)가 활성화되었습니다.', 'success');
+    }
+
+    async function clearMasterPasscode() {
+      runtimePasscode = '';
+      AppState.settings.e2eeEnabled = false;
+      document.getElementById('masterPasscodeInput').value = '';
+      await saveAppState();
+      showToast('암호화 잠금이 해제되어 빠른 시작(평문) 모드로 전환되었습니다.', 'info');
+    }
+
+    async function pushEncryptedToCloud() {
+      const url = document.getElementById('cloudSyncUrlInput').value.trim();
+      const pass = document.getElementById('masterPasscodeInput').value.trim() || runtimePasscode;
+      if (!url) {
+        showToast('클라우드 동기화 REST URL(예: Firebase URL)을 입력해 주세요.', 'error');
+        return;
+      }
+      if (!pass) {
+        showToast('보안을 위해 클라우드 전송 시 마스터 Passcode 입력이 필수입니다.', 'error');
+        return;
+      }
+      try {
+        AppState.settings.cloudSyncUrl = url;
+        runtimePasscode = pass;
+        AppState.settings.e2eeEnabled = true;
+        const encryptedPayload = await encryptStateWithPasscode(AppState, pass);
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(encryptedPayload)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await saveAppState();
+        showToast('☁️ E2EE 암호화 데이터가 클라우드에 안전하게 백업(Push)되었습니다.', 'success');
+      } catch (err) {
+        showToast('클라우드 업로드 실패: URL 또는 CORS 설정을 확인하세요 (' + err.message + ')', 'error');
+      }
+    }
+
+    async function pullEncryptedFromCloud() {
+      const url = document.getElementById('cloudSyncUrlInput').value.trim() || AppState.settings.cloudSyncUrl;
+      const pass = document.getElementById('masterPasscodeInput').value.trim() || runtimePasscode;
+      if (!url) {
+        showToast('클라우드 동기화 REST URL을 입력해 주세요.', 'error');
+        return;
+      }
+      if (!pass) {
+        showToast('복호화를 위해 마스터 Passcode를 입력해 주세요.', 'error');
+        return;
+      }
+      try {
+        const res = await fetch(url, { method: 'GET' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const envelope = await res.json();
+        if (!envelope || !envelope.ciphertext) {
+          throw new Error('유효한 암호화 백업 데이터가 없습니다.');
+        }
+        const decrypted = await decryptStateWithPasscode(envelope, pass);
+        runtimePasscode = pass;
+        AppState = mergeWithDefaultState(decrypted);
+        AppState.settings.cloudSyncUrl = url;
+        AppState.settings.e2eeEnabled = true;
+        await saveAppState();
+        renderAll();
+        closeSecurityModal();
+        showToast('📥 클라우드에서 모든 세션과 문장 DB를 성공적으로 복원했습니다!', 'success');
+      } catch (err) {
+        showToast('클라우드 복원 실패: Passcode 또는 URL을 확인하세요 (' + err.message + ')', 'error');
+      }
+    }
+
+    async function exportEncryptedBackupFile() {
+      const pass = document.getElementById('masterPasscodeInput').value.trim() || runtimePasscode;
+      let payload;
+      if (pass) {
+        payload = await encryptStateWithPasscode(AppState, pass);
+      } else {
+        payload = {
+          app: 'BizRoleplay',
+          version: 1,
+          encrypted: false,
+          updated_at: Date.now(),
+          data: AppState
+        };
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = URL.createObjectURL(blob);
+      a.download = `BizRoleplay_Backup_${dateStr}.bizenc.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(pass ? '💾 AES-GCM 암호화 백업 파일이 다운로드되었습니다.' : '💾 백업 파일이 다운로드되었습니다.', 'success');
+    }
+
+    async function importEncryptedBackupFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (parsed.encrypted) {
+          let pass = document.getElementById('masterPasscodeInput').value.trim() || runtimePasscode;
+          if (!pass) {
+            pass = prompt('암호화된 백업 파일입니다. 마스터 Passcode를 입력하세요:') || '';
+          }
+          const decrypted = await decryptStateWithPasscode(parsed, pass);
+          runtimePasscode = pass;
+          AppState = mergeWithDefaultState(decrypted);
+          AppState.settings.e2eeEnabled = true;
+        } else if (parsed.data) {
+          AppState = mergeWithDefaultState(parsed.data);
+        } else {
+          throw new Error('지원하지 않는 백업 포맷입니다.');
+        }
+        await saveAppState();
+        renderAll();
+        closeSecurityModal();
+        showToast('📂 백업 파일에서 모든 데이터를 성공적으로 복원했습니다!', 'success');
+      } catch (err) {
+        showToast('백업 파일 복원 실패: 비밀번호 또는 파일 형식을 확인하세요.', 'error');
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    /*************************************************************************
+     * 4. SENTENCE DB INGESTION (BULK TEXT PASTE + MULTI-EXCEL/CSV + EXPORT)
+     *************************************************************************/
+    function hasKoreanChars(str) {
+      return /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(str || '');
+    }
+
+    function normalizeEnglishForDedup(eng) {
+      return (eng || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    function parseBulkSentencesText(rawText) {
+      const lines = (rawText || '')
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
+      const results = [];
+      const delimiterRegex = /\t|\s*\|\s*|\s+-\s+|\s+:\s+|\s+\/\s+/;
+
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        // Clean bullet numbering if present (e.g., "1. " or "- ")
+        const cleanedLine = line.replace(/^(\d+[\.\)]\s*|[-•*]\s*)/, '').trim();
+
+        if (delimiterRegex.test(cleanedLine)) {
+          const parts = cleanedLine.split(delimiterRegex).map(p => p.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            const firstIsKor = hasKoreanChars(parts[0]) && !hasKoreanChars(parts[1]);
+            const secondIsKor = hasKoreanChars(parts[1]) && !hasKoreanChars(parts[0]);
+            let korean = parts[0];
+            let english = parts[1];
+            if (!firstIsKor && secondIsKor) {
+              english = parts[0];
+              korean = parts[1];
+            } else if (hasKoreanChars(parts[1]) && !hasKoreanChars(parts[0])) {
+              english = parts[0];
+              korean = parts[1];
+            }
+            const notes = parts.slice(2).join(' | ');
+            results.push({ korean, english, notes });
+            i++;
+            continue;
+          }
+        }
+
+        // If no delimiter on this line, check if we can pair with next line (Alternating lines)
+        if (i + 1 < lines.length) {
+          const nextLine = lines[i + 1].replace(/^(\d+[\.\)]\s*|[-•*]\s*)/, '').trim();
+          const line1Kor = hasKoreanChars(cleanedLine);
+          const line2Kor = hasKoreanChars(nextLine);
+          if (line1Kor !== line2Kor) {
+            results.push({
+              korean: line1Kor ? cleanedLine : nextLine,
+              english: line1Kor ? nextLine : cleanedLine,
+              notes: ''
+            });
+            i += 2;
+            continue;
+          }
+        }
+        i++;
+      }
+      return results;
+    }
+
+    function updateBulkPreviewCount() {
+      const raw = document.getElementById('bulkPasteTextarea').value;
+      const parsed = parseBulkSentencesText(raw);
+      document.getElementById('bulkPreviewCountBadge').textContent = `인식된 문장: ${parsed.length}개`;
+    }
+
+    function mergeSentencesIntoDB(newItems, sourceFile, defaultCategory) {
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      const existingMap = new Map();
+      AppState.sentencesDB.forEach(item => {
+        const key = normalizeEnglishForDedup(item.english);
+        if (key) existingMap.set(key, item);
+      });
+
+      newItems.forEach((raw, idx) => {
+        const kor = (raw.korean || '').trim();
+        const eng = (raw.english || '').trim();
+        if (!kor || !eng) return;
+
+        const key = normalizeEnglishForDedup(eng);
+        if (!key) return;
+
+        if (existingMap.has(key)) {
+          const existing = existingMap.get(key);
+          existing.korean = kor;
+          existing.english = eng;
+          if (raw.notes) existing.notes = raw.notes.trim();
+          if (raw.category) existing.category = raw.category.trim();
+          updatedCount++;
+        } else {
+          const newEntry = {
+            id: `sent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${idx}`,
+            source_file: sourceFile || '수기입력_세트',
+            category: (raw.category || defaultCategory || '비즈니스회화').trim(),
+            korean: kor,
+            english: eng,
+            notes: (raw.notes || '').trim(),
+            practice_count: 0,
+            is_starred: false,
+            created_at: Date.now()
+          };
+          AppState.sentencesDB.unshift(newEntry);
+          existingMap.set(key, newEntry);
+          addedCount++;
+        }
+      });
+
+      return { addedCount, updatedCount, totalProcessed: addedCount + updatedCount };
+    }
+
+    async function submitBulkAndSingleSentences() {
+      const sourceTitle = document.getElementById('bulkSetTitleInput').value.trim() || '내 학습 문장 세트';
+      const category = document.getElementById('bulkCategoryInput').value.trim() || '비즈니스회화';
+      const bulkRaw = document.getElementById('bulkPasteTextarea').value;
+      const singleKor = document.getElementById('singleKorInput').value.trim();
+      const singleEng = document.getElementById('singleEngInput').value.trim();
+      const singleNote = document.getElementById('singleNoteInput').value.trim();
+
+      const itemsToMerge = parseBulkSentencesText(bulkRaw);
+      if (singleKor && singleEng) {
+        itemsToMerge.push({ korean: singleKor, english: singleEng, notes: singleNote, category });
+      }
+
+      if (itemsToMerge.length === 0) {
+        showToast('등록할 유효한 한글+영어 문장 쌍을 입력해 주세요.', 'error');
+        return;
+      }
+
+      const { addedCount, updatedCount, totalProcessed } = mergeSentencesIntoDB(itemsToMerge, sourceTitle, category);
+
+      // Set current session target filter to this new set if user wants immediate practice
+      const activeSess = getActiveSession();
+      if (activeSess) {
+        activeSess.target_filter = sourceTitle;
+      }
+
+      document.getElementById('bulkPasteTextarea').value = '';
+      document.getElementById('singleKorInput').value = '';
+      document.getElementById('singleEngInput').value = '';
+      document.getElementById('singleNoteInput').value = '';
+      updateBulkPreviewCount();
+
+      await saveAppState();
+      renderAll();
+      closeBulkAddModal();
+      showToast(`✅ 총 ${totalProcessed}개 문장이 [${sourceTitle}] 세트로 병합되었습니다 (신규 ${addedCount}, 업데이트 ${updatedCount}).`, 'success');
+    }
+
+    async function handleExcelFilesUpload(event) {
+      const files = Array.from(event.target.files || []);
+      if (files.length === 0) return;
+
+      let grandRawRows = 0;
+      let grandValidMerged = 0;
+      let lastFileName = '';
+
+      for (const file of files) {
+        lastFileName = file.name;
+        try {
+          const buffer = await file.arrayBuffer();
+          let workbook;
+
+          if (file.name.toLowerCase().endsWith('.csv')) {
+            // Decode UTF-8 first, fallback to EUC-KR if replacement character detected
+            let text = new TextDecoder('utf-8').decode(buffer);
+            if (text.includes('\uFFFD')) {
+              try {
+                text = new TextDecoder('euc-kr').decode(buffer);
+              } catch (e) {}
+            }
+            workbook = XLSX.read(text, { type: 'string', codepage: 65001 });
+          } else {
+            workbook = XLSX.read(buffer, { type: 'array', codepage: 65001 });
+          }
+
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+          if (!rows || rows.length === 0) continue;
+
+          // Detect columns (Korean vs English vs Category vs Notes)
+          const extracted = extractSentencesFromSheetRows(rows, file.name.replace(/\.[^.]+$/, ''));
+          grandRawRows += extracted.totalCandidateRows;
+          const res = mergeSentencesIntoDB(extracted.items, file.name, file.name.replace(/\.[^.]+$/, ''));
+          grandValidMerged += res.totalProcessed;
+        } catch (err) {
+          console.error('File parse error:', file.name, err);
+          showToast(`파일 파싱 오류 (${file.name}): ${err.message}`, 'error');
+        }
+      }
+
+      event.target.value = '';
+      if (grandValidMerged > 0 && lastFileName) {
+        const activeSess = getActiveSession();
+        if (activeSess) activeSess.target_filter = lastFileName;
+      }
+      await saveAppState();
+      renderAll();
+      showToast(`📁 총 ${grandRawRows}개 행 중 유효한 ${grandValidMerged}개 문장이 병합되었습니다.`, 'success');
+    }
+
+    function extractSentencesFromSheetRows(rows, defaultCat) {
+      const nonEmptyRows = rows.filter(r => Array.isArray(r) && r.some(cell => String(cell).trim() !== ''));
+      if (nonEmptyRows.length === 0) return { totalCandidateRows: 0, items: [] };
+
+      let korCol = -1;
+      let engCol = -1;
+      let noteCol = -1;
+      let catCol = -1;
+      let startRowIdx = 0;
+
+      const headerRow = nonEmptyRows[0].map(c => String(c).trim().toLowerCase());
+      headerRow.forEach((h, idx) => {
+        if (['한글', '한국어', '의미', '해석', 'kr', 'kor', 'korean', '뜻'].some(k => h.includes(k))) korCol = idx;
+        else if (['영어', '영문', '표현', '문장', 'en', 'eng', 'english', 'sentence', 'expression'].some(k => h.includes(k))) engCol = idx;
+        else if (['메모', '노트', '팁', '비고', 'note', 'notes', 'tip'].some(k => h.includes(k))) noteCol = idx;
+        else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) catCol = idx;
+      });
+
+      if (korCol !== -1 && engCol !== -1) {
+        startRowIdx = 1;
+      } else {
+        // Auto-detect columns by inspecting Korean character ratios across first 5 rows
+        const sampleRows = nonEmptyRows.slice(0, Math.min(5, nonEmptyRows.length));
+        const maxCols = Math.max(...sampleRows.map(r => r.length));
+        let bestKorCol = 0;
+        let bestEngCol = 1;
+
+        for (let c = 0; c < maxCols; c++) {
+          const texts = sampleRows.map(r => String(r[c] || '').trim()).filter(Boolean);
+          if (texts.length === 0) continue;
+          const korCount = texts.filter(t => hasKoreanChars(t)).length;
+          if (korCount / texts.length >= 0.5 && korCol === -1) {
+            korCol = c;
+          } else if (korCount / texts.length < 0.5 && engCol === -1) {
+            engCol = c;
+          }
+        }
+        if (korCol === -1) korCol = bestKorCol;
+        if (engCol === -1) engCol = bestEngCol === korCol ? 1 : bestEngCol;
+        if (maxCols >= 3) noteCol = [0, 1, 2].find(x => x !== korCol && x !== engCol) ?? -1;
+      }
+
+      const dataRows = nonEmptyRows.slice(startRowIdx);
+      const items = [];
+
+      dataRows.forEach(r => {
+        let c1 = String(r[korCol] ?? '').trim();
+        let c2 = String(r[engCol] ?? '').trim();
+        if (!c1 || !c2) return;
+
+        // If headerless row has English in c1 and Korean in c2, swap automatically
+        if (!hasKoreanChars(c1) && hasKoreanChars(c2)) {
+          const tmp = c1;
+          c1 = c2;
+          c2 = tmp;
+        }
+
+        items.push({
+          korean: c1,
+          english: c2,
+          notes: noteCol !== -1 ? String(r[noteCol] ?? '').trim() : '',
+          category: catCol !== -1 && String(r[catCol] ?? '').trim() ? String(r[catCol]).trim() : defaultCat
+        });
+      });
+
+      return { totalCandidateRows: dataRows.length, items };
+    }
+
+    function exportSentencesToExcel(filterValue = 'ALL') {
+      const targetList = getFilteredSentences(filterValue);
+      if (targetList.length === 0) {
+        showToast('내보낼 문장이 없습니다.', 'error');
+        return;
+      }
+      const exportData = targetList.map(s => ({
+        '출처(Source)': s.source_file,
+        '카테고리(Category)': s.category,
+        '한국어(Korean)': s.korean,
+        '영어(English)': s.english,
+        '메모(Notes)': s.notes || '',
+        '연습횟수(Practice Count)': s.practice_count || 0,
+        '중요별표(Starred)': s.is_starred ? 'Y' : 'N'
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'BizRoleplay_Sentences');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const cleanFilter = filterValue === 'ALL' ? '전체DB' : filterValue.replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
+      XLSX.writeFile(wb, `BizRoleplay_${cleanFilter}_${dateStr}.xlsx`);
+      showToast(`📥 총 ${targetList.length}개 문장이 엑셀(.xlsx) 파일로 다운로드되었습니다.`, 'success');
+    }
+
+    /*************************************************************************
+     * 5. FILTERING, SMART SAMPLING & DUAL-PROMPT AI ENGINE
+     *************************************************************************/
+    function getActiveSession() {
+      let sess = AppState.sessionsDB.find(s => s.session_id === AppState.activeSessionId);
+      if (!sess && AppState.sessionsDB.length > 0) {
+        sess = AppState.sessionsDB[0];
+        AppState.activeSessionId = sess.session_id;
+      }
+      return sess;
+    }
+
+    function getFilteredSentences(filterValue) {
+      const all = AppState.sentencesDB || [];
+      if (!filterValue || filterValue === 'ALL') return all;
+      if (filterValue === 'FEEDBACK_ONLY') {
+        return all.filter(s => s.category === '대화피드백' || s.source_file === 'chat_feedback');
+      }
+      if (filterValue === 'STARRED_ONLY') {
+        return all.filter(s => s.is_starred);
+      }
+      if (filterValue === 'UNPRACTICED_ONLY') {
+        return all.filter(s => (s.practice_count || 0) === 0);
+      }
+      return all.filter(s => s.source_file === filterValue || s.category === filterValue);
+    }
+
+    function getAvailableFilterOptions() {
+      const all = AppState.sentencesDB || [];
+      const feedbackCount = all.filter(s => s.category === '대화피드백' || s.source_file === 'chat_feedback').length;
+      const starredCount = all.filter(s => s.is_starred).length;
+      const unpracticedCount = all.filter(s => (s.practice_count || 0) === 0).length;
+
+      const sourceMap = new Map();
+      all.forEach(s => {
+        if (s.source_file && s.source_file !== 'chat_feedback') {
+          sourceMap.set(s.source_file, (sourceMap.get(s.source_file) || 0) + 1);
+        }
+      });
+
+      const options = [
+        { value: 'ALL', label: `전체 문장 (${all.length})` },
+        { value: 'FEEDBACK_ONLY', label: `⭐ 대화피드백 오답노트 (${feedbackCount})` },
+        { value: 'STARRED_ONLY', label: `★ 중요 별표 문장 (${starredCount})` },
+        { value: 'UNPRACTICED_ONLY', label: `🔥 미암기 집중 (${unpracticedCount})` }
+      ];
+
+      sourceMap.forEach((count, src) => {
+        options.push({ value: src, label: `📁 ${src} (${count})` });
+      });
+
+      return options;
+    }
+
+    // Smart Context Sampling (selects 5~10 high-priority sentences for prompt injection)
+    function sampleTargetSentencesForSession(session, maxCount = 8) {
+      let pool = getFilteredSentences(session?.target_filter || 'ALL');
+      if (pool.length === 0) pool = AppState.sentencesDB || [];
+      // Sort by starred first, then lowest practice_count, then slight randomness
+      const scored = pool.map(item => ({
+        item,
+        score: (item.is_starred ? -100 : 0) + (item.practice_count || 0) * 10 + Math.random() * 4
+      }));
+      scored.sort((a, b) => a.score - b.score);
+      return scored.slice(0, maxCount).map(x => x.item);
+    }
+
+    function buildRoleplaySystemPrompt(session, sampledTargets) {
+      const targetLines = sampledTargets.length > 0
+        ? sampledTargets.map((s, i) => `${i + 1}. [ID: ${s.id}] "${s.english}" (Meaning: ${s.korean})`).join('\n')
+        : 'No specific target expressions registered; use natural business English.';
+
+      return `You are strictly roleplaying as a real-world business partner in a live messenger/meeting conversation.
+
+[PARTNER PROFILE & SCENARIO]
+- Your Name & Role: ${session.partner_name} (${session.partner_persona})
+- Business Situation & Context: ${session.business_context}
+- Difficulty & Tone Level: ${session.difficulty} (Beginner: supportive & clear / Intermediate: realistic professional / Advanced: demanding, sharp, high-stakes negotiation)
+- Target Expressions User Wants to Practice:
+${targetLines}
+
+[ABSOLUTE RULES - VIOLATION WILL BREAK THE APP]
+1. STAY IN CHARACTER 100%: Never act as an AI assistant, English teacher, or coach.
+2. ZERO CORRECTIONS OR EXPLANATIONS: Never correct the user's grammar, never praise their English, and never explain the situation from a third-person perspective.
+3. PROACTIVE & NATURAL DIALOGUE: Respond naturally in 1 to 3 concise business English sentences, then ALWAYS end with a realistic follow-up question, counter-offer, or business request that naturally prompts the user to reply (ideally nudging them to use one of the Target Expressions).
+4. IF STARTING THE CONVERSATION: Greet the user briefly in character and immediately bring up the core business issue or question based on the scenario and target expressions.`;
+    }
+
+    function buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampledTargets) {
+      const targetLines = sampledTargets.length > 0
+        ? sampledTargets.map(s => `- [ID: ${s.id}] "${s.english}" (${s.korean})`).join('\n')
+        : 'None';
+
+      return `You are an expert Executive Business English Coach. Analyze the user's English response within the given business conversation context and return ONLY a valid JSON object.
+
+[CONTEXT]
+- Business Scenario: ${session.business_context}
+- Partner's Previous Message: "${prevPartnerMsg || '(Conversation start)'}"
+- User's English Message to Evaluate: "${userMsg}"
+- Registered Target Expressions for this Session:
+${targetLines}
+
+[OUTPUT JSON SCHEMA]
+{
+  "target_used": boolean,
+  "matched_sentence_id": "string or null (ID of the matched target expression from the list if target_used is true)",
+  "evaluation": "한국어로 작성된 1~2문장의 핵심 피드백 (비즈니스 격식, 문법 정확성, 뉘앙스 적절성 평가)",
+  "recommended_korean": "추천 영어 대안 문장에 정확히 대응하는 자연스러운 비즈니스 한국어 문장 (오답노트 플래시카드 상단 노출용)",
+  "better_alternative": "Polished, natural, native-level business English sentence that best fits the user's intent in this context (오답노트 플래시카드 하단 노출용)",
+  "nuance_tip": "왜 이 대안 표현이 비즈니스 상황에서 더 효과적인지 설명하는 짧은 팁 (한국어)"
+}`;
+    }
+
+    async function callRoleplayPartnerAI(session, isFirstTrigger = false) {
+      const sampled = sampleTargetSentencesForSession(session, 8);
+      const systemPrompt = buildRoleplaySystemPrompt(session, sampled);
+      const apiKey = (AppState.settings.apiKey || '').trim();
+
+      // Fallback to smart simulation if API key is not configured
+      if (!apiKey) {
+        await new Promise(r => setTimeout(r, 650));
+        return generateSimulatedPartnerReply(session, sampled, isFirstTrigger);
+      }
+
+      const historyMessages = (session.messages || []).slice(-10);
+      const provider = AppState.settings.provider || 'gemini';
+      const model = AppState.settings.model || 'gemini-2.5-flash';
+
+      if (provider === 'gemini') {
+        const contents = [];
+        historyMessages.forEach(m => {
+          contents.push({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.text }]
+          });
+        });
+        if (isFirstTrigger || contents.length === 0 || contents[contents.length - 1].role === 'model') {
+          contents.push({
+            role: 'user',
+            parts: [{ text: '[SYSTEM TRIGGER: Start or continue the business conversation proactively in character by asking a relevant question or raising an agenda item that nudges the user to respond.]' }]
+          });
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig: { temperature: 0.75, maxOutputTokens: 350 }
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Gemini API 오류 (${res.status}): ${errText.slice(0, 120)}`);
+        }
+        const data = await res.json();
+        const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (!reply) throw new Error('AI 응답이 비어 있습니다.');
+        return reply;
+      } else {
+        // OpenAI compatible endpoint
+        const messages = [{ role: 'system', content: systemPrompt }];
+        historyMessages.forEach(m => {
+          messages.push({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.text
+          });
+        });
+        if (isFirstTrigger || messages.length === 1) {
+          messages.push({
+            role: 'user',
+            content: '[Start the meeting in character and ask me the first key business question based on our scenario.]'
+          });
+        }
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model.startsWith('gpt') ? model : 'gpt-4o-mini',
+            messages,
+            temperature: 0.75
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`OpenAI API 오류 (${res.status}): ${errText.slice(0, 120)}`);
+        }
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content?.trim() || 'Could you elaborate on your proposal?';
+      }
+    }
+
+    async function callFeedbackCoachAI(session, prevPartnerMsg, userMsg) {
+      const sampled = getFilteredSentences(session?.target_filter || 'ALL').slice(0, 15);
+      const prompt = buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampled);
+      const apiKey = (AppState.settings.apiKey || '').trim();
+
+      if (!apiKey) {
+        await new Promise(r => setTimeout(r, 550));
+        return generateSimulatedFeedback(session, userMsg, sampled);
+      }
+
+      const provider = AppState.settings.provider || 'gemini';
+      const model = AppState.settings.model || 'gemini-2.5-flash';
+
+      if (provider === 'gemini') {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              responseMimeType: 'application/json'
+            }
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Gemini 피드백 API 오류 (${res.status}): ${errText.slice(0, 120)}`);
+        }
+        const data = await res.json();
+        const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        return JSON.parse(cleaned);
+      } else {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model.startsWith('gpt') ? model : 'gpt-4o-mini',
+            messages: [{ role: 'system', content: prompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.3
+          })
+        });
+        if (!res.ok) throw new Error(`OpenAI 피드백 API 오류 (${res.status})`);
+        const data = await res.json();
+        const rawJson = data?.choices?.[0]?.message?.content || '{}';
+        return JSON.parse(rawJson);
+      }
+    }
+
+    // Smart Offline Simulation Fallback (when user hasn't entered an API key yet)
+    function generateSimulatedPartnerReply(session, sampledTargets, isFirstTrigger) {
+      const target = sampledTargets[Math.floor(Math.random() * sampledTargets.length)];
+      if (isFirstTrigger || (session.messages || []).length === 0) {
+        if (target) {
+          return `Hi, thanks for making time today. Regarding our current agenda (${session.title}), we really need a concrete solution from your team. What is your proposal on this—especially regarding "${target.korean}"?`;
+        }
+        return `Hello! Thanks for joining the call. Given our situation (${session.business_context}), what is your team's current position and how can we move forward today?`;
+      }
+      const partnerReplies = [
+        `I understand your point, but from our leadership's perspective, we still need stronger assurances. If we move forward with your suggestion, what specific terms or timeline can you commit to?`,
+        `That sounds like a reasonable starting point. However, how would that impact our overall Q4 schedule and budget constraints? Can you share a bit more detail?`,
+        `Fair enough. Let's look at the practical side—if we agree to adjust our condition here, what kind of counter-benefit or guarantee can your side offer us?`
+      ];
+      return partnerReplies[(session.messages?.length || 0) % partnerReplies.length];
+    }
+
+    function generateSimulatedFeedback(session, userMsg, sampledTargets) {
+      const lowerUser = userMsg.toLowerCase();
+      let matched = null;
+      for (const item of sampledTargets) {
+        const words = item.english.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+        const hitCount = words.filter(w => lowerUser.includes(w.replace(/[^a-z]/g, ''))).length;
+        if (hitCount >= 2) {
+          matched = item;
+          break;
+        }
+      }
+      const fallbackTarget = matched || sampledTargets[0] || {
+        id: null,
+        korean: '제안해 주신 조건을 내부적으로 면밀히 검토한 후 금주 내로 회신드리겠습니다.',
+        english: 'We will carefully review your proposed terms internally and get back to you by the end of this week.'
+      };
+
+      return {
+        target_used: Boolean(matched),
+        matched_sentence_id: matched ? matched.id : null,
+        evaluation: matched
+          ? '목표 비즈니스 표현의 핵심 구조를 잘 활용하여 의도를 명확히 전달하셨습니다. 어조를 조금 더 정중한 임원급 표현으로 다듬으면 완벽합니다.'
+          : '전달하려는 핵심 의도는 파악되나, 구어체 표현 대신 등록된 타깃 비즈니스 구문을 활용하면 훨씬 격식 있고 설득력 있는 협상이 됩니다.',
+        recommended_korean: fallbackTarget.korean,
+        better_alternative: fallbackTarget.english,
+        nuance_tip: '단순 직역투 동사 대신 비즈니스 관용구(consider, propose, ensure 등)를 결합하면 프로페셔널한 인상을 줄 수 있습니다. (※ 현재 시뮬레이션 모드 응답이며 API 키 입력 시 실시간 정밀 AI 교정이 제공됩니다.)'
+      };
+    }
+
+    /*************************************************************************
+     * 6. ROLEPLAY MESSENGER & INLINE THREAD FEEDBACK CONTROLLER
+     *************************************************************************/
+    function getAvatarInitials(name) {
+      const cleaned = (name || 'Partner').replace(/\(.*\)/, '').trim();
+      const parts = cleaned.split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return cleaned.slice(0, 2).toUpperCase();
+    }
+
+    async function triggerPartnerFirstMessage() {
+      const session = getActiveSession();
+      if (!session) return;
+
+      const typingEl = document.getElementById('partnerTypingIndicator');
+      const btnTrigger = document.getElementById('btnAiFirstTrigger');
+      typingEl.classList.remove('hidden');
+      btnTrigger.disabled = true;
+
+      try {
+        const replyText = await callRoleplayPartnerAI(session, true);
+        session.messages.push({
+          msg_id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          role: 'partner',
+          text: replyText,
+          timestamp: Date.now()
+        });
+        session.updated_at = Date.now();
+        await saveAppState();
+        renderChatMessages(true);
+        renderSessionList();
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        typingEl.classList.add('hidden');
+        btnTrigger.disabled = false;
+      }
+    }
+
+    async function sendUserRoleplayMessage() {
+      const inputEl = document.getElementById('chatInputTextarea');
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      const session = getActiveSession();
+      if (!session) return;
+
+      inputEl.value = '';
+      if (AppState.uiState.draftInputs) {
+        delete AppState.uiState.draftInputs[session.session_id];
+      }
+
+      const userMsgObj = {
+        msg_id: 'msg_' + Date.now() + '_u',
+        role: 'user',
+        text: text,
+        timestamp: Date.now()
+      };
+      session.messages.push(userMsgObj);
+      session.updated_at = Date.now();
+      renderChatMessages(true);
+
+      const typingEl = document.getElementById('partnerTypingIndicator');
+      typingEl.classList.remove('hidden');
+
+      try {
+        const partnerReply = await callRoleplayPartnerAI(session, false);
+        session.messages.push({
+          msg_id: 'msg_' + Date.now() + '_p',
+          role: 'partner',
+          text: partnerReply,
+          timestamp: Date.now()
+        });
+        session.updated_at = Date.now();
+        await saveAppState();
+        renderChatMessages(true);
+        renderSessionList();
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        typingEl.classList.add('hidden');
+      }
+    }
+
+    async function toggleOrRequestFeedback(msgId, forceRefresh = false) {
+      const session = getActiveSession();
+      if (!session) return;
+      const msgIndex = session.messages.findIndex(m => m.msg_id === msgId);
+      if (msgIndex === -1) return;
+      const msg = session.messages[msgIndex];
+
+      // If feedback already exists and not forcing refresh, simply toggle accordion
+      if (msg.feedback && !forceRefresh) {
+        msg.feedback.is_open = !msg.feedback.is_open;
+        await saveAppState();
+        renderChatMessages(false);
+        return;
+      }
+
+      // Find previous partner message for context
+      let prevPartnerText = '';
+      for (let i = msgIndex - 1; i >= 0; i--) {
+        if (session.messages[i].role === 'partner') {
+          prevPartnerText = session.messages[i].text;
+          break;
+        }
+      }
+
+      // Set temporary loading state
+      msg.feedback = {
+        is_open: true,
+        is_loading: true
+      };
+      renderChatMessages(false);
+
+      try {
+        const result = await callFeedbackCoachAI(session, prevPartnerText, msg.text);
+        msg.feedback = {
+          is_open: true,
+          is_loading: false,
+          target_used: Boolean(result.target_used),
+          matched_sentence_id: result.matched_sentence_id || null,
+          evaluation: result.evaluation || '문장 분석이 완료되었습니다.',
+          recommended_korean: result.recommended_korean || '',
+          better_alternative: result.better_alternative || msg.text,
+          nuance_tip: result.nuance_tip || '',
+          saved_to_db: false,
+          is_editing: false
+        };
+
+        // Increment practice_count if a registered target expression was used
+        if (result.target_used && result.matched_sentence_id) {
+          const matchedSent = AppState.sentencesDB.find(s => s.id === result.matched_sentence_id);
+          if (matchedSent) {
+            matchedSent.practice_count = (matchedSent.practice_count || 0) + 1;
+          }
+        }
+
+        await saveAppState();
+        renderChatMessages(false);
+        renderSidebarDBSummary();
+        renderTargetHintDrawer();
+      } catch (err) {
+        delete msg.feedback;
+        renderChatMessages(false);
+        showToast('피드백 생성 실패: ' + err.message, 'error');
+      }
+    }
+
+    function toggleFeedbackInlineEdit(msgId) {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      if (!msg || !msg.feedback) return;
+      msg.feedback.is_editing = !msg.feedback.is_editing;
+      renderChatMessages(false);
+    }
+
+    async function saveFeedbackToWrongAnswerDB(msgId) {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      if (!msg || !msg.feedback) return;
+
+      const korInput = document.getElementById(`fbEditKor_${msgId}`);
+      const engInput = document.getElementById(`fbEditEng_${msgId}`);
+      if (korInput && engInput) {
+        msg.feedback.recommended_korean = korInput.value.trim();
+        msg.feedback.better_alternative = engInput.value.trim();
+        msg.feedback.is_editing = false;
+      }
+
+      const kor = (msg.feedback.recommended_korean || '').trim();
+      const eng = (msg.feedback.better_alternative || '').trim();
+      if (!kor || !eng) {
+        showToast('한국어 의미와 추천 영어 문장이 모두 필요합니다.', 'error');
+        return;
+      }
+
+      const notes = `[원래 내 문장] ${msg.text}${msg.feedback.nuance_tip ? ' | 💡 ' + msg.feedback.nuance_tip : ''}`;
+      mergeSentencesIntoDB(
+        [{ korean: kor, english: eng, notes, category: '대화피드백' }],
+        'chat_feedback',
+        '대화피드백'
+      );
+
+      // Mark the newly added/updated sentence as starred for review
+      const key = normalizeEnglishForDedup(eng);
+      const found = AppState.sentencesDB.find(s => normalizeEnglishForDedup(s.english) === key);
+      if (found) {
+        found.is_starred = true;
+        found.source_file = 'chat_feedback';
+        found.category = '대화피드백';
+      }
+
+      msg.feedback.saved_to_db = true;
+      await saveAppState();
+      renderAll();
+      showToast('⭐ [대화피드백 오답노트]에 저장되었습니다! 플래시카드에서 즉시 복습할 수 있습니다.', 'success');
+    }
+
+    /*************************************************************************
+     * 7. UI RENDERING & MULTI-SESSION MANAGEMENT
+     *************************************************************************/
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function applyTheme(themeValue) {
+      const theme = themeValue === 'light' ? 'light' : 'dark';
+      document.body.classList.toggle('theme-light', theme === 'light');
+      const labelEl = document.getElementById('gnbThemeLabel');
+      const btnEl = document.getElementById('btnThemeQuickToggle');
+      if (labelEl && btnEl) {
+        if (theme === 'light') {
+          btnEl.innerHTML = `<i data-lucide="moon" class="w-4 h-4 text-indigo-600"></i><span id="gnbThemeLabel" class="hidden md:inline">Dark</span>`;
+        } else {
+          btnEl.innerHTML = `<i data-lucide="sun" class="w-4 h-4 text-amber-400"></i><span id="gnbThemeLabel" class="hidden md:inline">White</span>`;
+        }
+      }
+      const themeSel = document.getElementById('settingThemeSelect');
+      if (themeSel) themeSel.value = theme;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function toggleThemeQuick() {
+      const current = AppState.settings.theme || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      AppState.settings.theme = next;
+      applyTheme(next);
+      await saveAppState();
+      showToast(next === 'light' ? '☀️ White(밝은) 화면 테마가 적용되었습니다.' : '🌙 Dark(어두운) 화면 테마가 적용되었습니다.', 'info');
+    }
+
+    async function handleThemeSelectChange(val) {
+      AppState.settings.theme = val === 'light' ? 'light' : 'dark';
+      applyTheme(AppState.settings.theme);
+      await saveAppState();
+    }
+
+    function renderAll() {
+      applyTheme(AppState.settings.theme || 'dark');
+      renderFilterSelectDropdowns();
+      renderSessionList();
+      renderSidebarDBSummary();
+      renderActiveSessionHeader();
+      renderTargetHintDrawer();
+      renderChatMessages(false);
+      updateSecurityBadges();
+
+      const activeSess = getActiveSession();
+      const draft = (AppState.uiState.draftInputs && activeSess)
+        ? (AppState.uiState.draftInputs[activeSess.session_id] || '')
+        : '';
+      const chatInput = document.getElementById('chatInputTextarea');
+      if (chatInput && document.activeElement !== chatInput) {
+        chatInput.value = draft;
+      }
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    function renderFilterSelectDropdowns() {
+      const options = getAvailableFilterOptions();
+      const activeSess = getActiveSession();
+      const gnbSelect = document.getElementById('gnbTargetFilterSelect');
+      const sessModalSelect = document.getElementById('inputSessionTargetFilter');
+      const dbModalSelect = document.getElementById('dbModalFilterSelect');
+      const fcSelect = document.getElementById('fcFilterSelect');
+
+      const html = options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+
+      if (gnbSelect) {
+        gnbSelect.innerHTML = html;
+        gnbSelect.value = activeSess?.target_filter || 'ALL';
+        if (!gnbSelect.value) gnbSelect.value = 'ALL';
+      }
+      if (sessModalSelect) {
+        const prev = sessModalSelect.value;
+        sessModalSelect.innerHTML = html;
+        if (prev) sessModalSelect.value = prev;
+      }
+      if (dbModalSelect) {
+        const prev = dbModalSelect.value || 'ALL';
+        dbModalSelect.innerHTML = html;
+        dbModalSelect.value = prev;
+        if (!dbModalSelect.value) dbModalSelect.value = 'ALL';
+      }
+      if (fcSelect) {
+        const prev = AppState.uiState.flashcard.filter || 'ALL';
+        fcSelect.innerHTML = html;
+        fcSelect.value = prev;
+        if (!fcSelect.value) fcSelect.value = 'ALL';
+      }
+
+      document.getElementById('gnbSentenceCountBadge').textContent = (AppState.sentencesDB || []).length;
+    }
+
+    function renderSessionList() {
+      const container = document.getElementById('sessionListContainer');
+      if (!container) return;
+
+      const sessions = AppState.sessionsDB || [];
+      container.innerHTML = sessions.map(sess => {
+        const isActive = sess.session_id === AppState.activeSessionId;
+        const msgCount = (sess.messages || []).length;
+        const diffColor = sess.difficulty === 'Advanced'
+          ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+          : sess.difficulty === 'Beginner'
+          ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+          : 'text-indigo-300 bg-indigo-500/15 border-indigo-500/30';
+
+        return `
+          <div onclick="selectSession('${escapeHtml(sess.session_id)}')" class="group p-2.5 rounded-xl border transition cursor-pointer flex items-start justify-between gap-2 ${
+            isActive
+              ? 'bg-indigo-600/20 border-indigo-500/50 text-white shadow-sm'
+              : 'bg-slate-950/60 hover:bg-slate-800/70 border-slate-800/90 text-slate-300'
+          }">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-indigo-400' : 'bg-slate-600'}"></span>
+                <p class="text-xs font-bold truncate">${escapeHtml(sess.title)}</p>
+              </div>
+              <div class="flex items-center gap-1.5 mt-1 pl-3.5 text-[11px] text-slate-400">
+                <span class="truncate max-w-[115px]">${escapeHtml(sess.partner_name)}</span>
+                <span>·</span>
+                <span class="px-1.5 py-0.2 rounded border text-[10px] font-semibold ${diffColor}">${escapeHtml(sess.difficulty)}</span>
+                <span>·</span>
+                <span>💬 ${msgCount}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 shrink-0" onclick="event.stopPropagation()">
+              <button onclick="openSessionModal('${escapeHtml(sess.session_id)}')" class="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white" title="시나리오 수정">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteSession('${escapeHtml(sess.session_id)}')" class="p-1 rounded hover:bg-rose-950 text-slate-400 hover:text-rose-400" title="세션 삭제">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderSidebarDBSummary() {
+      const all = AppState.sentencesDB || [];
+      document.getElementById('sidebarTotalSentences').textContent = all.length;
+
+      const options = getAvailableFilterOptions();
+      const activeSess = getActiveSession();
+      const currentTarget = activeSess?.target_filter || 'ALL';
+
+      const container = document.getElementById('sidebarFilterTagsContainer');
+      if (!container) return;
+
+      container.innerHTML = options.map(opt => {
+        const isSelected = currentTarget === opt.value;
+        return `
+          <div class="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${
+            isSelected
+              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200 font-semibold'
+              : 'bg-slate-950/50 hover:bg-slate-800/70 border-slate-800/80 text-slate-300'
+          }" onclick="handleQuickTargetFilterChange('${escapeHtml(opt.value)}')">
+            <span class="truncate text-xs">${escapeHtml(opt.label)}</span>
+            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+              <button onclick="openFlashcardModal('${escapeHtml(opt.value)}')" class="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold" title="이 세트만 플래시카드 암기">
+                🎴 암기
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderActiveSessionHeader() {
+      const sess = getActiveSession();
+      if (!sess) return;
+
+      document.getElementById('gnbSessionTitle').textContent = sess.title;
+      const diffEl = document.getElementById('gnbDifficultyBadge');
+      diffEl.textContent = sess.difficulty;
+      diffEl.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ' + (
+        sess.difficulty === 'Advanced'
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+          : sess.difficulty === 'Beginner'
+          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+          : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+      );
+
+      document.getElementById('activePartnerAvatar').textContent = getAvatarInitials(sess.partner_name);
+      document.getElementById('activePartnerName').textContent = `${sess.partner_name} · ${sess.partner_persona}`;
+      document.getElementById('activeBusinessContext').textContent = `📋 상황: ${sess.business_context}`;
+
+      const targetPool = getFilteredSentences(sess.target_filter || 'ALL');
+      document.getElementById('hintTargetCountBadge').textContent = targetPool.length;
+    }
+
+    function renderTargetHintDrawer() {
+      const drawer = document.getElementById('targetHintDrawer');
+      if (!drawer) return;
+      if (AppState.uiState.hintDrawerOpen) {
+        drawer.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+      }
+
+      const sess = getActiveSession();
+      const targetPool = getFilteredSentences(sess?.target_filter || 'ALL');
+      const showEng = document.getElementById('chkShowHintEnglish')?.checked ?? true;
+      const listEl = document.getElementById('targetHintList');
+      if (!listEl) return;
+
+      if (targetPool.length === 0) {
+        listEl.innerHTML = `<div class="col-span-2 text-xs text-slate-400 py-2">선택된 범위에 문장이 없습니다. 좌측에서 문장 세트를 추가하거나 필터를 '전체 문장'으로 변경하세요.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = targetPool.map(item => `
+        <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${escapeHtml(item.category)}</span>
+              <span class="text-[10px] text-emerald-400">연습 ${item.practice_count || 0}회</span>
+            </div>
+            <p class="text-xs font-semibold text-amber-200 leading-snug">${escapeHtml(item.korean)}</p>
+            ${showEng ? `<p class="text-xs text-slate-300 mt-1 font-medium">${escapeHtml(item.english)}</p>` : `<p class="text-[11px] text-slate-500 mt-1 italic">(영어 문장 숨김 상태)</p>`}
+          </div>
+          <div class="flex flex-col gap-1 shrink-0">
+            <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300" title="원어민 발음 듣기">
+              <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="insertHintToInput(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white" title="채팅 입력창으로 가져오기">
+              <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function insertHintToInput(engText) {
+      const input = document.getElementById('chatInputTextarea');
+      input.value = (input.value ? input.value.trim() + ' ' : '') + engText;
+      input.focus();
+      handleChatInputSaveDraft(input.value);
+    }
+
+    function toggleHintDrawer() {
+      AppState.uiState.hintDrawerOpen = !AppState.uiState.hintDrawerOpen;
+      renderTargetHintDrawer();
+    }
+
+    function renderChatMessages(scrollToBottom = false) {
+      const container = document.getElementById('chatMessagesContainer');
+      if (!container) return;
+      const prevScroll = container.scrollTop;
+
+      const sess = getActiveSession();
+      const messages = sess?.messages || [];
+
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div class="max-w-lg mx-auto my-12 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 text-center space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400">
+              <i data-lucide="sparkles" class="w-6 h-6"></i>
+            </div>
+            <div class="space-y-1">
+              <h3 class="text-base font-bold text-white">비즈니스 롤플레잉 세션이 준비되었습니다</h3>
+              <p class="text-xs text-slate-400 leading-relaxed">
+                직접 영어로 첫인사를 건네거나, 아래 버튼을 눌러 <strong>${escapeHtml(sess?.partner_name || 'AI 파트너')}</strong>가 먼저 비즈니스 질문을 던지게 해보세요.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <button onclick="triggerPartnerFirstMessage()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/25">
+                <i data-lucide="dices" class="w-4 h-4"></i>
+                <span>🎲 AI 파트너가 먼저 질문 던지기</span>
+              </button>
+              <button onclick="openFlashcardModalWithCurrentFilter()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+                <span>🎴 타깃 표현 플래시카드 먼저 암기</span>
+              </button>
+            </div>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      const initials = getAvatarInitials(sess.partner_name);
+      container.innerHTML = messages.map(msg => {
+        const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+        if (msg.role === 'partner') {
+          return `
+            <div class="flex items-start gap-3 max-w-3xl">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs shrink-0 mt-0.5 shadow">
+                ${escapeHtml(initials)}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs font-bold text-slate-300">${escapeHtml(sess.partner_name)}</span>
+                  <span class="text-[10px] text-slate-500">${timeStr}</span>
+                </div>
+                <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-sm text-slate-100 leading-relaxed shadow-sm">
+                  ${escapeHtml(msg.text)}
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button onclick="speakEnglishText(${JSON.stringify(msg.text).replace(/"/g, '&quot;')})" class="text-[11px] text-slate-400 hover:text-indigo-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-slate-900 transition">
+                    <i data-lucide="volume-2" class="w-3 h-3"></i>
+                    <span>발음 듣기</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // User message with On-Demand Inline Thread Feedback
+          const fb = msg.feedback;
+          const fbBtnLabel = !fb
+            ? '💬 피드백'
+            : fb.is_loading
+            ? '⏳ 코칭 분석 중...'
+            : fb.is_open
+            ? '💬 피드백 닫기 ▲'
+            : '💬 피드백 열기 ▼';
+
+          let feedbackCardHtml = '';
+          if (fb && fb.is_open) {
+            if (fb.is_loading) {
+              feedbackCardHtml = `
+                <div class="mt-2 max-w-xl ml-auto rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-4 text-xs text-slate-300 flex items-center gap-2.5">
+                  <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                  <span>Executive Business Coach 엔진이 문법·비즈니스 격식·타깃 표현 활용도를 분석 중입니다...</span>
+                </div>
+              `;
+            } else {
+              const targetBadge = fb.target_used
+                ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">🎯 타깃 표현 활용 성공</span>`
+                : `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-semibold">💡 추천 비즈니스 대안 제시</span>`;
+
+              feedbackCardHtml = `
+                <div class="mt-2.5 max-w-2xl ml-auto rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-4 text-left shadow-xl space-y-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-extrabold text-indigo-300 flex items-center gap-1">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        원어민 비즈니스 코칭 피드백
+                      </span>
+                      ${targetBadge}
+                    </div>
+                    <button onclick="toggleOrRequestFeedback('${escapeHtml(msg.msg_id)}', true)" class="text-[11px] text-slate-400 hover:text-white flex items-center gap-1" title="피드백 다시 생성">
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                      <span>재분석</span>
+                    </button>
+                  </div>
+
+                  <div class="space-y-1.5 text-xs">
+                    <p class="text-slate-200 leading-relaxed"><strong class="text-indigo-300">• 평가:</strong> ${escapeHtml(fb.evaluation)}</p>
+                    ${fb.nuance_tip ? `<p class="text-slate-400 leading-relaxed"><strong class="text-amber-300">• 뉘앙스 팁:</strong> ${escapeHtml(fb.nuance_tip)}</p>` : ''}
+                  </div>
+
+                  <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2">
+                    ${
+                      fb.is_editing
+                        ? `
+                          <div class="space-y-2">
+                            <div>
+                              <label class="block text-[11px] text-slate-400 mb-0.5">오답노트 상단 한국어 의미 수정</label>
+                              <input id="fbEditKor_${escapeHtml(msg.msg_id)}" type="text" value="${escapeHtml(fb.recommended_korean)}" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1.5 text-xs text-white" />
+                            </div>
+                            <div>
+                              <label class="block text-[11px] text-slate-400 mb-0.5">오답노트 하단 추천 영어 문장 수정</label>
+                              <input id="fbEditEng_${escapeHtml(msg.msg_id)}" type="text" value="${escapeHtml(fb.better_alternative)}" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1.5 text-xs text-emerald-300" />
+                            </div>
+                          </div>
+                        `
+                        : `
+                          <div class="text-xs text-amber-200/90 font-medium">🇰🇷 ${escapeHtml(fb.recommended_korean)}</div>
+                          <div class="text-sm font-bold text-emerald-300 leading-snug">🇺🇸 "${escapeHtml(fb.better_alternative)}"</div>
+                        `
+                    }
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                      <button onclick="speakEnglishText(${JSON.stringify(fb.better_alternative).replace(/"/g, '&quot;')})" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-indigo-300 flex items-center gap-1">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                        <span>추천 문장 발음 듣기</span>
+                      </button>
+
+                      <div class="flex items-center gap-1.5">
+                        <button onclick="toggleFeedbackInlineEdit('${escapeHtml(msg.msg_id)}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 flex items-center gap-1">
+                          <i data-lucide="pencil" class="w-3 h-3"></i>
+                          <span>${fb.is_editing ? '편집 취소' : '문장 수정'}</span>
+                        </button>
+                        <button onclick="saveFeedbackToWrongAnswerDB('${escapeHtml(msg.msg_id)}')" class="px-3 py-1 rounded-lg ${
+                          fb.saved_to_db
+                            ? 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
+                            : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold'
+                        } text-xs flex items-center gap-1 transition">
+                          <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                          <span>${fb.saved_to_db ? '⭐ 오답노트 저장됨 (다시 저장)' : '⭐ 오답노트에 저장'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+
+          return `
+            <div class="flex flex-col items-end">
+              <div class="max-w-2xl text-right">
+                <div class="flex items-center justify-end gap-2 mb-1">
+                  <span class="text-[10px] text-slate-500">${timeStr}</span>
+                  <span class="text-xs font-bold text-indigo-300">Me</span>
+                </div>
+                <div class="inline-block text-left rounded-2xl rounded-tr-xs bg-indigo-600 text-white px-4 py-3 text-sm leading-relaxed shadow-md">
+                  ${escapeHtml(msg.text)}
+                </div>
+                <div class="mt-1.5 flex items-center justify-end gap-2">
+                  <button onclick="speakEnglishText(${JSON.stringify(msg.text).replace(/"/g, '&quot;')})" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-slate-900">
+                    <i data-lucide="volume-2" class="w-3 h-3"></i>
+                    <span>내 문장 듣기</span>
+                  </button>
+                  <button onclick="toggleOrRequestFeedback('${escapeHtml(msg.msg_id)}', false)" class="px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition ${
+                    fb
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                  }">
+                    ${fbBtnLabel}
+                  </button>
+                </div>
+              </div>
+              ${feedbackCardHtml}
+            </div>
+          `;
+        }
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+      if (scrollToBottom) {
+        container.scrollTop = container.scrollHeight;
+      } else {
+        container.scrollTop = prevScroll;
+      }
+    }
+
+    /*************************************************************************
+     * 8. FULL-SCREEN 2-STAGE SPLIT FLASHCARD CONTROLLER
+     *************************************************************************/
+    function openFlashcardModal(customFilter) {
+      const chatContainer = document.getElementById('chatMessagesContainer');
+      if (chatContainer) {
+        AppState.uiState.savedScrollTop = chatContainer.scrollTop;
+      }
+
+      const activeSess = getActiveSession();
+      const filterToUse = customFilter || activeSess?.target_filter || 'ALL';
+      AppState.uiState.flashcard.isOpen = true;
+      AppState.uiState.flashcard.filter = filterToUse;
+      AppState.uiState.flashcard.currentIndex = 0;
+      AppState.uiState.flashcard.isRevealed = false;
+
+      buildFlashcardDeck();
+      document.getElementById('flashcardModal').classList.remove('hidden');
+      renderFilterSelectDropdowns();
+      renderCurrentFlashcard();
+    }
+
+    function openFlashcardModalWithCurrentFilter() {
+      const sess = getActiveSession();
+      openFlashcardModal(sess?.target_filter || 'ALL');
+    }
+
+    function closeFlashcardModal() {
+      AppState.uiState.flashcard.isOpen = false;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      document.getElementById('flashcardModal').classList.add('hidden');
+      renderAll();
+      const chatContainer = document.getElementById('chatMessagesContainer');
+      if (chatContainer && typeof AppState.uiState.savedScrollTop === 'number') {
+        chatContainer.scrollTop = AppState.uiState.savedScrollTop;
+      }
+    }
+
+    function buildFlashcardDeck() {
+      const fc = AppState.uiState.flashcard;
+      let list = getFilteredSentences(fc.filter);
+      if (list.length === 0 && fc.filter !== 'ALL') {
+        showToast('선택한 필터에 문장이 없어 전체 문장을 표시합니다.', 'info');
+        fc.filter = 'ALL';
+        list = getFilteredSentences('ALL');
+      }
+      let ids = list.map(s => s.id);
+      if (fc.isShuffle) {
+        for (let i = ids.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ids[i], ids[j]] = [ids[j], ids[i]];
+        }
+      }
+      fc.deckIds = ids;
+      if (fc.currentIndex >= ids.length) fc.currentIndex = 0;
+    }
+
+    function getCurrentFlashcardItem() {
+      const fc = AppState.uiState.flashcard;
+      const id = fc.deckIds[fc.currentIndex];
+      return (AppState.sentencesDB || []).find(s => s.id === id) || null;
+    }
+
+    function renderCurrentFlashcard() {
+      const fc = AppState.uiState.flashcard;
+      const item = getCurrentFlashcardItem();
+      const total = fc.deckIds.length;
+
+      document.getElementById('fcDirectionText').textContent = fc.direction === 'KR_TO_EN' ? '한 ➔ 영' : '영 ➔ 한';
+      document.getElementById('fcShuffleText').textContent = fc.isShuffle ? '셔플 ON' : '셔플 OFF';
+      document.getElementById('btnFcShuffle').className = `px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
+        fc.isShuffle
+          ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+          : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+      }`;
+
+      if (!item || total === 0) {
+        document.getElementById('fcProgressBadge').textContent = '0 / 0';
+        document.getElementById('fcProgressBar').style.width = '0%';
+        document.getElementById('fcTopPromptText').textContent = '등록된 학습 문장이 없습니다. 먼저 문장 세트를 추가해 주세요.';
+        document.getElementById('fcBottomHiddenState').classList.remove('hidden');
+        document.getElementById('fcBottomRevealedState').classList.add('hidden');
+        return;
+      }
+
+      const idxDisplay = String(fc.currentIndex + 1).padStart(2, '0');
+      const totalDisplay = String(total).padStart(2, '0');
+      document.getElementById('fcProgressBadge').textContent = `${idxDisplay} / ${totalDisplay}`;
+      document.getElementById('fcProgressBar').style.width = `${((fc.currentIndex + 1) / total) * 100}%`;
+
+      document.getElementById('fcTopCategoryBadge').textContent = item.category || '비즈니스';
+      document.getElementById('fcTopSourceBadge').textContent = item.source_file || '기본 세트';
+      document.getElementById('fcPracticeCountBadge').textContent = `인출 연습 ${item.practice_count || 0}회`;
+
+      const starColorClass = item.is_starred
+        ? 'p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 transition'
+        : 'p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition';
+      document.getElementById('btnFcStar').className = starColorClass;
+
+      const isKrToEn = fc.direction === 'KR_TO_EN';
+      document.getElementById('fcTopLabel').textContent = isKrToEn
+        ? 'STEP 1. 제시된 한국어 의미를 보고 영어로 즉시 말해보세요'
+        : 'STEP 1. 제시된 영어 문장의 정확한 비즈니스 의미를 떠올려 보세요';
+      document.getElementById('fcTopPromptText').textContent = isKrToEn ? item.korean : item.english;
+      document.getElementById('fcBottomAnswerText').textContent = isKrToEn ? item.english : item.korean;
+
+      const notesEl = document.getElementById('fcBottomNotesText');
+      if (item.notes) {
+        notesEl.textContent = `💡 메모: ${item.notes}`;
+        notesEl.classList.remove('hidden');
+      } else {
+        notesEl.classList.add('hidden');
+      }
+
+      if (fc.isRevealed) {
+        document.getElementById('fcBottomHiddenState').classList.add('hidden');
+        document.getElementById('fcBottomRevealedState').classList.remove('hidden');
+        document.getElementById('btnFcMainStep').innerHTML = `<span>다음 카드로 이동 (Space / 클릭) ▶</span>`;
+      } else {
+        document.getElementById('fcBottomHiddenState').classList.remove('hidden');
+        document.getElementById('fcBottomRevealedState').classList.add('hidden');
+        document.getElementById('btnFcMainStep').innerHTML = `<span>정답 확인 (Space / 화면 클릭)</span>`;
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function handleFlashcardAreaClick() {
+      const fc = AppState.uiState.flashcard;
+      if (fc.deckIds.length === 0) return;
+
+      if (!fc.isRevealed) {
+        fc.isRevealed = true;
+        renderCurrentFlashcard();
+      } else {
+        nextFlashcard();
+      }
+    }
+
+    function nextFlashcard() {
+      const fc = AppState.uiState.flashcard;
+      if (fc.deckIds.length === 0) return;
+      fc.currentIndex = (fc.currentIndex + 1) % fc.deckIds.length;
+      fc.isRevealed = false;
+      renderCurrentFlashcard();
+    }
+
+    function prevFlashcard() {
+      const fc = AppState.uiState.flashcard;
+      if (fc.deckIds.length === 0) return;
+      fc.currentIndex = (fc.currentIndex - 1 + fc.deckIds.length) % fc.deckIds.length;
+      fc.isRevealed = false;
+      renderCurrentFlashcard();
+    }
+
+    function changeFlashcardFilter(newFilter) {
+      AppState.uiState.flashcard.filter = newFilter;
+      AppState.uiState.flashcard.currentIndex = 0;
+      AppState.uiState.flashcard.isRevealed = false;
+      buildFlashcardDeck();
+      renderCurrentFlashcard();
+    }
+
+    function toggleFlashcardDirection() {
+      const fc = AppState.uiState.flashcard;
+      fc.direction = fc.direction === 'KR_TO_EN' ? 'EN_TO_KR' : 'KR_TO_EN';
+      fc.isRevealed = false;
+      renderCurrentFlashcard();
+    }
+
+    function toggleFlashcardShuffle() {
+      const fc = AppState.uiState.flashcard;
+      fc.isShuffle = !fc.isShuffle;
+      fc.currentIndex = 0;
+      fc.isRevealed = false;
+      buildFlashcardDeck();
+      renderCurrentFlashcard();
+    }
+
+    async function toggleCurrentFlashcardStar() {
+      const item = getCurrentFlashcardItem();
+      if (!item) return;
+      item.is_starred = !item.is_starred;
+      await saveAppState();
+      renderCurrentFlashcard();
+      showToast(item.is_starred ? '★ 중요 문장으로 북마크되었습니다.' : '별표 북마크가 해제되었습니다.', 'info');
+    }
+
+    async function markCurrentFlashcardPracticed() {
+      const item = getCurrentFlashcardItem();
+      if (!item) return;
+      item.practice_count = (item.practice_count || 0) + 1;
+      await saveAppState();
+      showToast(`✅ 인출 연습 완료! (누적 ${item.practice_count}회)`, 'success');
+      nextFlashcard();
+    }
+
+    function speakCurrentFlashcard() {
+      const item = getCurrentFlashcardItem();
+      if (!item) return;
+      speakEnglishText(item.english);
+    }
+
+    /*************************************************************************
+     * 9. WEB SPEECH API (TTS PRONUNCIATION & STT VOICE INPUT)
+     *************************************************************************/
+    function speakEnglishText(text) {
+      if (!('speechSynthesis' in window)) {
+        showToast('현재 브라우저에서 음성 합성(TTS)을 지원하지 않습니다.', 'error');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = Number(AppState.settings.ttsSpeed || 1.0);
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft')))
+        || voices.find(v => v.lang.startsWith('en-US'))
+        || voices.find(v => v.lang.startsWith('en'));
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function updateTtsSpeed(val) {
+      AppState.settings.ttsSpeed = Number(val) || 1.0;
+      saveAppState();
+    }
+
+    let speechRecognitionInstance = null;
+    let isSttRecording = false;
+
+    function toggleSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        showToast('현재 브라우저에서 음성 인식(STT)을 지원하지 않습니다 (Chrome/Edge 권장).', 'error');
+        return;
+      }
+
+      const micBtn = document.getElementById('btnSttMic');
+      const statusText = document.getElementById('sttStatusText');
+
+      if (isSttRecording && speechRecognitionInstance) {
+        speechRecognitionInstance.stop();
+        return;
+      }
+
+      speechRecognitionInstance = new SpeechRecognition();
+      speechRecognitionInstance.lang = 'en-US';
+      speechRecognitionInstance.interimResults = false;
+      speechRecognitionInstance.maxAlternatives = 1;
+
+      speechRecognitionInstance.onstart = () => {
+        isSttRecording = true;
+        micBtn.classList.add('stt-recording', 'bg-rose-600', 'text-white', 'border-rose-500');
+        statusText.classList.remove('hidden');
+      };
+
+      speechRecognitionInstance.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        if (transcript) {
+          const textarea = document.getElementById('chatInputTextarea');
+          textarea.value = (textarea.value ? textarea.value.trim() + ' ' : '') + transcript;
+          handleChatInputSaveDraft(textarea.value);
+          textarea.focus();
+        }
+      };
+
+      speechRecognitionInstance.onerror = (event) => {
+        showToast('음성 인식 오류: ' + event.error, 'error');
+      };
+
+      speechRecognitionInstance.onend = () => {
+        isSttRecording = false;
+        micBtn.classList.remove('stt-recording', 'bg-rose-600', 'text-white', 'border-rose-500');
+        statusText.classList.add('hidden');
+      };
+
+      speechRecognitionInstance.start();
+    }
+
+    /*************************************************************************
+     * 10. MODALS, SESSION CRUD & DB MANAGER TABLE HANDLERS
+     *************************************************************************/
+    function selectSession(sessionId) {
+      AppState.activeSessionId = sessionId;
+      saveAppState();
+      renderAll();
+      closeMobileSidebar();
+      setTimeout(() => {
+        const c = document.getElementById('chatMessagesContainer');
+        if (c) c.scrollTop = c.scrollHeight;
+      }, 30);
+    }
+
+    function handleQuickTargetFilterChange(newFilter) {
+      const sess = getActiveSession();
+      if (sess) {
+        sess.target_filter = newFilter;
+        saveAppState();
+        renderAll();
+        showToast(`🎯 현재 세션의 타깃 표현 범위가 변경되었습니다.`, 'info');
+      }
+    }
+
+    function openSessionModal(sessionId = null) {
+      renderFilterSelectDropdowns();
+      const modal = document.getElementById('sessionModal');
+      const idInput = document.getElementById('sessionModalId');
+      const titleEl = document.getElementById('inputSessionTitle');
+      const partnerNameEl = document.getElementById('inputPartnerName');
+      const personaEl = document.getElementById('inputPartnerPersona');
+      const contextEl = document.getElementById('inputBusinessContext');
+      const diffEl = document.getElementById('inputSessionDifficulty');
+      const filterEl = document.getElementById('inputSessionTargetFilter');
+
+      if (sessionId) {
+        const sess = AppState.sessionsDB.find(s => s.session_id === sessionId);
+        if (!sess) return;
+        document.getElementById('sessionModalTitle').innerHTML = `<i data-lucide="settings-2" class="w-4 h-4 text-indigo-400"></i><span>롤플레잉 시나리오 세션 수정</span>`;
+        idInput.value = sess.session_id;
+        titleEl.value = sess.title;
+        partnerNameEl.value = sess.partner_name;
+        personaEl.value = sess.partner_persona;
+        contextEl.value = sess.business_context;
+        diffEl.value = sess.difficulty || 'Intermediate';
+        filterEl.value = sess.target_filter || 'ALL';
+      } else {
+        document.getElementById('sessionModalTitle').innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-indigo-400"></i><span>새 롤플레잉 시나리오 세션 만들기</span>`;
+        idInput.value = '';
+        titleEl.value = '';
+        partnerNameEl.value = '';
+        personaEl.value = '';
+        contextEl.value = '';
+        diffEl.value = 'Intermediate';
+        filterEl.value = 'ALL';
+      }
+
+      modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeSessionModal() {
+      document.getElementById('sessionModal').classList.add('hidden');
+    }
+
+    function applySessionTemplate(type) {
+      if (type === 'buyer') {
+        document.getElementById('inputSessionTitle').value = '글로벌 바이어 Alex - 연간 재계약 단가 방어';
+        document.getElementById('inputPartnerName').value = 'Alex Rivera (VP of Procurement)';
+        document.getElementById('inputPartnerPersona').value = '경쟁사 견적을 근거로 10% 단가 인하를 요구하는 실리적인 구매 임원';
+        document.getElementById('inputBusinessContext').value = '원자재 및 물류비 상승으로 단순 단가 인하는 어렵지만, 발주 물량 확대나 결제 조건 완화 시 5% 할인을 역제안해야 함.';
+        document.getElementById('inputSessionDifficulty').value = 'Advanced';
+      } else if (type === 'delay') {
+        document.getElementById('inputSessionTitle').value = '글로벌 PM Sarah - 출시 일정 2주 연기 설득';
+        document.getElementById('inputPartnerName').value = 'Sarah Jenkins (Global Product Lead)';
+        document.getElementById('inputPartnerPersona').value = '정시 출시를 중시하지만 품질 리스크 방지 대안에는 합리적으로 귀를 기울이는 PM';
+        document.getElementById('inputBusinessContext').value = '최종 QA 안정성 확보를 위해 정식 런칭을 2주 연기하거나 핵심 기능만 Phase 1으로 선배포하는 방안을 설득해야 함.';
+        document.getElementById('inputSessionDifficulty').value = 'Intermediate';
+      } else if (type === 'vc') {
+        document.getElementById('inputSessionTitle').value = '해외 VC 파트너 David - 수익성 및 BEP 질의 방어';
+        document.getElementById('inputPartnerName').value = 'David Chen (Managing Partner)';
+        document.getElementById('inputPartnerPersona').value = '숫자와 유닛 이코노믹스 근거를 날카롭게 파고드는 벤처캐피탈 심사역';
+        document.getElementById('inputBusinessContext').value = '시리즈 A 투자 미팅. 고객획득비용(CAC) 절감 추이와 내년 상반기 손익분기점(BEP) 달성 로드맵을 명확히 설명해야 함.';
+        document.getElementById('inputSessionDifficulty').value = 'Advanced';
+      }
+    }
+
+    async function saveSessionFromModal() {
+      const id = document.getElementById('sessionModalId').value.trim();
+      const title = document.getElementById('inputSessionTitle').value.trim() || '비즈니스 영어 롤플레잉 세션';
+      const partnerName = document.getElementById('inputPartnerName').value.trim() || 'Business Partner';
+      const persona = document.getElementById('inputPartnerPersona').value.trim() || '실무 비즈니스 파트너';
+      const context = document.getElementById('inputBusinessContext').value.trim() || '실전 비즈니스 미팅 및 협상 진행';
+      const difficulty = document.getElementById('inputSessionDifficulty').value || 'Intermediate';
+      const targetFilter = document.getElementById('inputSessionTargetFilter').value || 'ALL';
+
+      if (id) {
+        const sess = AppState.sessionsDB.find(s => s.session_id === id);
+        if (sess) {
+          sess.title = title;
+          sess.partner_name = partnerName;
+          sess.partner_persona = persona;
+          sess.business_context = context;
+          sess.difficulty = difficulty;
+          sess.target_filter = targetFilter;
+          sess.updated_at = Date.now();
+        }
+      } else {
+        const newSess = {
+          session_id: 'sess_' + Date.now(),
+          title,
+          partner_name: partnerName,
+          partner_persona: persona,
+          business_context: context,
+          difficulty,
+          target_filter: targetFilter,
+          updated_at: Date.now(),
+          messages: []
+        };
+        AppState.sessionsDB.unshift(newSess);
+        AppState.activeSessionId = newSess.session_id;
+      }
+
+      await saveAppState();
+      closeSessionModal();
+      renderAll();
+      showToast('시나리오 세션이 저장되었습니다.', 'success');
+    }
+
+    async function deleteSession(sessionId) {
+      if (AppState.sessionsDB.length <= 1) {
+        showToast('최소 1개의 롤플레잉 세션은 유지되어야 합니다.', 'error');
+        return;
+      }
+      if (!confirm('이 롤플레잉 세션과 대화 기록을 삭제하시겠습니까?')) return;
+      AppState.sessionsDB = AppState.sessionsDB.filter(s => s.session_id !== sessionId);
+      if (AppState.activeSessionId === sessionId) {
+        AppState.activeSessionId = AppState.sessionsDB[0].session_id;
+      }
+      await saveAppState();
+      renderAll();
+      showToast('세션이 삭제되었습니다.', 'info');
+    }
+
+    async function resetActiveSessionHistory() {
+      const sess = getActiveSession();
+      if (!sess) return;
+      if ((sess.messages || []).length === 0) {
+        showToast('이미 대화 내역이 비어 있습니다.', 'info');
+        return;
+      }
+      if (!confirm(`[${sess.title}] 세션의 파트너/시나리오 설정은 그대로 유지하고 대화 기록만 초기화하시겠습니까?`)) return;
+      sess.messages = [];
+      sess.updated_at = Date.now();
+      await saveAppState();
+      renderAll();
+      showToast('🔄 현재 세션의 대화 내역이 초기화되었습니다.', 'info');
+    }
+
+    function openBulkAddModal() {
+      document.getElementById('bulkAddModal').classList.remove('hidden');
+      updateBulkPreviewCount();
+    }
+
+    function closeBulkAddModal() {
+      document.getElementById('bulkAddModal').classList.add('hidden');
+    }
+
+    function openDBManagerModal() {
+      renderFilterSelectDropdowns();
+      renderDBManagerTable();
+      document.getElementById('dbManagerModal').classList.remove('hidden');
+    }
+
+    function closeDBManagerModal() {
+      document.getElementById('dbManagerModal').classList.add('hidden');
+    }
+
+    function renderDBManagerTable() {
+      const filterVal = document.getElementById('dbModalFilterSelect')?.value || 'ALL';
+      const query = (document.getElementById('dbModalSearchInput')?.value || '').trim().toLowerCase();
+      let list = getFilteredSentences(filterVal);
+
+      if (query) {
+        list = list.filter(s =>
+          (s.korean || '').toLowerCase().includes(query) ||
+          (s.english || '').toLowerCase().includes(query) ||
+          (s.notes || '').toLowerCase().includes(query) ||
+          (s.category || '').toLowerCase().includes(query)
+        );
+      }
+
+      document.getElementById('dbModalCountBadge').textContent = `${list.length}문장`;
+      const container = document.getElementById('dbModalTableContainer');
+      if (!container) return;
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">조건에 해당하는 문장이 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(item => `
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">${escapeHtml(item.category)}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">${escapeHtml(item.source_file)}</span>
+              <span class="text-emerald-400 font-medium">인출 연습 ${item.practice_count || 0}회</span>
+            </div>
+            <p class="text-xs md:text-sm font-bold text-amber-200">${escapeHtml(item.korean)}</p>
+            <p class="text-xs md:text-sm font-semibold text-white">${escapeHtml(item.english)}</p>
+            ${item.notes ? `<p class="text-xs text-slate-400">💡 ${escapeHtml(item.notes)}</p>` : ''}
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+            <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300" title="발음 듣기">
+              <i data-lucide="volume-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleStarInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg border ${
+              item.is_starred ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'bg-slate-900 border-slate-700 text-slate-400'
+            }" title="별표 토글">
+              <i data-lucide="star" class="w-4 h-4"></i>
+            </button>
+            <button onclick="editSentenceInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300" title="문장 수정">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteSentenceInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg bg-slate-900 hover:bg-rose-950 border border-slate-700 text-slate-400 hover:text-rose-400" title="삭제">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function toggleStarInDBModal(sentId) {
+      const item = AppState.sentencesDB.find(s => s.id === sentId);
+      if (!item) return;
+      item.is_starred = !item.is_starred;
+      await saveAppState();
+      renderDBManagerTable();
+      renderSidebarDBSummary();
+    }
+
+    async function editSentenceInDBModal(sentId) {
+      const item = AppState.sentencesDB.find(s => s.id === sentId);
+      if (!item) return;
+      const newKor = prompt('한국어 의미 수정:', item.korean);
+      if (newKor === null) return;
+      const newEng = prompt('영어 문장 수정:', item.english);
+      if (newEng === null) return;
+      const newNotes = prompt('메모 수정:', item.notes || '');
+      if (newNotes === null) return;
+
+      item.korean = newKor.trim() || item.korean;
+      item.english = newEng.trim() || item.english;
+      item.notes = newNotes.trim();
+      await saveAppState();
+      renderDBManagerTable();
+      renderAll();
+      showToast('문장이 수정되었습니다.', 'success');
+    }
+
+    async function deleteSentenceInDBModal(sentId) {
+      AppState.sentencesDB = AppState.sentencesDB.filter(s => s.id !== sentId);
+      await saveAppState();
+      renderDBManagerTable();
+      renderAll();
+      showToast('문장이 삭제되었습니다.', 'info');
+    }
+
+    async function deleteFilteredSentencesInDBModal() {
+      const filterVal = document.getElementById('dbModalFilterSelect')?.value || 'ALL';
+      const targetList = getFilteredSentences(filterVal);
+      if (targetList.length === 0) return;
+      if (!confirm(`현재 필터에 표시된 ${targetList.length}개의 문장을 모두 삭제하시겠습니까?`)) return;
+      const targetIds = new Set(targetList.map(s => s.id));
+      AppState.sentencesDB = AppState.sentencesDB.filter(s => !targetIds.has(s.id));
+      await saveAppState();
+      renderDBManagerTable();
+      renderAll();
+      showToast('선택된 범위의 문장이 삭제되었습니다.', 'info');
+    }
+
+    function openSecurityModal(tab = 'api') {
+      document.getElementById('settingProviderSelect').value = AppState.settings.provider || 'gemini';
+      document.getElementById('settingModelSelect').value = AppState.settings.model || 'gemini-2.5-flash';
+      document.getElementById('settingApiKeyInput').value = AppState.settings.apiKey || '';
+      const themeSel = document.getElementById('settingThemeSelect');
+      if (themeSel) themeSel.value = AppState.settings.theme || 'dark';
+      document.getElementById('cloudSyncUrlInput').value = AppState.settings.cloudSyncUrl || '';
+      switchSecurityModalTab(tab);
+      updateSecurityBadges();
+      document.getElementById('securityModal').classList.remove('hidden');
+    }
+
+    function closeSecurityModal() {
+      document.getElementById('securityModal').classList.add('hidden');
+    }
+
+    function switchSecurityModalTab(tab) {
+      const isApi = tab === 'api';
+      document.getElementById('tabContentApi').classList.toggle('hidden', !isApi);
+      document.getElementById('tabContentSync').classList.toggle('hidden', isApi);
+      document.getElementById('tabBtnApi').className = isApi
+        ? 'pb-2.5 border-b-2 border-indigo-500 text-indigo-400'
+        : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200';
+      document.getElementById('tabBtnSync').className = !isApi
+        ? 'pb-2.5 border-b-2 border-sky-500 text-sky-400'
+        : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200';
+    }
+
+    function handleProviderSelectChange() {
+      const prov = document.getElementById('settingProviderSelect').value;
+      const modelSel = document.getElementById('settingModelSelect');
+      if (prov === 'gemini' && modelSel.value.startsWith('gpt')) {
+        modelSel.value = 'gemini-2.5-flash';
+      } else if (prov === 'openai' && modelSel.value.startsWith('gemini')) {
+        modelSel.value = 'gpt-4o-mini';
+      }
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('settingApiKeyInput');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function saveApiSettings() {
+      AppState.settings.provider = document.getElementById('settingProviderSelect').value;
+      AppState.settings.model = document.getElementById('settingModelSelect').value;
+      AppState.settings.apiKey = document.getElementById('settingApiKeyInput').value.trim();
+      const themeSel = document.getElementById('settingThemeSelect');
+      if (themeSel) {
+        AppState.settings.theme = themeSel.value === 'light' ? 'light' : 'dark';
+        applyTheme(AppState.settings.theme);
+      }
+      await saveAppState();
+      updateSecurityBadges();
+      closeSecurityModal();
+      showToast('🤖 AI 엔진 및 화면 테마 설정이 저장되었습니다.', 'success');
+    }
+
+    function updateSecurityBadges() {
+      const hasKey = Boolean((AppState.settings.apiKey || '').trim());
+      const banner = document.getElementById('apiKeyNoticeBanner');
+      if (banner) {
+        banner.classList.toggle('hidden', hasKey);
+      }
+
+      const e2eeBadge = document.getElementById('e2eeStatusBadge');
+      if (e2eeBadge) {
+        if (AppState.settings.e2eeEnabled && runtimePasscode) {
+          e2eeBadge.textContent = '🔐 AES-GCM 256-bit 활성화됨';
+          e2eeBadge.className = 'px-2 py-0.5 rounded bg-sky-500/20 border border-sky-500/40 text-sky-300 text-[11px] font-bold';
+        } else {
+          e2eeBadge.textContent = '미설정 (평문 빠른 시작)';
+          e2eeBadge.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold';
+        }
+      }
+    }
+
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('leftSidebar');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
+      sidebar.classList.toggle('-translate-x-full');
+      backdrop.classList.toggle('hidden');
+    }
+
+    function closeMobileSidebar() {
+      const sidebar = document.getElementById('leftSidebar');
+      const backdrop = document.getElementById('mobileSidebarBackdrop');
+      sidebar.classList.add('-translate-x-full');
+      backdrop.classList.add('hidden');
+    }
+
+    function handleChatInputKeydown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendUserRoleplayMessage();
+      }
+    }
+
+    function handleChatInputSaveDraft(val) {
+      const sess = getActiveSession();
+      if (!sess) return;
+      if (!AppState.uiState.draftInputs) AppState.uiState.draftInputs = {};
+      AppState.uiState.draftInputs[sess.session_id] = val;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const colorClass = type === 'success'
+        ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200'
+        : type === 'error'
+        ? 'bg-rose-950/95 border-rose-500/50 text-rose-200'
+        : 'bg-slate-900/95 border-indigo-500/40 text-slate-200';
+
+      toast.className = `pointer-events-auto max-w-sm px-4 py-3 rounded-xl border shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 ${colorClass}`;
+      toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    // Global Keyboard Shortcuts for Flashcard Mode
+    window.addEventListener('keydown', (event) => {
+      if (!AppState.uiState.flashcard.isOpen) return;
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeFlashcardModal();
+      } else if (event.code === 'Space' || event.key === 'Enter') {
+        event.preventDefault();
+        handleFlashcardAreaClick();
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        nextFlashcard();
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        prevFlashcard();
+      } else if (event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        speakCurrentFlashcard();
+      } else if (event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        toggleCurrentFlashcardStar();
+      }
+    });
+
+    // Startup Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+      }
+      loadAppStateOnStartup();
+    });
+  </script>
+</body>
+</html>
