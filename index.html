@@ -10,6 +10,10 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- SheetJS (xlsx) CDN -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <!-- Firebase Compat SDKs (App, Auth, Firestore) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <!-- Google Fonts: Pretendard / Inter -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <script>
@@ -205,9 +209,9 @@
       </div>
 
       <!-- Flashcard Mode Trigger Button -->
-      <button onclick="openFlashcardModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs md:text-sm shadow-lg shadow-amber-500/15 transition transform active:scale-95">
+      <button onclick="openFlashcardModal()" class="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs md:text-sm shadow-lg shadow-amber-500/15 transition transform active:scale-95">
         <i data-lucide="layers" class="w-4 h-4"></i>
-        <span>플래시카드</span>
+        <span class="hidden xs:inline sm:inline">플래시카드</span>
         <span id="gnbSentenceCountBadge" class="px-1.5 py-0.2 bg-slate-950/25 rounded text-[11px] font-extrabold">0</span>
       </button>
 
@@ -223,10 +227,27 @@
         <span id="gnbThemeLabel" class="hidden md:inline">White</span>
       </button>
 
+      <!-- Admin User Approval Button (Only visible to Admin) -->
+      <button id="btnAdminApprovalModal" onclick="openAdminApprovalModal()" class="hidden p-2 md:px-2.5 md:py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold items-center gap-1 transition" title="회원 가입 승인 관리 (관리자 전용)">
+        <i data-lucide="user-check" class="w-4 h-4 text-indigo-400"></i>
+        <span class="hidden lg:inline">승인관리</span>
+        <span id="gnbPendingUsersBadge" class="hidden px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold">0</span>
+      </button>
+
       <!-- Security / Cloud Sync / API Settings Button -->
-      <button onclick="openSecurityModal('api')" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="AI API 키 및 E2EE 보안 동기화 설정">
-        <i id="gnbLockIcon" data-lucide="shield-check" class="w-4 h-4 text-sky-400"></i>
-        <span class="hidden md:inline">보안·API 설정</span>
+      <button onclick="openSecurityModal('api')" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="AI API 키 · Firestore DB · 보안 설정">
+        <i id="gnbLockIcon" data-lucide="settings" class="w-4 h-4 text-sky-400"></i>
+        <span id="gnbSyncBadgeText" class="hidden lg:inline">설정</span>
+      </button>
+
+      <!-- Help Guide Popup Button -->
+      <button onclick="openHelpGuideModal()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition" title="이용 가이드 및 단축키 보기">
+        <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+      </button>
+
+      <!-- Logout Button (visible when authenticated) -->
+      <button id="btnLogoutHeader" onclick="handleUserLogout()" class="hidden p-2 rounded-lg bg-slate-800 hover:bg-rose-950 border border-slate-700 text-slate-400 hover:text-rose-300 text-xs transition" title="로그아웃">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
@@ -403,7 +424,7 @@
       </div>
 
       <!-- Message Composer Footer -->
-      <footer class="p-3 md:p-4 bg-slate-900/95 border-t border-slate-800 shrink-0">
+      <footer class="p-2.5 md:p-3.5 bg-slate-900/95 border-t border-slate-800 shrink-0">
         <div class="max-w-4xl mx-auto flex items-end gap-2">
           <!-- STT Voice Input Button -->
           <button id="btnSttMic" onclick="toggleSpeechRecognition()" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition shrink-0" title="음성으로 영어 문장 말하기 (Web Speech STT)">
@@ -415,7 +436,7 @@
             <textarea
               id="chatInputTextarea"
               rows="2"
-              placeholder="비즈니스 파트너에게 영어로 답변을 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+              placeholder="영어로 답변 입력... (Enter: 전송)"
               onkeydown="handleChatInputKeydown(event)"
               oninput="handleChatInputSaveDraft(this.value)"
               class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 resize-none focus:outline-none leading-relaxed"
@@ -428,10 +449,7 @@
             <i data-lucide="send" class="w-4 h-4"></i>
           </button>
         </div>
-        <div class="max-w-4xl mx-auto mt-1.5 flex items-center justify-between text-[11px] text-slate-500 px-1">
-          <span>💡 대화 도중에는 교정이 개입하지 않습니다. 내 말풍선 아래의 <strong class="text-slate-400">[💬 피드백]</strong>을 누를 때만 코칭 댓글이 열립니다.</span>
-          <span id="sttStatusText" class="text-rose-400 font-medium hidden">🎙️ 음성 인식 중... 영어로 말씀해 주세요</span>
-        </div>
+        <div id="sttStatusText" class="max-w-4xl mx-auto mt-1 text-right text-[11px] text-rose-400 font-medium hidden px-1">🎙️ 음성 인식 중... 영어로 말씀해 주세요</div>
       </footer>
     </main>
   </div>
@@ -439,36 +457,32 @@
   <!-- ==================== FULL-SCREEN 2-STAGE SPLIT FLASHCARD MODAL (z-index: 50) ==================== -->
   <div id="flashcardModal" class="fixed inset-0 z-50 bg-slate-950 flex flex-col hidden">
     <!-- Flashcard Top Header -->
-    <div class="h-14 shrink-0 bg-slate-900 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="flex items-center gap-1.5 text-amber-400 font-bold text-sm md:text-base shrink-0">
-          <i data-lucide="layers" class="w-5 h-5"></i>
-          <span>Flashcard Mode</span>
+    <div class="h-14 shrink-0 bg-slate-900 border-b border-slate-800 px-3 md:px-6 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="flex items-center gap-1.5 text-amber-400 font-bold text-xs md:text-base shrink-0">
+          <i data-lucide="layers" class="w-4 h-4 md:w-5 md:h-5"></i>
+          <span class="hidden sm:inline">Flashcard</span>
         </div>
 
-        <div class="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block"></div>
-
         <!-- Flashcard Scope Filter -->
-        <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
-          <span class="text-slate-400 hidden sm:inline">학습 범위:</span>
-          <select id="fcFilterSelect" onchange="changeFlashcardFilter(this.value)" class="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer max-w-[160px] sm:max-w-[240px] truncate">
+        <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
+          <select id="fcFilterSelect" onchange="changeFlashcardFilter(this.value)" class="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[240px] truncate">
             <option value="ALL">전체 문장</option>
           </select>
         </div>
       </div>
 
       <!-- Center Progress & Controls -->
-      <div class="flex items-center gap-2 shrink-0">
-        <span id="fcProgressBadge" class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200">
+      <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
+        <span id="fcProgressBadge" class="px-2 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200">
           0 / 0
         </span>
 
-        <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hidden md:flex items-center gap-1 transition" title="문제 출제 방향 전환 (한글->영어 / 영어->한글)">
-          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span id="fcDirectionText">한 ➔ 영</span>
+        <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="출제 방향 전환 (한글->영어 / 영어->한글)">
+          <span id="fcDirectionText">한➔영</span>
         </button>
 
-        <button id="btnFcShuffle" onclick="toggleFlashcardShuffle()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="카드 순서 랜덤 셔플">
+        <button id="btnFcShuffle" onclick="toggleFlashcardShuffle()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="카드 순서 랜덤 셔플">
           <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
           <span id="fcShuffleText" class="hidden sm:inline">셔플 OFF</span>
         </button>
@@ -481,9 +495,9 @@
         </select>
 
         <!-- Exit Flashcard Overlay Button -->
-        <button onclick="closeFlashcardModal()" class="ml-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs md:text-sm flex items-center gap-1 shadow-lg shadow-rose-600/20 transition">
+        <button onclick="closeFlashcardModal()" class="ml-0.5 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs md:text-sm flex items-center gap-1 shadow-lg shadow-rose-600/20 transition">
           <i data-lucide="x" class="w-4 h-4"></i>
-          <span>Exit 복귀</span>
+          <span>Exit</span>
         </button>
       </div>
     </div>
@@ -496,17 +510,17 @@
     <!-- 50:50 Vertical Split Container -->
     <div class="flex-1 flex flex-col min-h-0 select-none">
 
-      <!-- TOP 50%: KOREAN PROMPT AREA -->
-      <div onclick="handleFlashcardAreaClick()" class="h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-6 md:p-10 flex flex-col justify-between items-center text-center cursor-pointer relative group">
+      <!-- TOP 50%: KOREAN PROMPT AREA (De-cluttered for mobile) -->
+      <div onclick="handleFlashcardAreaClick()" class="h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-4 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative group">
         <!-- Top Badges Row -->
         <div class="w-full max-w-4xl flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2">
-            <span id="fcTopCategoryBadge" class="px-2.5 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold">카테고리</span>
-            <span id="fcTopSourceBadge" class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400">출처 파일</span>
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span id="fcTopCategoryBadge" class="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold truncate">카테고리</span>
+            <span id="fcTopSourceBadge" class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 truncate max-w-[130px] sm:max-w-[220px]">출처 파일</span>
           </div>
-          <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-            <span id="fcPracticeCountBadge" class="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">인출 연습 0회</span>
-            <button id="btnFcStar" onclick="toggleCurrentFlashcardStar()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition" title="중요/미암기 별표 북마크 (단축키: B)">
+          <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+            <span id="fcPracticeCountBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">0회</span>
+            <button id="btnFcStar" onclick="toggleCurrentFlashcardStar()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition" title="중요 별표 북마크 (단축키: B)">
               <i data-lucide="star" class="w-4 h-4"></i>
             </button>
           </div>
@@ -514,57 +528,52 @@
 
         <!-- Center Korean Sentence -->
         <div class="my-auto max-w-4xl px-2">
-          <div class="text-xs font-bold uppercase tracking-widest text-amber-400/80 mb-3" id="fcTopLabel">STEP 1. 제시된 의미를 보고 영어로 즉시 말해보세요</div>
+          <div id="fcTopLabel" class="hidden"></div>
           <h1 id="fcTopPromptText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-white leading-snug tracking-tight break-keep">
             문장을 불러오는 중입니다...
           </h1>
         </div>
 
-        <!-- Bottom Guide Label -->
-        <div class="text-xs text-slate-400 flex items-center gap-1.5">
-          <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>머릿속으로 영작하거나 입 밖으로 말해본 뒤 <strong>화면 아무 곳이나 클릭(또는 Space바)</strong>하세요</span>
-        </div>
+        <div class="h-2"></div>
       </div>
 
-      <!-- BOTTOM 50%: ENGLISH ANSWER REVEAL AREA -->
-      <div onclick="handleFlashcardAreaClick()" class="h-1/2 bg-slate-950 p-6 md:p-10 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-y-auto">
+      <!-- BOTTOM 50%: ENGLISH ANSWER REVEAL AREA (De-cluttered for mobile) -->
+      <div onclick="handleFlashcardAreaClick()" class="h-1/2 bg-slate-950 p-4 md:p-8 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-y-auto">
         
-        <!-- Stage 1: Hidden Cover State -->
-        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-3 py-8">
-          <div class="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 shadow-inner">
-            <i data-lucide="eye" class="w-7 h-7"></i>
+        <!-- Stage 1: Minimal Hidden Cover State -->
+        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-2 py-4">
+          <div class="px-4 py-2 rounded-full bg-slate-900 border border-slate-800 flex items-center gap-2 text-amber-400 text-xs md:text-sm font-bold shadow-inner">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+            <span>탭하여 정답 확인</span>
           </div>
-          <p class="text-base md:text-lg font-bold text-slate-300">클릭(탭)하거나 <kbd class="px-2 py-0.5 text-xs bg-slate-800 border border-slate-700 rounded text-amber-300">Space</kbd> 바를 눌러 영어 정답 확인</p>
-          <p class="text-xs text-slate-500">먼저 스스로 문장을 인출(Retrieval)해 봐야 실전 롤플레잉에서 입이 떨어집니다</p>
         </div>
 
         <!-- Stage 2: Revealed Answer State -->
         <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full">
-          <div class="text-xs font-bold uppercase tracking-widest text-emerald-400">STEP 2. 원어민 비즈니스 영어 정답 확인 및 소리 내어 읽기</div>
+          <div class="h-1"></div>
 
-          <div class="my-auto py-3">
+          <div class="my-auto py-2">
             <h2 id="fcBottomAnswerText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-emerald-300 leading-snug tracking-tight">
               English sentence goes here.
             </h2>
-            <p id="fcBottomNotesText" class="mt-4 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 inline-block max-w-2xl"></p>
+            <p id="fcBottomNotesText" class="mt-3 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl"></p>
           </div>
 
           <!-- Action Buttons inside Revealed State -->
-          <div class="flex flex-wrap items-center justify-center gap-2.5 pt-2" onclick="event.stopPropagation()">
-            <button onclick="speakCurrentFlashcard()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-1" onclick="event.stopPropagation()">
+            <button onclick="speakCurrentFlashcard()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
-              <span>발음 듣기 (TTS · S)</span>
+              <span>발음 (S)</span>
             </button>
 
-            <button onclick="markCurrentFlashcardPracticed()" class="px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+            <button onclick="markCurrentFlashcardPracticed()" class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
               <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-              <span>암기 완료 체크 (+1회 · 다음 카드)</span>
+              <span>암기완료 (+1)</span>
             </button>
 
-            <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition">
+            <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1 transition">
               <i data-lucide="star" class="w-4 h-4"></i>
-              <span>중요 별표 북마크 (B)</span>
+              <span>별표 (B)</span>
             </button>
           </div>
         </div>
@@ -572,18 +581,18 @@
     </div>
 
     <!-- Flashcard Bottom Navigation Bar -->
-    <div class="h-16 shrink-0 bg-slate-900 border-t border-slate-800 px-4 md:px-8 flex items-center justify-between gap-3">
-      <button onclick="prevFlashcard()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+    <div class="h-14 md:h-16 shrink-0 bg-slate-900 border-t border-slate-800 px-3 md:px-8 flex items-center justify-between gap-2">
+      <button onclick="prevFlashcard()" class="px-3 md:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1 transition">
         <i data-lucide="chevron-left" class="w-4 h-4"></i>
-        <span>이전 카드 (←)</span>
+        <span>이전</span>
       </button>
 
-      <button onclick="handleFlashcardAreaClick()" id="btnFcMainStep" class="flex-1 max-w-md py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 transition">
-        <span>정답 확인 / 다음 단계 (Space / 클릭)</span>
+      <button onclick="handleFlashcardAreaClick()" id="btnFcMainStep" class="flex-1 max-w-md py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs md:text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/15 transition">
+        <span>정답 확인</span>
       </button>
 
-      <button onclick="nextFlashcard()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
-        <span>다음 카드 (→)</span>
+      <button onclick="nextFlashcard()" class="px-3 md:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1 transition">
+        <span>다음</span>
         <i data-lucide="chevron-right" class="w-4 h-4"></i>
       </button>
     </div>
@@ -841,8 +850,33 @@
         </div>
       </div>
 
-      <!-- Tab 2: Zero-Knowledge E2EE & Cloud Sync -->
+      <!-- Tab 2: Firestore Real-Time DB & Zero-Knowledge E2EE Sync -->
       <div id="tabContentSync" class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm hidden">
+        <!-- 0. Firebase / Firestore Real-Time Shared DB Section -->
+        <div class="bg-indigo-950/30 border border-indigo-500/40 rounded-xl p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-300 flex items-center gap-1.5">
+              <i data-lucide="flame" class="w-4 h-4 text-amber-400"></i>
+              <span>Firebase / Firestore 공통 DB & 로그인 연동 (전 기기 실시간 공유)</span>
+            </span>
+            <span id="firestoreStatusBadge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold">미연결</span>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Firebase 콘솔의 <code>firebaseConfig</code> 객체(또는 JSON)를 붙여넣고 저장하면, <strong>ID/PW 승인제 로그인</strong>과 <strong>Firestore 공통 문장 DB(PC·휴대폰·타 브라우저 자동 공유)</strong>가 즉시 작동합니다.
+          </p>
+          <textarea id="firebaseConfigTextarea" rows="4" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "..." };' class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none font-mono"></textarea>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="saveAndConnectFirebaseConfig('securityModal')" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Firebase 설정 저장 및 연결</span>
+            </button>
+            <button onclick="syncNowWithFirestore()" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              <span>Firestore 즉시 동기화</span>
+            </button>
+          </div>
+        </div>
+
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
             <span class="font-bold text-sky-400 flex items-center gap-1.5">
@@ -851,9 +885,6 @@
             </span>
             <span id="e2eeStatusBadge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold">미설정 (평문 빠른 시작)</span>
           </div>
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            마스터 Passcode를 설정하면 브라우저 내장 <code>Web Crypto API (PBKDF2 100,000회 + AES-GCM 256-bit)</code>로 모든 세션·문장 DB·API 키를 암호화합니다.
-          </p>
           <div class="flex gap-2 pt-1">
             <input id="masterPasscodeInput" type="password" placeholder="마스터 Passcode 입력 (설정/변경/동기화용)" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-sky-500 focus:outline-none" />
             <button onclick="applyMasterPasscode()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shrink-0">암호화 적용</button>
@@ -865,20 +896,17 @@
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
           <span class="font-bold text-indigo-400 flex items-center gap-1.5">
             <i data-lucide="cloud" class="w-4 h-4"></i>
-            <span>2. Serverless 클라우드 실시간 동기화 (PC ↔ 모바일 연동)</span>
+            <span>2. REST URL 암호화 동기화 (선택사항)</span>
           </span>
-          <p class="text-[11px] text-slate-400 leading-relaxed">
-            Firebase Realtime DB REST URL(예: <code>https://your-project.firebaseio.com/bizroleplay.json</code>) 또는 Custom JSON PUT/GET 엔드포인트를 입력하면, <strong>오직 E2EE 암호화된 페이로드만</strong> 전송되어 서버 해킹 시에도 내용은 절대 노출되지 않습니다.
-          </p>
           <input id="cloudSyncUrlInput" type="url" placeholder="https://your-db-id.firebaseio.com/bizroleplay_vault.json" class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none font-mono" />
           <div class="flex flex-wrap gap-2 pt-1">
             <button onclick="pushEncryptedToCloud()" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
               <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-              <span>클라우드로 암호화 백업 (Push)</span>
+              <span>클라우드 백업 (Push)</span>
             </button>
             <button onclick="pullEncryptedFromCloud()" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
               <i data-lucide="download-cloud" class="w-4 h-4"></i>
-              <span>클라우드에서 복원 (Pull)</span>
+              <span>클라우드 복원 (Pull)</span>
             </button>
           </div>
         </div>
@@ -887,12 +915,12 @@
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2">
           <span class="font-bold text-emerald-400 flex items-center gap-1.5">
             <i data-lucide="hard-drive-download" class="w-4 h-4"></i>
-            <span>3. 암호화 백업 파일 내보내기 / 불러오기 (.bizenc.json)</span>
+            <span>3. 백업 파일 내보내기 / 불러오기 (.bizenc.json)</span>
           </span>
           <div class="flex flex-wrap gap-2 pt-1">
             <button onclick="exportEncryptedBackupFile()" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5">
               <i data-lucide="save" class="w-4 h-4 text-emerald-400"></i>
-              <span>암호화 백업 파일 저장 (.bizenc.json)</span>
+              <span>백업 파일 저장 (.bizenc.json)</span>
             </button>
             <label class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
               <i data-lucide="folder-open" class="w-4 h-4 text-amber-400"></i>
@@ -919,6 +947,137 @@
       <div class="flex gap-2">
         <button onclick="resetVaultIfForgotten()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-950 text-xs text-slate-400 hover:text-rose-300">초기화 후 시작</button>
         <button onclick="unlockVaultWithPasscode()" class="flex-1 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">잠금 해제 및 복원</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 6: FIREBASE / FIRESTORE AUTH & ADMIN APPROVAL GATE ==================== -->
+  <div id="authGateModal" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <!-- Brand Header -->
+      <div class="text-center space-y-1.5">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto text-white shadow-lg shadow-indigo-500/25">
+          <i data-lucide="lock" class="w-6 h-6"></i>
+        </div>
+        <h2 class="text-lg font-extrabold text-white">BizRoleplay 회원 로그인</h2>
+        <p id="authGateSubtitle" class="text-xs text-slate-400">승인된 사용자만 접속할 수 있는 프라이빗 영어 학습 공간입니다</p>
+      </div>
+
+      <!-- View A: Login / SignUp Form -->
+      <div id="authLoginFormView" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">아이디(ID) 또는 이메일</label>
+          <input id="authIdInput" type="text" placeholder="예: admin 또는 user@example.com" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">비밀번호 (6자 이상)</label>
+          <input id="authPwInput" type="password" onkeydown="if(event.key==='Enter') handleAuthSubmit('login')" placeholder="비밀번호 입력" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button onclick="handleAuthSubmit('login')" id="btnAuthLogin" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/25 transition">
+            로그인
+          </button>
+          <button onclick="handleAuthSubmit('signup')" id="btnAuthSignup" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs transition">
+            가입 신청
+          </button>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+          <button onclick="toggleAuthFirebaseSetupBox()" class="hover:text-indigo-400 flex items-center gap-1 font-medium">
+            <i data-lucide="database" class="w-3.5 h-3.5"></i>
+            <span>Firebase DB 연결 설정</span>
+          </button>
+          <span id="authModeIndicator" class="text-slate-500">로컬/Firebase 인증 지원</span>
+        </div>
+
+        <!-- Collapsible Firebase Config Input inside Login Screen -->
+        <div id="authFirebaseSetupBox" class="hidden pt-2 space-y-2">
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Firebase 콘솔에서 발급받은 <code>firebaseConfig</code> 코드를 아래에 붙여넣으면 전 기기 로그인 및 Firestore 실시간 문장 DB 공유가 활성화됩니다.
+          </p>
+          <textarea id="authFirebaseConfigInput" rows="3" placeholder='const firebaseConfig = { apiKey: "...", projectId: "..." };' class="w-full rounded-xl bg-slate-950 border border-slate-700 p-2.5 text-xs text-slate-200 font-mono focus:outline-none"></textarea>
+          <button onclick="saveAndConnectFirebaseConfig('authGate')" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+            Firebase Config 저장 및 연결
+          </button>
+        </div>
+      </div>
+
+      <!-- View B: Pending Admin Approval Screen -->
+      <div id="authPendingView" class="hidden text-center space-y-4 py-2">
+        <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed space-y-1">
+          <p class="font-bold text-sm text-amber-300">⏳ 관리자 승인 대기 중입니다</p>
+          <p>가입 신청이 완료되었습니다. 관리자가 승인한 후 접속하실 수 있습니다.</p>
+          <p id="authPendingUserEmail" class="text-[11px] text-slate-400 pt-1 font-mono"></p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="handleUserLogout()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+            로그아웃
+          </button>
+          <button onclick="recheckUserApprovalStatus()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">
+            🔄 승인 상태 다시 확인
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 7: ADMIN USER APPROVAL MANAGER ==================== -->
+  <div id="adminApprovalModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-check" class="w-5 h-5 text-indigo-400"></i>
+          <span>회원 가입 승인 및 권한 관리 (Admin)</span>
+        </h3>
+        <button onclick="closeAdminApprovalModal()" class="p-1 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-4 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <span>승인(`approved`)된 계정만 앱에 입장하여 문장 DB와 롤플레잉을 이용할 수 있습니다.</span>
+        <button onclick="loadAdminUsersList()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center gap-1 shrink-0">
+          <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+          <span>새로고침</span>
+        </button>
+      </div>
+      <div id="adminUsersListContainer" class="flex-1 overflow-y-auto p-4 space-y-2 text-xs">
+        <!-- Dynamically rendered by loadAdminUsersList() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 8: COMPACT HELP & SHORTCUTS POPUP ([?]) ==================== -->
+  <div id="helpGuideModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
+          <span>핵심 이용 가이드 & 단축키</span>
+        </h3>
+        <button onclick="closeHelpGuideModal()" class="p-1 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4 text-xs leading-relaxed text-slate-300">
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <p class="font-bold text-indigo-300">1. 실전 AI 롤플레잉 & 온디맨드 피드백</p>
+          <p>• 상단 <strong>[설정]</strong>에서 유료/무료 Gemini 또는 OpenAI API 키를 입력하면 시뮬레이션 모드가 해제되고 실시간 AI 파트너와 대화합니다.</p>
+          <p>• 대화 중에는 교정이 개입하지 않으며, 내 말풍선 아래의 <strong>[💬 피드백]</strong>을 누를 때만 코칭 댓글과 오답노트 저장 버튼이 열립니다.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <p class="font-bold text-amber-300">2. 플래시카드 단축키 (PC/모바일)</p>
+          <p>• <strong>화면 탭 / Space / Enter:</strong> 하단 영어 정답 확인 ➔ 다음 카드 이동</p>
+          <p>• <strong>← / → 방향키:</strong> 이전 카드 / 다음 카드</p>
+          <p>• <strong>S 키:</strong> 원어민 발음 듣기 (TTS) &nbsp;|&nbsp; <strong>B 키:</strong> 중요 별표 북마크</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+          <p class="font-bold text-emerald-300">3. Firestore 전 기기 자동 동기화</p>
+          <p>• <strong>[설정 ➔ 암호화 & 클라우드 동기화]</strong> 탭에 Firebase 설정(`firebaseConfig`)을 등록하면, 엑셀/CSV로 업로드한 문장 DB와 API 키가 PC·스마트폰·다른 브라우저에 실시간 공유됩니다.</p>
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex justify-end">
+        <button onclick="closeHelpGuideModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">확인</button>
       </div>
     </div>
   </div>
@@ -1221,8 +1380,10 @@
     /*************************************************************************
      * 3. PERSISTENCE, LOCALSTORAGE & CLOUD SYNC
      *************************************************************************/
-    async function saveAppState() {
+    async function saveAppState(skipFirestorePush = false) {
       try {
+        const nowTs = Date.now();
+        lastLocalSaveTimestamp = nowTs;
         if (AppState.settings.e2eeEnabled && runtimePasscode) {
           const encryptedEnvelope = await encryptStateWithPasscode(AppState, runtimePasscode);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(encryptedEnvelope));
@@ -1231,12 +1392,15 @@
             app: 'BizRoleplay',
             version: 1,
             encrypted: false,
-            updated_at: Date.now(),
+            updated_at: nowTs,
             data: AppState
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(plainEnvelope));
         }
         updateSecurityBadges();
+        if (!skipFirestorePush && !isApplyingRemoteSnapshot) {
+          pushSharedWorkspaceToFirestore(nowTs);
+        }
       } catch (err) {
         console.error('Failed to save state:', err);
       }
@@ -1246,27 +1410,28 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) {
         AppState = getInitialOnboardingData();
-        await saveAppState();
+        await saveAppState(true);
         renderAll();
-        return;
-      }
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.encrypted === true) {
-          document.getElementById('unlockGateModal').classList.remove('hidden');
-          setTimeout(() => document.getElementById('unlockGatePasscodeInput').focus(), 100);
-        } else if (parsed && parsed.data) {
-          AppState = mergeWithDefaultState(parsed.data);
-          renderAll();
-        } else {
+      } else {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.encrypted === true) {
+            document.getElementById('unlockGateModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('unlockGatePasscodeInput').focus(), 100);
+          } else if (parsed && parsed.data) {
+            AppState = mergeWithDefaultState(parsed.data);
+            renderAll();
+          } else {
+            AppState = getInitialOnboardingData();
+            renderAll();
+          }
+        } catch (e) {
+          console.error('Corrupted local storage, loading defaults:', e);
           AppState = getInitialOnboardingData();
           renderAll();
         }
-      } catch (e) {
-        console.error('Corrupted local storage, loading defaults:', e);
-        AppState = getInitialOnboardingData();
-        renderAll();
       }
+      initAuthAndFirestoreGateOnStartup();
     }
 
     function mergeWithDefaultState(loaded) {
@@ -2522,24 +2687,18 @@ ${targetLines}
 
       if (messages.length === 0) {
         container.innerHTML = `
-          <div class="max-w-lg mx-auto my-12 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 text-center space-y-4">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400">
-              <i data-lucide="sparkles" class="w-6 h-6"></i>
-            </div>
-            <div class="space-y-1">
-              <h3 class="text-base font-bold text-white">비즈니스 롤플레잉 세션이 준비되었습니다</h3>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                직접 영어로 첫인사를 건네거나, 아래 버튼을 눌러 <strong>${escapeHtml(sess?.partner_name || 'AI 파트너')}</strong>가 먼저 비즈니스 질문을 던지게 해보세요.
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <button onclick="triggerPartnerFirstMessage()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/25">
-                <i data-lucide="dices" class="w-4 h-4"></i>
-                <span>🎲 AI 파트너가 먼저 질문 던지기</span>
+          <div class="max-w-md mx-auto my-6 p-4 rounded-2xl bg-slate-900/70 border border-slate-800 text-center space-y-3">
+            <p class="text-xs font-semibold text-slate-300">
+              영어로 첫인사를 입력하거나 <strong>${escapeHtml(sess?.partner_name || 'AI 파트너')}</strong>의 첫 질문을 시작하세요.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <button onclick="triggerPartnerFirstMessage()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/25">
+                <i data-lucide="dices" class="w-3.5 h-3.5"></i>
+                <span>🎲 파트너 첫 질문</span>
               </button>
-              <button onclick="openFlashcardModalWithCurrentFilter()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-bold flex items-center gap-1.5">
-                <i data-lucide="layers" class="w-4 h-4"></i>
-                <span>🎴 타깃 표현 플래시카드 먼저 암기</span>
+              <button onclick="openFlashcardModalWithCurrentFilter()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span>🎴 플래시카드</span>
               </button>
             </div>
           </div>
@@ -2801,7 +2960,7 @@ ${targetLines}
 
       document.getElementById('fcTopCategoryBadge').textContent = item.category || '비즈니스';
       document.getElementById('fcTopSourceBadge').textContent = item.source_file || '기본 세트';
-      document.getElementById('fcPracticeCountBadge').textContent = `인출 연습 ${item.practice_count || 0}회`;
+      document.getElementById('fcPracticeCountBadge').textContent = `${item.practice_count || 0}회`;
 
       const starColorClass = item.is_starred
         ? 'p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 transition'
@@ -2809,15 +2968,12 @@ ${targetLines}
       document.getElementById('btnFcStar').className = starColorClass;
 
       const isKrToEn = fc.direction === 'KR_TO_EN';
-      document.getElementById('fcTopLabel').textContent = isKrToEn
-        ? 'STEP 1. 제시된 한국어 의미를 보고 영어로 즉시 말해보세요'
-        : 'STEP 1. 제시된 영어 문장의 정확한 비즈니스 의미를 떠올려 보세요';
       document.getElementById('fcTopPromptText').textContent = isKrToEn ? item.korean : item.english;
       document.getElementById('fcBottomAnswerText').textContent = isKrToEn ? item.english : item.korean;
 
       const notesEl = document.getElementById('fcBottomNotesText');
       if (item.notes) {
-        notesEl.textContent = `💡 메모: ${item.notes}`;
+        notesEl.textContent = `💡 ${item.notes}`;
         notesEl.classList.remove('hidden');
       } else {
         notesEl.classList.add('hidden');
@@ -2826,11 +2982,11 @@ ${targetLines}
       if (fc.isRevealed) {
         document.getElementById('fcBottomHiddenState').classList.add('hidden');
         document.getElementById('fcBottomRevealedState').classList.remove('hidden');
-        document.getElementById('btnFcMainStep').innerHTML = `<span>다음 카드로 이동 (Space / 클릭) ▶</span>`;
+        document.getElementById('btnFcMainStep').innerHTML = `<span>다음 카드 ▶</span>`;
       } else {
         document.getElementById('fcBottomHiddenState').classList.remove('hidden');
         document.getElementById('fcBottomRevealedState').classList.add('hidden');
-        document.getElementById('btnFcMainStep').innerHTML = `<span>정답 확인 (Space / 화면 클릭)</span>`;
+        document.getElementById('btnFcMainStep').innerHTML = `<span>정답 확인</span>`;
       }
 
       if (window.lucide) lucide.createIcons();
@@ -3282,9 +3438,15 @@ ${targetLines}
       const themeSel = document.getElementById('settingThemeSelect');
       if (themeSel) themeSel.value = AppState.settings.theme || 'dark';
       document.getElementById('cloudSyncUrlInput').value = AppState.settings.cloudSyncUrl || '';
+      const fbTextarea = document.getElementById('firebaseConfigTextarea');
+      if (fbTextarea) {
+        const savedFbCfg = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || '';
+        fbTextarea.value = savedFbCfg;
+      }
       switchSecurityModalTab(tab);
       updateSecurityBadges();
       document.getElementById('securityModal').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
     }
 
     function closeSecurityModal() {
@@ -3334,10 +3496,10 @@ ${targetLines}
     }
 
     function updateSecurityBadges() {
-      const hasKey = Boolean((AppState.settings.apiKey || '').trim());
+      // Keep top simulation notice banner hidden so mobile screens remain clean
       const banner = document.getElementById('apiKeyNoticeBanner');
       if (banner) {
-        banner.classList.toggle('hidden', hasKey);
+        banner.classList.add('hidden');
       }
 
       const e2eeBadge = document.getElementById('e2eeStatusBadge');
@@ -3350,6 +3512,639 @@ ${targetLines}
           e2eeBadge.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold';
         }
       }
+
+      const fsBadge = document.getElementById('firestoreStatusBadge');
+      if (fsBadge) {
+        if (fbDb) {
+          fsBadge.textContent = '🟢 Firestore 실시간 연결됨';
+          fsBadge.className = 'px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold';
+        } else {
+          fsBadge.textContent = '미연결 (로컬 모드)';
+          fsBadge.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px] font-semibold';
+        }
+      }
+    }
+
+    /*************************************************************************
+     * 11. V2 UPGRADE: FIREBASE AUTH + ADMIN APPROVAL GATE + FIRESTORE REAL-TIME DB
+     *************************************************************************/
+    const FIREBASE_CONFIG_STORAGE_KEY = 'BIZROLEPLAY_FIREBASE_CONFIG_V2';
+    const LOCAL_AUTH_ACCOUNTS_KEY = 'BIZROLEPLAY_LOCAL_ACCOUNTS_V2';
+    const LOCAL_AUTH_SESSION_KEY = 'BIZROLEPLAY_LOCAL_SESSION_V2';
+
+    let fbApp = null;
+    let fbAuth = null;
+    let fbDb = null;
+    let firestoreWorkspaceUnsubscribe = null;
+    let firestoreUsersBadgeUnsubscribe = null;
+    let currentAuthUser = null;
+    let isApplyingRemoteSnapshot = false;
+    let lastLocalSaveTimestamp = 0;
+
+    function normalizeIdToEmail(rawId) {
+      const trimmed = (rawId || '').trim();
+      if (!trimmed) return '';
+      if (trimmed.includes('@')) return trimmed.toLowerCase();
+      const safeLocal = trimmed.toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'user';
+      return `${safeLocal}@bizroleplay.local`;
+    }
+
+    function extractDisplayId(rawIdOrEmail) {
+      const trimmed = (rawIdOrEmail || '').trim();
+      if (trimmed.endsWith('@bizroleplay.local')) {
+        return trimmed.replace('@bizroleplay.local', '');
+      }
+      return trimmed;
+    }
+
+    function parseFirebaseConfigInput(rawText) {
+      const text = (rawText || '').trim();
+      if (!text) return null;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && parsed.apiKey && parsed.projectId) return parsed;
+      } catch (_) {}
+
+      const objMatch = text.match(/\{[\s\S]*\}/);
+      if (!objMatch) return null;
+      const body = objMatch[0];
+      const keys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId', 'measurementId'];
+      const config = {};
+      keys.forEach(k => {
+        const reg = new RegExp(`['"]?${k}['"]?\\s*:\\s*['"]([^'"]+)['"]`);
+        const m = body.match(reg);
+        if (m && m[1]) config[k] = m[1].trim();
+      });
+      if (config.apiKey && config.projectId) {
+        return config;
+      }
+      return null;
+    }
+
+    function toggleAuthFirebaseSetupBox() {
+      const box = document.getElementById('authFirebaseSetupBox');
+      if (!box) return;
+      box.classList.toggle('hidden');
+      const input = document.getElementById('authFirebaseConfigInput');
+      if (input && !input.value) {
+        input.value = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || '';
+      }
+    }
+
+    async function saveAndConnectFirebaseConfig(source) {
+      const inputId = source === 'authGate' ? 'authFirebaseConfigInput' : 'firebaseConfigTextarea';
+      const rawText = document.getElementById(inputId)?.value?.trim() || '';
+      if (!rawText) {
+        localStorage.removeItem(FIREBASE_CONFIG_STORAGE_KEY);
+        fbApp = null;
+        fbAuth = null;
+        fbDb = null;
+        updateSecurityBadges();
+        showToast('Firebase 연동 설정이 해제되었습니다 (로컬 인증/저장 모드).', 'info');
+        return;
+      }
+
+      const cfg = parseFirebaseConfigInput(rawText);
+      if (!cfg) {
+        showToast('유효한 firebaseConfig 형식이 아닙니다. apiKey와 projectId가 포함되어야 합니다.', 'error');
+        return;
+      }
+
+      localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(cfg, null, 2));
+      const ok = await connectFirebaseInstance(cfg);
+      if (ok) {
+        showToast('🔥 Firebase Auth 및 Firestore 공통 DB가 연결되었습니다!', 'success');
+        const box = document.getElementById('authFirebaseSetupBox');
+        if (box) box.classList.add('hidden');
+      }
+    }
+
+    async function connectFirebaseInstance(cfg) {
+      if (!window.firebase) {
+        showToast('Firebase SDK를 불러오지 못했습니다. 네트워크 연결을 확인하세요.', 'error');
+        return false;
+      }
+      try {
+        if (!firebase.apps.length) {
+          fbApp = firebase.initializeApp(cfg);
+        } else {
+          fbApp = firebase.app();
+        }
+        fbAuth = firebase.auth();
+        fbDb = firebase.firestore();
+        updateSecurityBadges();
+        const modeEl = document.getElementById('authModeIndicator');
+        if (modeEl) {
+          modeEl.textContent = `🔥 Firebase 연결됨 (${cfg.projectId})`;
+          modeEl.className = 'text-emerald-400 font-semibold';
+        }
+
+        fbAuth.onAuthStateChanged(async (user) => {
+          if (user) {
+            await verifyFirebaseUserStatus(user);
+          } else {
+            currentAuthUser = null;
+            stopFirestoreSubscriptions();
+            showAuthGateLoginView();
+          }
+        });
+        return true;
+      } catch (err) {
+        console.error('Firebase init error:', err);
+        showToast('Firebase 초기화 오류: ' + err.message, 'error');
+        return false;
+      }
+    }
+
+    function initAuthAndFirestoreGateOnStartup() {
+      const savedCfgRaw = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY);
+      if (savedCfgRaw) {
+        const cfg = parseFirebaseConfigInput(savedCfgRaw);
+        if (cfg) {
+          connectFirebaseInstance(cfg);
+          return;
+        }
+      }
+      // Fallback Local Auth Gate check when Firebase Config is not set yet
+      initLocalAuthGate();
+    }
+
+    function getLocalAccounts() {
+      try {
+        return JSON.parse(localStorage.getItem(LOCAL_AUTH_ACCOUNTS_KEY) || '[]');
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveLocalAccounts(list) {
+      localStorage.setItem(LOCAL_AUTH_ACCOUNTS_KEY, JSON.stringify(list));
+    }
+
+    function initLocalAuthGate() {
+      const accounts = getLocalAccounts();
+      const subtitle = document.getElementById('authGateSubtitle');
+      const modeEl = document.getElementById('authModeIndicator');
+      if (modeEl) {
+        modeEl.textContent = accounts.length === 0 ? '최초 관리자 계정 등록 대기' : '로컬 승인제 로그인 모드';
+      }
+      if (subtitle && accounts.length === 0) {
+        subtitle.textContent = '최초 접속입니다. 사용할 관리자 ID와 비밀번호(6자 이상)를 입력해 로그인하세요.';
+      }
+
+      const activeUid = sessionStorage.getItem(LOCAL_AUTH_SESSION_KEY) || localStorage.getItem(LOCAL_AUTH_SESSION_KEY);
+      if (activeUid) {
+        const found = accounts.find(a => a.uid === activeUid);
+        if (found) {
+          currentAuthUser = { ...found, mode: 'local' };
+          applyAuthenticatedUserUI();
+          return;
+        }
+      }
+      showAuthGateLoginView();
+    }
+
+    function showAuthGateLoginView() {
+      const modal = document.getElementById('authGateModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      document.getElementById('authLoginFormView')?.classList.remove('hidden');
+      document.getElementById('authPendingView')?.classList.add('hidden');
+      document.getElementById('btnLogoutHeader')?.classList.add('hidden');
+      document.getElementById('btnAdminApprovalModal')?.classList.add('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function showAuthGatePendingView(userObj) {
+      const modal = document.getElementById('authGateModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      document.getElementById('authLoginFormView')?.classList.add('hidden');
+      document.getElementById('authPendingView')?.classList.remove('hidden');
+      const emailEl = document.getElementById('authPendingUserEmail');
+      if (emailEl) {
+        const statusLabel = userObj.status === 'rejected' ? '반려됨 (관리자 문의)' : '승인 대기 중 (pending)';
+        emailEl.textContent = `계정: ${userObj.displayId || extractDisplayId(userObj.email)} · 상태: ${statusLabel}`;
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleAuthSubmit(mode) {
+      const rawId = document.getElementById('authIdInput')?.value?.trim() || '';
+      const rawPw = document.getElementById('authPwInput')?.value || '';
+      if (!rawId) {
+        showToast('아이디(ID) 또는 이메일을 입력해 주세요.', 'error');
+        return;
+      }
+      if (!rawPw || rawPw.length < 6) {
+        showToast('비밀번호는 최소 6자 이상 입력해 주세요.', 'error');
+        return;
+      }
+
+      const email = normalizeIdToEmail(rawId);
+      const displayId = extractDisplayId(rawId);
+
+      // 1) Firebase Auth + Firestore Mode
+      if (fbAuth && fbDb) {
+        try {
+          if (mode === 'signup') {
+            const cred = await fbAuth.createUserWithEmailAndPassword(email, rawPw);
+            await ensureFirestoreUserRecord(cred.user, displayId);
+          } else {
+            try {
+              const cred = await fbAuth.signInWithEmailAndPassword(email, rawPw);
+              await verifyFirebaseUserStatus(cred.user, displayId);
+            } catch (signInErr) {
+              // If very first user tries clicking Login directly, check if users collection is empty and auto-register admin
+              if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+                const snap = await fbDb.collection('users').limit(1).get();
+                if (snap.empty) {
+                  const cred = await fbAuth.createUserWithEmailAndPassword(email, rawPw);
+                  await ensureFirestoreUserRecord(cred.user, displayId);
+                  return;
+                }
+              }
+              throw signInErr;
+            }
+          }
+        } catch (err) {
+          let msg = err.message || '인증 오류가 발생했습니다.';
+          if (err.code === 'auth/email-already-in-use') msg = '이미 등록된 아이디(이메일)입니다. [로그인] 버튼을 눌러주세요.';
+          else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = '아이디 또는 비밀번호가 일치하지 않습니다.';
+          else if (err.code === 'auth/user-not-found') msg = '존재하지 않는 계정입니다. 먼저 [가입 신청]을 진행해 주세요.';
+          showToast(msg, 'error');
+        }
+        return;
+      }
+
+      // 2) Local Auth Gate Fallback Mode (when Firebase Config is not entered yet)
+      const accounts = getLocalAccounts();
+      if (accounts.length === 0) {
+        // First user automatically becomes Approved Admin
+        const firstAdmin = {
+          uid: 'local_' + Date.now(),
+          email,
+          displayId,
+          pw: rawPw,
+          role: 'admin',
+          status: 'approved',
+          created_at: Date.now()
+        };
+        accounts.push(firstAdmin);
+        saveLocalAccounts(accounts);
+        localStorage.setItem(LOCAL_AUTH_SESSION_KEY, firstAdmin.uid);
+        currentAuthUser = { ...firstAdmin, mode: 'local' };
+        applyAuthenticatedUserUI();
+        showToast(`👑 관리자 계정(${displayId})이 생성되고 로그인되었습니다.`, 'success');
+        return;
+      }
+
+      const existing = accounts.find(a => a.email === email || a.displayId.toLowerCase() === displayId.toLowerCase());
+      if (mode === 'signup') {
+        if (existing) {
+          showToast('이미 존재하는 아이디입니다. 로그인해 주세요.', 'error');
+          return;
+        }
+        const newUser = {
+          uid: 'local_' + Date.now(),
+          email,
+          displayId,
+          pw: rawPw,
+          role: 'user',
+          status: 'pending',
+          created_at: Date.now()
+        };
+        accounts.push(newUser);
+        saveLocalAccounts(accounts);
+        localStorage.setItem(LOCAL_AUTH_SESSION_KEY, newUser.uid);
+        currentAuthUser = { ...newUser, mode: 'local' };
+        applyAuthenticatedUserUI();
+        showToast('가입 신청이 등록되었습니다. 관리자 승인 후 이용 가능합니다.', 'info');
+      } else {
+        if (!existing || existing.pw !== rawPw) {
+          showToast('아이디 또는 비밀번호가 일치하지 않습니다.', 'error');
+          return;
+        }
+        localStorage.setItem(LOCAL_AUTH_SESSION_KEY, existing.uid);
+        currentAuthUser = { ...existing, mode: 'local' };
+        applyAuthenticatedUserUI();
+        if (existing.status === 'approved') {
+          showToast(`환영합니다, ${existing.displayId}님!`, 'success');
+        }
+      }
+    }
+
+    async function ensureFirestoreUserRecord(fbUser, preferredDisplayId) {
+      if (!fbDb || !fbUser) return null;
+      const userRef = fbDb.collection('users').doc(fbUser.uid);
+      const doc = await userRef.get();
+      if (doc.exists) {
+        return doc.data();
+      }
+      // Check if this is the very first user in the Firestore `users` collection
+      const existingUsersSnap = await fbDb.collection('users').limit(1).get();
+      const isFirstUser = existingUsersSnap.empty;
+      const newRecord = {
+        uid: fbUser.uid,
+        email: fbUser.email || '',
+        displayId: preferredDisplayId || extractDisplayId(fbUser.email || 'user'),
+        role: isFirstUser ? 'admin' : 'user',
+        status: isFirstUser ? 'approved' : 'pending',
+        created_at: Date.now()
+      };
+      await userRef.set(newRecord);
+      return newRecord;
+    }
+
+    async function verifyFirebaseUserStatus(fbUser, preferredDisplayId) {
+      try {
+        const record = await ensureFirestoreUserRecord(fbUser, preferredDisplayId);
+        if (!record) return;
+        currentAuthUser = { ...record, mode: 'firebase' };
+        applyAuthenticatedUserUI();
+      } catch (err) {
+        console.error('verifyFirebaseUserStatus error:', err);
+        showToast('Firestore 권한 확인 실패: Firestore 규칙(Rules)을 확인해 주세요.', 'error');
+      }
+    }
+
+    async function recheckUserApprovalStatus() {
+      if (fbAuth && fbAuth.currentUser && fbDb) {
+        await verifyFirebaseUserStatus(fbAuth.currentUser);
+        if (currentAuthUser?.status === 'approved') {
+          showToast('✅ 승인 확인 완료! 앱에 입장합니다.', 'success');
+        } else {
+          showToast('아직 승인 대기 중입니다.', 'info');
+        }
+        return;
+      }
+      if (currentAuthUser?.mode === 'local') {
+        const accounts = getLocalAccounts();
+        const found = accounts.find(a => a.uid === currentAuthUser.uid);
+        if (found) {
+          currentAuthUser = { ...found, mode: 'local' };
+          applyAuthenticatedUserUI();
+          if (found.status === 'approved') {
+            showToast('✅ 승인 확인 완료!', 'success');
+          } else {
+            showToast('아직 승인 대기 중입니다.', 'info');
+          }
+        }
+      }
+    }
+
+    async function handleUserLogout() {
+      stopFirestoreSubscriptions();
+      localStorage.removeItem(LOCAL_AUTH_SESSION_KEY);
+      sessionStorage.removeItem(LOCAL_AUTH_SESSION_KEY);
+      if (fbAuth && fbAuth.currentUser) {
+        await fbAuth.signOut();
+      }
+      currentAuthUser = null;
+      const pwInput = document.getElementById('authPwInput');
+      if (pwInput) pwInput.value = '';
+      showAuthGateLoginView();
+      showToast('로그아웃되었습니다.', 'info');
+    }
+
+    function applyAuthenticatedUserUI() {
+      if (!currentAuthUser) {
+        showAuthGateLoginView();
+        return;
+      }
+
+      if (currentAuthUser.status !== 'approved') {
+        stopFirestoreSubscriptions();
+        showAuthGatePendingView(currentAuthUser);
+        return;
+      }
+
+      // Approved user! Hide Auth Gate and show main workspace
+      document.getElementById('authGateModal')?.classList.add('hidden');
+      const logoutBtn = document.getElementById('btnLogoutHeader');
+      if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+      const adminBtn = document.getElementById('btnAdminApprovalModal');
+      if (adminBtn) {
+        if (currentAuthUser.role === 'admin') {
+          adminBtn.classList.remove('hidden');
+          adminBtn.classList.add('flex');
+          watchPendingUsersCount();
+        } else {
+          adminBtn.classList.add('hidden');
+          adminBtn.classList.remove('flex');
+        }
+      }
+
+      if (fbDb && currentAuthUser.mode === 'firebase') {
+        startFirestoreWorkspaceSync();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function stopFirestoreSubscriptions() {
+      if (firestoreWorkspaceUnsubscribe) {
+        firestoreWorkspaceUnsubscribe();
+        firestoreWorkspaceUnsubscribe = null;
+      }
+      if (firestoreUsersBadgeUnsubscribe) {
+        firestoreUsersBadgeUnsubscribe();
+        firestoreUsersBadgeUnsubscribe = null;
+      }
+    }
+
+    function watchPendingUsersCount() {
+      const badge = document.getElementById('gnbPendingUsersBadge');
+      if (!badge) return;
+
+      if (fbDb && currentAuthUser?.mode === 'firebase') {
+        if (firestoreUsersBadgeUnsubscribe) firestoreUsersBadgeUnsubscribe();
+        firestoreUsersBadgeUnsubscribe = fbDb.collection('users').onSnapshot(snap => {
+          let pendingCount = 0;
+          snap.forEach(doc => {
+            if (doc.data()?.status === 'pending') pendingCount++;
+          });
+          badge.textContent = pendingCount;
+          badge.classList.toggle('hidden', pendingCount === 0);
+        }, () => {});
+      } else {
+        const accounts = getLocalAccounts();
+        const pendingCount = accounts.filter(a => a.status === 'pending').length;
+        badge.textContent = pendingCount;
+        badge.classList.toggle('hidden', pendingCount === 0);
+      }
+    }
+
+    function openAdminApprovalModal() {
+      document.getElementById('adminApprovalModal')?.classList.remove('hidden');
+      loadAdminUsersList();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeAdminApprovalModal() {
+      document.getElementById('adminApprovalModal')?.classList.add('hidden');
+    }
+
+    async function loadAdminUsersList() {
+      const container = document.getElementById('adminUsersListContainer');
+      if (!container) return;
+
+      let users = [];
+      if (fbDb && currentAuthUser?.mode === 'firebase') {
+        try {
+          const snap = await fbDb.collection('users').get();
+          snap.forEach(d => users.push(d.data()));
+        } catch (err) {
+          container.innerHTML = `<div class="p-4 text-rose-300">사용자 목록 조회 실패: ${escapeHtml(err.message)}</div>`;
+          return;
+        }
+      } else {
+        users = getLocalAccounts();
+      }
+
+      users.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+      watchPendingUsersCount();
+
+      if (users.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-slate-400">등록된 사용자가 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = users.map(u => {
+        const isApproved = u.status === 'approved';
+        const isPending = u.status === 'pending';
+        const statusBadge = isApproved
+          ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">승인됨 (approved)</span>`
+          : isPending
+          ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold">⏳ 승인 대기 (pending)</span>`
+          : `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-bold">차단/반려</span>`;
+
+        const roleBadge = u.role === 'admin'
+          ? `<span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-extrabold">👑 ADMIN</span>`
+          : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-semibold">USER</span>`;
+
+        const dateStr = u.created_at ? new Date(u.created_at).toLocaleString('ko-KR') : '-';
+
+        return `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-bold text-sm text-white">${escapeHtml(u.displayId || extractDisplayId(u.email))}</span>
+                ${roleBadge}
+                ${statusBadge}
+              </div>
+              <p class="text-[11px] text-slate-400 font-mono">${escapeHtml(u.email || '')} · 가입: ${escapeHtml(dateStr)}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+              ${
+                !isApproved
+                  ? `<button onclick="updateUserApprovalStatus('${escapeHtml(u.uid)}', 'approved', '${escapeHtml(u.role || 'user')}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">✅ 가입 승인</button>`
+                  : `<button onclick="updateUserApprovalStatus('${escapeHtml(u.uid)}', 'pending', '${escapeHtml(u.role || 'user')}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-950 border border-slate-700 text-amber-300 text-xs font-semibold">대기로 전환</button>`
+              }
+              <button onclick="updateUserApprovalStatus('${escapeHtml(u.uid)}', '${escapeHtml(u.status)}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs">
+                ${u.role === 'admin' ? '일반회원으로' : '관리자 지정'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateUserApprovalStatus(uid, newStatus, newRole) {
+      if (fbDb && currentAuthUser?.mode === 'firebase') {
+        try {
+          await fbDb.collection('users').doc(uid).update({
+            status: newStatus,
+            role: newRole
+          });
+          showToast('회원 권한 및 승인 상태가 업데이트되었습니다.', 'success');
+          loadAdminUsersList();
+        } catch (err) {
+          showToast('업데이트 실패: ' + err.message, 'error');
+        }
+        return;
+      }
+
+      const accounts = getLocalAccounts();
+      const target = accounts.find(a => a.uid === uid);
+      if (target) {
+        target.status = newStatus;
+        target.role = newRole;
+        saveLocalAccounts(accounts);
+        showToast('회원 승인 상태가 변경되었습니다.', 'success');
+        loadAdminUsersList();
+      }
+    }
+
+    function startFirestoreWorkspaceSync() {
+      if (!fbDb || !currentAuthUser || currentAuthUser.status !== 'approved') return;
+      if (firestoreWorkspaceUnsubscribe) firestoreWorkspaceUnsubscribe();
+
+      const docRef = fbDb.collection('bizroleplay_data').doc('shared_workspace');
+      firestoreWorkspaceUnsubscribe = docRef.onSnapshot(async (doc) => {
+        if (!doc.exists) {
+          // Initialize cloud workspace with current local state if empty
+          await pushSharedWorkspaceToFirestore(Date.now());
+          return;
+        }
+        const remote = doc.data();
+        if (!remote) return;
+        if (remote.updated_at && remote.updated_at <= lastLocalSaveTimestamp) {
+          return;
+        }
+        isApplyingRemoteSnapshot = true;
+        try {
+          lastLocalSaveTimestamp = remote.updated_at || Date.now();
+          AppState = mergeWithDefaultState(remote);
+          applyTheme(AppState.settings?.theme || 'dark');
+          await saveAppState(true);
+          renderAll();
+        } finally {
+          isApplyingRemoteSnapshot = false;
+        }
+      }, (err) => {
+        console.warn('Firestore workspace sync listener error:', err);
+      });
+    }
+
+    async function pushSharedWorkspaceToFirestore(nowTs) {
+      if (!fbDb || !currentAuthUser || currentAuthUser.status !== 'approved') return;
+      try {
+        const docRef = fbDb.collection('bizroleplay_data').doc('shared_workspace');
+        const payload = JSON.parse(JSON.stringify({
+          sentencesDB: AppState.sentencesDB || [],
+          sessionsDB: AppState.sessionsDB || [],
+          activeSessionId: AppState.activeSessionId || '',
+          settings: AppState.settings || {},
+          updated_at: nowTs || Date.now(),
+          updated_by: currentAuthUser.displayId || currentAuthUser.email || 'user'
+        }));
+        await docRef.set(payload, { merge: true });
+      } catch (err) {
+        console.warn('Failed to push workspace to Firestore:', err);
+      }
+    }
+
+    async function syncNowWithFirestore() {
+      if (!fbDb) {
+        showToast('먼저 Firebase 설정(firebaseConfig)을 붙여넣고 저장해 주세요.', 'error');
+        return;
+      }
+      if (!currentAuthUser || currentAuthUser.status !== 'approved') {
+        showToast('승인된 계정으로 로그인된 상태에서만 동기화할 수 있습니다.', 'error');
+        return;
+      }
+      await pushSharedWorkspaceToFirestore(Date.now());
+      showToast('☁️ Firestore 공통 DB에 현재 문장 DB·세션·API 설정이 즉시 동기화되었습니다!', 'success');
+    }
+
+    function openHelpGuideModal() {
+      document.getElementById('helpGuideModal')?.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeHelpGuideModal() {
+      document.getElementById('helpGuideModal')?.classList.add('hidden');
     }
 
     function toggleMobileSidebar() {
