@@ -59,7 +59,7 @@
 - **LLM API 연동 규격:**
   - 지원 엔진: 유료/무료 Google Gemini API (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`) 및 OpenAI API (`gpt-4o-mini`, `gpt-4o`).
   - 피드백 엔진 호출 시 `responseMimeType: "application/json"` 옵션을 사용하여 파싱 오류 없는 정형 JSON 응답 보장.
-  - 등록된 API 키는 Firestore `bizroleplay_data/shared_workspace` 내 `settings`에 저장되어 다른 기기에서 로그인 시 재입력 없이 즉시 활성화됨.
+  - 등록된 API 키는 Firestore `workspace/main` 내 `settings`에 저장되어 다른 기기에서 로그인 시 재입력 없이 즉시 활성화됨.
 
 ---
 
@@ -83,7 +83,7 @@ Firebase Authentication으로 가입/로그인한 사용자의 승인 상태와 
 }
 ```
 
-### 4.2 전 기기 공유 워크스페이스 문서 (`Firestore: bizroleplay_data/shared_workspace`)
+### 4.2 전 기기 공유 워크스페이스 문서 (`Firestore: workspace/main`)
 승인된 사용자가 어떤 기기에서 접속하든 동일한 학습 환경을 제공하는 통합 문서입니다.
 - `sentencesDB`: 다중 엑셀/CSV 업로드 문장, 텍스트 붙여넣기 문장, 대화 중 저장한 오답노트 문장 배열
 - `sessionsDB`: 다중 비즈니스 롤플레잉 세션 및 대화 기록 배열
@@ -202,7 +202,7 @@ Firebase Authentication으로 가입/로그인한 사용자의 승인 상태와 
 - **스마트 텍스트 일괄 붙여넣기 (Bulk Text Paste):**
   - 구분자(`탭`, `|`, `-`, `:`) 또는 한·영 줄바꿈 교차 텍스트를 붙여넣어 즉시 문장 세트로 등록.
 - **Firestore 실시간 동기화:**
-  - 업로드하거나 수정·삭제한 문장 세트는 즉시 Firestore `bizroleplay_data/shared_workspace`에 동기화되어, 다른 PC나 스마트폰에서 접속해도 별도 업로드 없이 동일한 문장 DB가 즉시 표시됨.
+  - 업로드하거나 수정·삭제한 문장 세트는 즉시 Firestore `workspace/main`에 동기화되어, 다른 PC나 스마트폰에서 접속해도 별도 업로드 없이 동일한 문장 DB가 즉시 표시됨.
   - 전체 또는 필터별 문장 목록을 언제든 `.xlsx` 엑셀 파일로 다운로드 가능.
 
 ### 5.6 전체 화면 2단계 분할 플래시카드 모드 (군더더기 없는 모바일 인출 레이아웃)

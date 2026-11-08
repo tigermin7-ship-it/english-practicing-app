@@ -867,7 +867,7 @@
             <span id="firestoreStatusBadge" class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">🟢 Firestore 실시간 연결됨</span>
           </div>
           <p class="text-xs text-slate-300 leading-relaxed">
-            모든 회원 인증(<code>users_v2</code>)과 학습 데이터(<code>bizroleplay_data/workspace_v2</code>)는 로컬 브라우저 저장소를 사용하지 않고 <strong>Cloud Firestore(<code>english-practicing-app</code>)</strong>에 100% 실시간 동기화됩니다.
+            모든 회원 인증(<code>users</code>)과 학습 데이터(<code>workspace</code>)는 로컬 브라우저 저장소를 사용하지 않고 <strong>Cloud Firestore(<code>english-practicing-app</code>)</strong>에 100% 실시간 동기화됩니다.
           </p>
           <div class="flex flex-wrap gap-2 pt-1">
             <button onclick="syncNowWithFirestore()" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5">
@@ -892,7 +892,7 @@
         <p id="authGateSubtitle" class="text-xs text-slate-400">승인된 사용자만 접속할 수 있는 프라이빗 영어 학습 공간입니다</p>
       </div>
 
-      <!-- First Admin Notice Banner (Shown automatically when users_v2 is empty) -->
+      <!-- First Admin Notice Banner (Shown automatically when users is empty) -->
       <div id="firstAdminNoticeBox" class="hidden p-3 rounded-xl bg-indigo-500/15 border border-indigo-500/40 text-indigo-200 text-xs leading-relaxed text-center">
         👑 <strong>첫 관리자(Admin) 계정 등록 대기 중</strong><br/>
         지금 입력하시는 첫 번째 아이디와 비밀번호(6자 이상)가 <strong>최종 관리자 계정</strong>으로 즉시 승인·등록됩니다.
@@ -960,6 +960,10 @@
       <div class="p-4 bg-slate-950/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
         <span>승인(`approved`)된 계정만 앱에 입장하여 문장 DB와 롤플레잉을 이용할 수 있습니다.</span>
         <div class="flex items-center gap-1.5">
+          <button onclick="resetAllCloudUsersAndWorkspace()" class="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-200 font-semibold flex items-center gap-1 shrink-0">
+            <i data-lucide="trash-2" class="w-3 h-3"></i>
+            <span>전체 계정·DB 초기화</span>
+          </button>
           <button onclick="loadAdminUsersList()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center gap-1 shrink-0">
             <i data-lucide="refresh-cw" class="w-3 h-3"></i>
             <span>새로고침</span>
@@ -3170,8 +3174,11 @@ ${targetLines}
       measurementId: "G-8FX59Z9P72"
     };
 
-    const FIRESTORE_USERS_COLLECTION = 'users_v2';
-    const FIRESTORE_WORKSPACE_DOC = 'workspace_v2';
+    const FIRESTORE_USERS_COLLECTION = 'users';
+    const FIRESTORE_WORKSPACE_COLLECTION = 'workspace';
+    const FIRESTORE_WORKSPACE_DOC = 'main';
+    // 2026-11-08T18:38:20+09:00 이전에 생성된 기존 테스트 계정 및 불필요 컬렉션(users_v2, bizroleplay_data) 자동 영구 삭제 기준 시각
+    const CLEAN_SLATE_TIMESTAMP = 1794130700000;
 
     let fbApp = null;
     let fbAuth = null;
@@ -3188,18 +3195,64 @@ ${targetLines}
       if (!trimmed) return '';
       if (trimmed.includes('@')) return trimmed.toLowerCase();
       const safeLocal = trimmed.toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'user';
-      return `${safeLocal}@bizroleplay-v2.local`;
+      return `${safeLocal}@bizroleplay.local`;
     }
 
     function extractDisplayId(rawIdOrEmail) {
       const trimmed = (rawIdOrEmail || '').trim();
-      if (trimmed.endsWith('@bizroleplay-v2.local')) {
-        return trimmed.replace('@bizroleplay-v2.local', '');
-      }
       if (trimmed.endsWith('@bizroleplay.local')) {
         return trimmed.replace('@bizroleplay.local', '');
       }
+      if (trimmed.endsWith('@bizroleplay-v2.local')) {
+        return trimmed.replace('@bizroleplay-v2.local', '');
+      }
       return trimmed;
+    }
+
+    async function purgeLegacyFirestoreData() {
+      if (!fbDb) return;
+      try {
+        // 1) Remove any temporary v2 / legacy collections (users_v2, bizroleplay_data) so they disappear from Firestore
+        const [v2UsersSnap, oldBizDataSnap] = await Promise.all([
+          fbDb.collection('users_v2').get().catch(() => null),
+          fbDb.collection('bizroleplay_data').get().catch(() => null)
+        ]);
+        const deletePromises = [];
+        if (v2UsersSnap) {
+          v2UsersSnap.forEach(doc => deletePromises.push(doc.ref.delete().catch(() => {})));
+        }
+        if (oldBizDataSnap) {
+          oldBizDataSnap.forEach(doc => deletePromises.push(doc.ref.delete().catch(() => {})));
+        }
+
+        // 2) Delete any old test user records in `users` created before CLEAN_SLATE_TIMESTAMP
+        const usersSnap = await fbDb.collection(FIRESTORE_USERS_COLLECTION).get().catch(() => null);
+        if (usersSnap) {
+          usersSnap.forEach(doc => {
+            const d = doc.data() || {};
+            if (!d.created_at || d.created_at < CLEAN_SLATE_TIMESTAMP) {
+              deletePromises.push(doc.ref.delete().catch(() => {}));
+            }
+          });
+        }
+
+        // 3) Delete any old workspace docs in `workspace` updated before CLEAN_SLATE_TIMESTAMP
+        const wsSnap = await fbDb.collection(FIRESTORE_WORKSPACE_COLLECTION).get().catch(() => null);
+        if (wsSnap) {
+          wsSnap.forEach(doc => {
+            const d = doc.data() || {};
+            if (!d.updated_at || d.updated_at < CLEAN_SLATE_TIMESTAMP) {
+              deletePromises.push(doc.ref.delete().catch(() => {}));
+            }
+          });
+        }
+
+        if (deletePromises.length > 0) {
+          await Promise.all(deletePromises);
+        }
+      } catch (err) {
+        console.warn('purgeLegacyFirestoreData warning:', err);
+      }
     }
 
     async function connectFirebaseInstance(cfg) {
@@ -3223,13 +3276,17 @@ ${targetLines}
           modeEl.className = 'mx-auto flex items-center gap-1 text-emerald-400 font-semibold text-[11px]';
         }
 
+        await purgeLegacyFirestoreData();
+
         fbAuth.onAuthStateChanged(async (user) => {
           if (isAuthActionInProgress) return;
           if (user) {
             try {
+              // Run purge while authenticated so Firestore rules allow deleting legacy documents
+              await purgeLegacyFirestoreData();
               const userDoc = await fbDb.collection(FIRESTORE_USERS_COLLECTION).doc(user.uid).get();
               if (!userDoc.exists) {
-                // Sign out any legacy cached Firebase Auth session that is not registered in users_v2
+                // Sign out any cached Firebase Auth session whose Firestore record was purged/deleted
                 await fbAuth.signOut();
                 currentAuthUser = null;
                 stopFirestoreSubscriptions();
@@ -3386,12 +3443,13 @@ ${targetLines}
 
     async function ensureFirestoreUserRecord(fbUser, preferredDisplayId) {
       if (!fbDb || !fbUser) return null;
+      await purgeLegacyFirestoreData();
       const userRef = fbDb.collection(FIRESTORE_USERS_COLLECTION).doc(fbUser.uid);
       const doc = await userRef.get();
       if (doc.exists) {
         return doc.data();
       }
-      // Check if this is the very first user in the Firestore `users_v2` collection
+      // Check if this is the very first user in the Firestore `users` collection
       const existingUsersSnap = await fbDb.collection(FIRESTORE_USERS_COLLECTION).limit(1).get();
       const isFirstUser = existingUsersSnap.empty;
       const newRecord = {
@@ -3570,6 +3628,9 @@ ${targetLines}
               <button onclick="updateUserApprovalStatus('${escapeHtml(u.uid)}', '${escapeHtml(u.status)}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs">
                 ${u.role === 'admin' ? '일반회원으로' : '관리자 지정'}
               </button>
+              <button onclick="deleteUserRecord('${escapeHtml(u.uid)}')" class="px-2.5 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-semibold">
+                삭제
+              </button>
             </div>
           </div>
         `;
@@ -3590,14 +3651,55 @@ ${targetLines}
       }
     }
 
+    async function deleteUserRecord(uid) {
+      if (!fbDb || !uid) return;
+      if (!confirm('해당 사용자 계정을 Firestore(users)에서 완전히 삭제하시겠습니까?')) return;
+      try {
+        await fbDb.collection(FIRESTORE_USERS_COLLECTION).doc(uid).delete();
+        showToast('사용자 계정이 삭제되었습니다.', 'info');
+        if (currentAuthUser && currentAuthUser.uid === uid) {
+          closeAdminApprovalModal();
+          await handleUserLogout();
+          return;
+        }
+        loadAdminUsersList();
+      } catch (err) {
+        showToast('계정 삭제 실패: ' + err.message, 'error');
+      }
+    }
+
+    async function resetAllCloudUsersAndWorkspace() {
+      if (!fbDb) return;
+      if (!confirm('Firestore의 모든 사용자 계정(users)과 학습 데이터(workspace)를 완전히 삭제하고 첫 관리자 등록 대기 상태로 초기화하시겠습니까?')) return;
+      try {
+        stopFirestoreSubscriptions();
+        const cols = [FIRESTORE_USERS_COLLECTION, FIRESTORE_WORKSPACE_COLLECTION, 'users_v2', 'bizroleplay_data'];
+        for (const colName of cols) {
+          const snap = await fbDb.collection(colName).get().catch(() => null);
+          if (snap) {
+            const dels = [];
+            snap.forEach(d => dels.push(d.ref.delete().catch(() => {})));
+            await Promise.all(dels);
+          }
+        }
+        closeAdminApprovalModal();
+        AppState = createInitialAppState();
+        renderAll();
+        await handleUserLogout();
+        showToast('🗑️ 모든 계정 및 클라우드 DB가 완전히 삭제·초기화되었습니다.', 'success');
+      } catch (err) {
+        showToast('초기화 실패: ' + err.message, 'error');
+      }
+    }
+
     function startFirestoreWorkspaceSync() {
       if (!fbDb || !currentAuthUser || currentAuthUser.status !== 'approved') return;
       if (firestoreWorkspaceUnsubscribe) firestoreWorkspaceUnsubscribe();
 
-      const docRef = fbDb.collection('bizroleplay_data').doc(FIRESTORE_WORKSPACE_DOC);
+      const docRef = fbDb.collection(FIRESTORE_WORKSPACE_COLLECTION).doc(FIRESTORE_WORKSPACE_DOC);
       firestoreWorkspaceUnsubscribe = docRef.onSnapshot(async (doc) => {
         if (!doc.exists) {
-          // Initialize clean v2 cloud workspace with default state
+          // Initialize clean cloud workspace with default state
           await pushSharedWorkspaceToFirestore(Date.now());
           return;
         }
@@ -3623,7 +3725,7 @@ ${targetLines}
     async function pushSharedWorkspaceToFirestore(nowTs) {
       if (!fbDb || !currentAuthUser || currentAuthUser.status !== 'approved') return;
       try {
-        const docRef = fbDb.collection('bizroleplay_data').doc(FIRESTORE_WORKSPACE_DOC);
+        const docRef = fbDb.collection(FIRESTORE_WORKSPACE_COLLECTION).doc(FIRESTORE_WORKSPACE_DOC);
         const payload = JSON.parse(JSON.stringify({
           sentencesDB: AppState.sentencesDB || [],
           sessionsDB: AppState.sessionsDB || [],
