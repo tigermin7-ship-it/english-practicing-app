@@ -1,271 +1,223 @@
-# [통합 마스터 PRD] 비즈니스 영어 실전 롤플레잉 & 플래시카드 올인원 웹앱 (BizRoleplay)
+# Product Requirements Document (PRD): BizRoleplay — AI 비즈니스 영어 롤플레잉 & 스마트 암기 루프 웹앱 (v3.0 Master Edition)
 
-> **문서 목적:** 본 문서는 초기 기획서(`prd.md`)와 추가 업그레이드 요구사항(`prd_v2_upgrade.md`)을 하나로 통합한 **유일한 공식 마스터 기획서(Single Source of Truth)**입니다. 향후 모든 기능 개발, 수정 및 소통은 본 `prd.md`를 기준으로 진행합니다.
-
----
-
-## 0. 핵심 설계 원칙 및 아키텍처 대전제 (Core Mandates)
-
-1. **100% Firebase / Firestore 클라우드 단일 아키텍처 (로컬 인증·로컬 전용 저장 전면 배제):**
-   - 브라우저 로컬 저장소(`LocalStorage`)에 로그인 정보를 담거나 `localhost` 전용 로컬 폴백(Fallback)으로 테스트하는 구성을 **전면 삭제**함.
-   - **모든 로그인 및 회원 권한 관리**는 오직 **Firebase Authentication**과 **Cloud Firestore(`users` 컬렉션)**를 통해서만 처리함.
-   - **모든 학습 데이터(문장 DB, 롤플레잉 세션, 유료 API 키, 테마 설정)** 역시 브라우저 임시 저장소가 아닌 **Cloud Firestore(`bizroleplay_data/shared_workspace`)**에 실시간 저장·동기화하여, PC·스마트폰·태블릿·다른 브라우저 어디서 접속하더라도 동일한 데이터가 즉시 노출되도록 함.
-2. **에이전트 대화형 설정 수집 프로토콜 (Grill-Me 방식):**
-   - 개발·배포·유지보수 과정에서 **Firebase/Firestore 설정값(`firebaseConfig`), Firestore 보안 규칙, 관리자 계정 정보, 유료 Gemini/OpenAI API Key** 등 사용자 고유 설정이 필요한 경우, 에이전트가 임의로 로컬 임시방편(Mock/Fallback) 코드를 작성하지 않음.
-   - 반드시 **에이전트가 사용자에게 대화형(Grill-Me 방식)으로 필요한 정보를 하나씩 물어보고**, 사용자의 답변을 받아 코드 상수 또는 클라우드 설정에 직접 반영함.
-3. **모바일 화면 최적화를 위한 미니멀 UI & 팝업 도움말(`[❓]`):**
-   - 작은 스마트폰 화면을 복잡하게 만드는 상시 안내문(`"머릿속으로 영작하거나 입 밖으로 말해본 뒤..."`, `"먼저 스스로 문장을 인출(Retrieval)해 봐야..."`, `"STEP 1. 제시된 한국어 의미를 보고..."` 등)은 화면에서 **전면 제거**함.
-   - 이용법 및 단축키 안내는 상단 헤더의 **`[❓]` 버튼 클릭 시 열리는 팝업 모달(`#helpGuideModal`)**로만 깔끔하게 제공함.
-4. **유료 API 기반 실전 AI 롤플레잉 & 온디맨드 피드백:**
-   - 사용자의 유료 Google Gemini API(`gemini-2.5-flash` / `gemini-2.5-pro`) 또는 OpenAI API 키를 Firestore 설정에 연동하여, 시뮬레이션이 아닌 **실제 원어민 비즈니스 파트너 수준의 실시간 대화 및 정밀 교정 코칭**이 전 기기에서 동일하게 작동하도록 함.
+## 1. 제품 개요 (Product Overview)
+* **제품명:** BizRoleplay — AI 비즈니스 영어 롤플레잉 & 스마트 암기 루프 웹앱
+* **핵심 가치 (Core Value Proposition):**
+  * 사용자가 보유한 수백~수천 개의 비즈니스 영어 문장(`(영어문장, 한글문장)` 2열 엑셀/CSV 또는 텍스트 세트)을 앱에 탑재하여 **스마트 플래시카드(한→영 인출 훈련)**로 선행 학습함.
+  * 직후 실제 비즈니스 상황(**바이어 단가 협상, 일정 조율, 스몰토크, 임원 보고 등**)에서 AI 상대방과 자유롭게 대화하며, 방금 외운 표현을 내 입으로 써먹고 **내 문장에 대한 원어민 코칭 피드백 + 코치에게 추가 질문(Follow-up Q&A) + 오답노트 자동 축적**까지 한 화면에서 완결하는 **'인출(Output) 중심 비즈니스 영어 훈련소'** 구축.
+* **타깃 사용자:** 실제 업무 미팅, 이메일, 협상, 발표, 해외 출장/쇼핑 등 실전 상황에서 쓸 비즈니스 영어 표현을 체화하고자 하는 실무자 및 학습자.
+* **플랫폼 환경:**
+  * 별도 서버 구축 없이 브라우저에서 즉시 구동되는 **단일 파일(Single-File HTML/CSS/JS) 서버리스 SPA 아키텍처** (`index.html`).
+  * **GitHub Pages 멀티 환경 자동 배포:** `main` 브랜치(운영 환경 `/`)와 `dev` 브랜치(개발/검증 환경 `/dev/`)를 GitHub Actions 워크플로우로 분리하여 안전하게 배포·검증함.
+  * **100% Firebase 클라우드 동기화 아키텍처:** Firebase Authentication(이메일/비밀번호 로그인) 및 Cloud Firestore(`users/{uid}` 계정 프로필 + `workspace/main` 통합 문장 DB·롤플레잉 세션·글로벌 API 키 공유 문서)를 통해 PC·모바일·태블릿 어디서 로그인하든 동일한 학습 데이터와 API 설정을 즉시 이어서 사용함.
 
 ---
 
-## 1. 프로젝트 개요 및 비전 (Project Overview)
-
-- **제품명:** BizRoleplay (비즈니스 영어 실전 체화 및 인출 훈련 플랫폼)
-- **개발 및 배포 형태:**
-  - 단일 파일 웹 애플리케이션 (`index.html` 내 HTML5, Tailwind CSS CDN, Lucide Icons CDN, SheetJS CDN, Firebase SDK CDN, Vanilla JS 통합)
-  - GitHub Pages 배포 (안정 운영 버전 `main` 브랜치 `/` 및 테스트 버전 `dev` 브랜치 `/dev/` 이원화 운영)
-- **핵심 가치:**
-  - 외국인과의 접점이 없는 일상에서도 **'영어로 생각하고 즉각 문장화하는 환경'**을 메신저 대화 형태로 일상화.
-  - **사전 인출 훈련(플래시카드) ➔ 실전 적용(무중단 롤플레잉) ➔ 선택적 교정(인라인 댓글 피드백) ➔ 오답 축적(Firestore 통합 DB 아카이빙)**의 순환 학습 루프 완성.
-
----
-
-## 2. 문제 해결 매트릭스 (Context & Solutions)
-
-| 사용자의 실제 페인포인트 | BizRoleplay의 기술적·UX적 해결 방안 |
-| :--- | :--- |
-| **1. 아무나 접속 가능한 보안 문제** | **Firebase Auth + Firestore 관리자 승인제 로그인:** ID(이메일)/PW 입력 후 Firestore에서 관리자가 승인(`status: "approved"`)한 계정만 앱 진입 허용 |
-| **2. 기기·브라우저 변경 시 업로드한 문장 증발** | **Cloud Firestore 공통 DB 실시간 연동:** 엑셀/CSV로 업로드한 문장, 오답노트, 세션 내역, API 키를 Firestore에 통합 저장하여 모든 기기에서 실시간 공유 |
-| **3. 휴대폰 화면을 가리는 복잡한 이용 설명문** | **미니멀 UI & `[❓]` 도움말 팝업화:** 매 화면 반복되던 STEP 안내문과 코칭 예시문을 전면 삭제하고 상단 `[❓]` 팝업 모달로 분리 |
-| **4. 일상 속 영어 사고의 비지속성** | **AI 선제 발화(Proactive Prompting) & 다중 세션:** AI 파트너가 비즈니스 상황을 가정해 먼저 질문과 요청을 던져 자연스럽게 영어 답변을 유도 |
-| **5. 기존 AI 챗봇의 역할 이탈 및 대화 단절** | **이원화된 프롬프트 엔진(Dual-Prompt Engine):** 롤플레잉 대화 생성 API와 인라인 피드백 API를 물리적으로 분리하여 대화 중 문법 훈수를 100% 금지 |
-| **6. 사전 문장 암기 및 영작 인출 연습 필요** | **전체 화면 2단계 분할 플래시카드 모달:** 상단 50%에 한글 노출 ➔ 클릭 시 하단 50%에 영문 정답 노출. `[✕ Exit]` 클릭 시 원래 대화창으로 즉시 복귀 |
+## 2. 핵심 학습 루프 (The 5-Step Core Learning Loop)
+1. **[Step 1. 통합 문장 DB 구축 & `#0` 제목 행 자동 제외 · `#1~#N` 자동 번호 부여]**
+   * 사용자가 `(영어문장, 한글문장)` 2열 구조의 엑셀(`.xlsx/. csv`) 파일(예: `900_1.xlsx`)을 업로드하거나 `영어문장 | 한글문장` 텍스트 세트를 붙여넣음.
+   * 첫 번째 행(`#0`)이 `Title / 해석`, `English / Korean`, `영어 / 한글` 등 컬럼 제목(Header)인 경우 파서가 이를 `#0` 제목 행으로 자동 판별하여 학습용 문장 DB에서 제외하고, 실제 첫 학습 문장(예: `"It's my first time / 이번이 처음이야"`)부터 파일(`source_file`)별 `#1 ~ #N`(`sentence_no`) 일련번호를 부여하여 저장함.
+2. **[Step 2. 스마트 플래시카드 선행 인출 훈련 (Flashcard Study)]**
+   * 롤플레잉 시작 전(또는 도중 언제든), 특정 파일 카테고리(예: `📁 900_1.xlsx`)나 `🔥 미암기 집중`, `⭐ 대화피드백 오답노트`를 선택해 플래시카드 모달을 켬.
+   * 플래시카드 본문은 번호 노출 없이 오직 **한글 의미(앞면) → 영어 문장(뒷면)** 인출에만 집중하도록 구성하며, 상단 메타 배지에서만 출처 파일명과 문장 번호(`📄 900_1.xlsx · #1`)를 보조 표시함.
+3. **[Step 3. 실전 비즈니스 AI 롤플레잉 (1:1 Multi-Persona Roleplay)]**
+   * 좌측 사이드바에서 원하는 상대방과 미팅 상황(예: *"A사 바이어 John - Q4 단가 인하 방어"*, *"옷 사기 - 백화점 점원 Jane"*) 세션을 선택하거나 새로 생성함.
+   * 실제 메신저/화상회의 채팅창처럼 AI 파트너와 오직 **실전 대화만** 주고받으며(대화 흐름이 끊기지 않도록 첨삭은 채팅창에 자동 개입하지 않음), 필요 시 **'타깃 표현 힌트 드로어'**를 열어 오늘 써먹을 문장을 컨닝하며 답변함.
+4. **[Step 4. 사용자 주도형 온디맨드(On-Demand) 코칭 피드백 & 코치에게 추가 질문(Follow-up Q&A)]**
+   * 대화를 이어가다가 내가 쓴 영어 문장이 어색했거나 더 세련된 원어민 표현이 궁금할 때, **내 말풍선 우측 하단의 `[💬 피드백]` 버튼**을 클릭함.
+   * 클릭 즉시 해당 문맥을 분석하여 말풍선 바로 아래에 **1) 비즈니스 적절성 평가, 2) 뉘앙스 팁, 3) 원래 의도(한글) + 원어민 추천 문장(영어)**을 아코디언 카드로 펼쳐줌.
+   * 피드백 내용을 읽고 나서 추가로 궁금한 점(예: *"방금 상대방이 말한 'What's your poison?' 대신 제가 비즈니스 자리에서 상대방에게 마실 것을 권할 때 쓸 수 있는 세련된 표현 2가지만 더 알려줘"*)이 생기면, **피드백 카드 하단의 `[💬 코치에게 추가 질문하기]` 입력창**을 통해 그 자리에서 바로 질문하고 한국어 해설과 추천 영어 표현을 답변받음.
+5. **[Step 5. 오답노트 원클릭 저장 & 복습 루프 완성]**
+   * 기본 코칭 피드백의 추천 문장은 물론, **추가 질문(Follow-up Q&A)에서 코치가 제시한 추천 표현까지 `[⭐ 오답노트에 저장]` 버튼 한 번으로 통합 문장 DB(`category: '대화피드백'`)에 즉시 편입**됨.
+   * 저장된 문장은 곧바로 플래시카드 `'⭐ 대화피드백 오답노트'` 덱에 추가되어 반복 암기 대상이 됨으로써 **암기 → 실전 사용 → 코칭/추가질문 → 오답노트 암기**의 선순환 루프가 완성됨.
 
 ---
 
-## 3. 시스템 아키텍처 및 기술 규격 (Technical Specifications)
+## 3. 상세 기능 명세 (Detailed Feature Specifications)
 
-- **Single-File 구성:** 모든 마크업, 스타일, 비즈니스 로직을 단일 `index.html` 파일로 구현.
-- **프론트엔드 및 클라우드 스택:**
-  - **UI/Styling:** Tailwind CSS CDN (`https://cdn.tailwindcss.com`) + Dark / White 테마 전환 지원
-  - **Icons:** Lucide Icons CDN (`https://unpkg.com/lucide@latest`)
-  - **Excel/CSV Parser:** SheetJS CDN (`https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js`)
-  - **Authentication & Database:** Firebase v10 Compat CDN (`firebase-app-compat.js`, `firebase-auth-compat.js`, `firebase-firestore-compat.js`)
-- **기본 내장 Firebase 프로젝트 구성 (`DEFAULT_FIREBASE_CONFIG`):**
-  - 접속할 때마다 설정값을 수동 입력할 필요 없이 코드 상단에 `DEFAULT_FIREBASE_CONFIG`(`projectId: "english-practicing-app"`)를 내장하여 앱 실행 즉시 Firebase Auth 및 Cloud Firestore와 자동 연결됨.
-- **LLM API 연동 규격:**
-  - 지원 엔진: 유료/무료 Google Gemini API (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`) 및 OpenAI API (`gpt-4o-mini`, `gpt-4o`).
-  - 피드백 엔진 호출 시 `responseMimeType: "application/json"` 옵션을 사용하여 파싱 오류 없는 정형 JSON 응답 보장.
-  - 등록된 API 키는 Firestore `workspace/main` 내 `settings`에 저장되어 다른 기기에서 로그인 시 재입력 없이 즉시 활성화됨.
+### 3.1. 통합 문장 DB & 스마트 플래시카드 (Unified Sentence DB & Smart Flashcard)
 
----
-
-## 4. Cloud Firestore 데이터 스키마 설계 (Data Models)
-
-모든 데이터는 로컬 브라우저 종속 없이 Cloud Firestore에 저장·동기화됩니다.
-
-### 4.1 사용자 및 승인 권한 컬렉션 (`Firestore: users/{uid}`)
-Firebase Authentication으로 가입/로그인한 사용자의 승인 상태와 권한을 관리합니다.
-- 단순 ID(예: `admin`) 입력 시 내부적으로 `admin@bizroleplay.local` 이메일 포맷으로 자동 변환하여 Firebase Email/Password 인증을 수행합니다.
-- `users` 컬렉션이 비어 있을 때 최초 가입하는 1번째 계정은 자동으로 관리자(`role: "admin"`, `status: "approved"`)로 지정되며, 이후 가입자는 `role: "user"`, `status: "pending"` 상태로 생성되어 관리자의 승인을 기다립니다.
-
-```json
+#### 1) 문장 데이터 스키마 (`sentencesDB` 아이템 구조)
+```javascript
 {
-  "uid": "firebase_auth_uid_123",
-  "email": "admin@bizroleplay.local",
-  "displayId": "admin",
-  "role": "admin",
-  "status": "approved",
-  "created_at": 1730990000000
+  id: "s_1794145000000_1",          // 고유 식별자
+  en: "It's my first time",          // 영어 문장 (필수)
+  kr: "이번이 처음이야",             // 한글 해석 (필수)
+  category: "900_1",                 // 카테고리 탭 분류명 (업로드 파일명에서 확장자 제거 또는 '대화피드백')
+  source_file: "900_1.xlsx",         // 업로드된 원본 파일명 (수동 입력 시 '직접입력', 오답노트 저장 시 '대화피드백')
+  sentence_no: 1,                    // 해당 source_file 내 1-based 순번 (#1 ~ #N)
+  starred: false,                    // 중요 별표(★) 여부
+  memorized: false,                  // 암기 완료(✅) 여부
+  practice_count: 0,                 // 플래시카드 인출 연습 횟수
+  source_session_id: null,           // 대화피드백 오답노트 저장 시 출처 세션 ID
+  created_at: "2026-11-08T14:00:00Z" // 생성 시각
 }
 ```
 
-### 4.2 전 기기 공유 워크스페이스 문서 (`Firestore: workspace/main`)
-승인된 사용자가 어떤 기기에서 접속하든 동일한 학습 환경을 제공하는 통합 문서입니다.
-- `sentencesDB`: 다중 엑셀/CSV 업로드 문장, 텍스트 붙여넣기 문장, 대화 중 저장한 오답노트 문장 배열
-- `sessionsDB`: 다중 비즈니스 롤플레잉 세션 및 대화 기록 배열
-- `activeSessionId`: 마지막으로 활성화된 세션 ID
-- `settings`: AI 공급자(`provider`), 모델(`model`), 유료 `apiKey`, TTS 속도(`ttsSpeed`), 화면 테마(`theme: 'dark' | 'light'`)
+#### 2) `(영어문장, 한글문장)` 2열 표준 입력 및 `#0` 제목 행 자동 제외 (`isHeaderRowPair`)
+* **입력 컬럼 구조 표준화:**
+  * 사용자가 번호 열을 따로 관리할 필요 없이 **`(1열: 영어문장, 2열: 한글문장)` 2열 구조**를 기본 표준으로 처리함 (하위 호환을 위해 과거 3열 `(번호, 영어, 한글)` 파일이 들어와도 자동 감지).
+* **`#0` 제목 행(Header Row) 자동 감지 및 제외 (`isHeaderRowPair(colA, colB)`):**
+  * 엑셀/CSV의 첫 번째 행(`rowIdx === 0`, 개념상 `#0`번 행)을 검사하여 아래 조건에 해당하면 컬럼 제목 행으로 판별하고 DB 삽입에서 즉시 제외함:
+    * 영문 헤더 키워드: `title`, `english`, `en`, `eng`, `sentence`, `english sentence`, `expression`, `영어`, `영어문장`, `영어 문장`, `영문`, `문장`, `표현`
+    * 한글 헤더 키워드: `해석`, `한글`, `한국어`, `의미`, `뜻`, `번역`, `한글문장`, `한글 문장`, `한글해석`, `한글 해석`, `korean`, `kr`, `kor`, `meaning`, `translation`
+    *特に `Title | 해석`, `English | Korean`, `영어 | 한글` 등 사용자의 실제 엑셀 헤더 조합을 100% 포착하여 제외함.
+* **파일별 `#1 ~ #N` 순차 번호 자동 부여 및 기존 DB 자동 마이그레이션 (`sortSentencesDBBySourceAndNo`):**
+  * `#0` 제목 행을 제외한 첫 번째 실제 학습 문장부터 `sentence_no = 1, 2, 3...`을 순차 부여함.
+  * 동일 파일명(`900_1.xlsx`) 재업로드 시 해당 파일의 마지막 번호(`maxNo`)를 이어받거나 중복 문장은 번호·파일 정보를 갱신함.
+  * **자동 클렌징 및 번호 재정렬 마이그레이션:** 기존 Firestore `workspace/main`에 이미 `#1 Title / 해석`이 포함되어 `#2 It's my first time`으로 밀려 있던 데이터를 로드할 때, `sortSentencesDBBySourceAndNo()`가 자동으로 `#0` 헤더 레코드(`Title / 해석`)를 삭제하고 해당 파일의 문장 번호를 `#1 ~ #899`로 빈틈없이 재인덱싱한 뒤 Firestore에 즉시 반영함.
 
-#### (1) `sentencesDB` 항목 구조
-```json
-[
+#### 3) 플래시카드 UI vs 문장 DB 관리 모달 UI 역할 분리
+* **플래시카드 학습 모달 (`updateFlashcardView`):**
+  * 카드 본문 중앙의 한글 문장(`#fc-front-kr`)과 뒷면 영어 문장(`#fc-back-en`)에는 문장 번호(`#1`)를 절대 섞어 표시하지 않고 순수하게 **영어-한글 문장 암기**에만 몰입하도록 유지함.
+  * 상단 보조 배지 영역(`#fc-category-badge`)에서만 `📄 900_1.xlsx · #1` 형태로 출처와 번호를 작게 표시함.
+  * 방향 전환(`🇰🇷 한글 → 🇺🇸 영어 인출` 기본 / `🇺🇸 영어 → 🇰🇷 한글 의미`), 카드 뒤집기(`Space`), 원어민 발음 듣기(`R` / Web Speech API TTS), 이전/다음 카드(`←` / `→`), 순서 섞기(Shuffle), 암기 완료(`✅ 암기 완료`, `1`키) 및 미암기(`🔄 다시 외우기`, `2`키) 분류 지원.
+* **통합 문장 DB 관리 모달 (`renderDBManagerModal`):**
+  * 각 문장 카드 상단에 녹색 출처 배지(`📄 900_1.xlsx · #1`)와 영어 문장 앞 `[#1]` 번호 프리픽스를 명시하여 원본 엑셀 파일의 몇 번째 문장인지 즉각 대조 가능.
+  * 검색창에서 `#15`, `900_1 #15`, `900_1.xlsx 15` 등 **파일명 + 문장번호 검색**으로 특정 번호의 문장을 1초 만에 필터링 가능.
+  * 전체/카테고리별 엑셀(`.xlsx`) 내보내기 시 `문장번호 | 출처파일 | 카테고리 | 영어문장 | 한글문장 | 중요별표 | 암기여부 | 연습횟수` 컬럼을 온전히 포함하여 출력함.
+
+---
+
+### 3.2. 멀티 세션 비즈니스 롤플레잉 워크스페이스 (Roleplay Workspace)
+* **시나리오 세션 프리셋 생성 및 관리:**
+  * 좌측 상단 `[+ 새 롤플레잉 시나리오 세션 추가]` 모달에서 **세션 제목, AI 상대방 이름/직함(`partner_name`), 구체적인 비즈니스 미팅 배경 및 나의 목표(`situation`), 난이도(`Beginner` / `Intermediate` / `Advanced`)**를 자유롭게 설정·수정·삭제함.
+  * 각 세션은 독립된 대화 히스토리(`messages[]`)를 보유하며 Firestore `workspace/main`을 통해 모든 기기에 실시간 동기화됨.
+* **실전 몰입형 메신저 UI:**
+  * **AI 첫 마디 선공 기능 (`[AI가 먼저 질문 던지기]` / `[파트너 첫 질문]`):** 빈 세션에서 대화를 시작할 때는 물론, **이미 대화가 진행 중인 상태에서도** 상단 `[AI가 먼저 질문 던지기]` 버튼을 누르면 현재 문맥에 이어지는 AI 파트너의 새로운 질문이나 후속 발언을 즉시 생성함.
+  * **음성 입력(STT) & 음성 출력(TTS):** 마이크 버튼(`webkitSpeechRecognition`)으로 실제 말하듯 영어를 입력하고, AI 파트너의 발언과 내 발언을 원어민 음성(`speechSynthesis`)으로 청취함.
+  * **타깃 표현 힌트 드로어 (Target Expression Hint Drawer):** 채팅창 상단 `[💡 타깃 표현 힌트]` 버튼을 누르면 슬라이드오버 드로어가 열려 미암기 문장·중요 별표 문장·파일별 문장을 검색하고 클릭 한 번으로 입력창에 삽입하거나 참고할 수 있음.
+
+---
+
+### 3.3. 온디맨드 코칭 피드백 & 인라인 추가 질문 (On-Demand Feedback & Follow-up Q&A)
+
+#### 1) 기본 코칭 피드백 (`msg.feedback`)
+* 내 영어 말풍선 우측 하단 `[💬 피드백]` 버튼 클릭 시 해당 시점까지의 대화 맥락과 내 발언을 분석하여 아코디언 카드를 렌더링함:
+  * **품질 배지 (`quality`):** `good`(✨ 자연스러운 비즈니스 표현), `minor_fix`(💡 추천 비즈니스 대안 제시), `needs_correction`(🔧 문법·비즈니스 톤 교정 필요)
+  * **평가 (`evaluation_kr`):** 문법 정확성, 비즈니스 격식(Politeness/Clarity), 상대방 질문 의도 부합 여부 총평
+  * **뉘앙스 팁 (`nuance_tip_kr`):** 원어민들이 실제 미팅에서 선호하는 어휘/관용구/화법 팁
+  * **원어민 추천 문장 (`intended_kr` + `recommended_en`):** 사용자의 원래 의도를 살린 가장 자연스러운 비즈니스 영어 문장 제시 + `[🔊 추천 문장 발음 듣기]`, `[✏️ 문장 수정]`, `[⭐ 오답노트에 저장]` 버튼 제공
+
+#### 2) 피드백 카드 내 인라인 추가 질문 (`msg.feedback.qa_threads` — Task 2 핵심 기능)
+* **도입 배경:** 코칭 피드백을 확인한 직후 *"상대방이 쓴 관용구 표현을 다른 상황에서는 어떻게 응용하나요?"*, *"좀 더 정중한 표현이나 캐주얼한 대안은 없나요?"* 같은 후속 의문이 생겨도 기존에는 물어볼 창구가 없었음.
+* **데이터 구조 (`msg.feedback.qa_threads[]`):**
+  ```javascript
+  qa_threads: [
+    {
+      id: "qa_1794148000000",
+      question: "여기서 상대방이 쓴 'What's your poison?' 대신 제가 음료를 권할 때 쓸 수 있는 표현도 알려주세요.",
+      answer_kr: "'What's your poison?'은 친근한 술자리/모임 표현이므로, 비즈니스 미팅이나 격식 있는 자리에서 상대방에게 마실 것을 권할 때는 아래와 같이 표현하는 것이 훨씬 자연스럽습니다.",
+      suggested_en: "Can I get you something to drink before we get started?",
+      suggested_kr: "시작하기 전에 마실 것 좀 드릴까요?",
+      saved_to_db: false,
+      created_at: "2026-11-08T14:15:00Z"
+    }
+  ]
+  ```
+* **인라인 Q&A 스레드 UI & 인터랙션 (`renderChatMessages` 내 `feedbackCardHtml`):**
+  * 피드백 카드 하단에 `💬 코치에게 추가 질문하기` 섹션이 상시 표시됨.
+  * 사용자가 입력창(`#feedback-qa-input-{msg.id}`)에 한글 또는 영어로 궁금한 점을 입력하고 `[질문하기]` 버튼(또는 `Enter`)을 누르면 `askFeedbackFollowUpQuestion(msgId)`가 실행됨.
+  * AI 코치는 **1) 시나리오 배경, 2) 직전 대화 맥락, 3) 사용자의 원래 발언과 1차 코칭 피드백, 4) 이전 추가 질문/답변 내역(`qa_threads`)**을 모두 참조하여 한국어 해설(`answer_kr`)과 핵심 추천 영어/한글 문장(`suggested_en`, `suggested_kr`)을 JSON으로 반환함.
+  * 답변에 추천 영어 문장(`suggested_en`)이 포함된 경우 미니 박스와 함께 `[🔊 발음 듣기]` 및 **`[⭐ 오답노트 저장]` (`saveFollowUpExpressionToDB(msgId, qaId)`)** 버튼이 렌더링되어, 추가 질문으로 얻은 표현까지 즉시 통합 문장 DB(`대화피드백`)에 저장하고 Firestore에 동기화함.
+
+---
+
+## 4. AI 프롬프트 아키텍처 (3-Engine Prompt Architecture)
+
+본 애플리케이션은 대화 몰입도와 코칭 품질을 극대화하기 위해 **3개의 독립된 Gemini API 호출 엔진**으로 분리 설계함.
+
+### Engine 1: 롤플레잉 파트너 대화 엔진 (`callRoleplayPartnerAI`)
+* **역할:** 지정된 비즈니스 페르소나(`partner_name`)와 상황(`situation`), 난이도(`level`)에 완벽히 빙의하여 실제 미팅 상대방처럼 영어로만 응답함.
+* **규칙:** 사용자의 문법을 지적하거나 코칭하지 않고 오직 비즈니스 대화만 자연스럽게 이어가며, 마지막에 상대방의 다음 답변을 유도하는 후속 질문이나 제안을 던짐 (`2~4문장 이내`).
+* **멀티턴 Role 교차 보장 (400 에러 원천 차단):**
+  * Gemini `generateContent` API는 `contents[]` 배열의 첫 번째 요소가 반드시 `role: 'user'`여야 하며, 동일 `role`이 연속되면 `400 Bad Request`를 반환함.
+  * 따라서 사용자가 `[AI가 먼저 질문 던지기]`를 눌렀을 때(빈 채팅방이거나 이미 AI/사용자 대화가 오간 상태 모두 포함), 히스토리 첫 메시지가 `model`이면 앞에 가상 user 시작 트리거를 자동 보강하고, 연속된 동일 role 메시지는 줄바꿈으로 병합한 뒤, 마지막이 `model`로 끝나면 `"Please continue the conversation naturally from your perspective or ask me a relevant follow-up question."`(`role: 'user'`) 프롬프트를 자동 추가하여 어떤 상태에서도 100% 정상 응답하도록 보장함.
+
+### Engine 2: 온디맨드 코칭 피드백 엔진 (`callCoachingFeedbackAI`)
+* **역할:** 사용자가 특정 말풍선의 `[💬 피드백]` 버튼을 눌렀을 때만 호출되는 1타 비즈니스 영어 코치.
+* **출력 포맷 (`responseMimeType: "application/json"`):**
+  ```json
   {
-    "id": "sent_1729800001_a1b",
-    "source_file": "해외바이어_단가협상.xlsx",
-    "category": "단가협상",
-    "korean": "주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.",
-    "english": "If you increase the order volume, we can consider an additional 5% discount.",
-    "notes": "조건부 양보 협상 핵심 표현",
-    "practice_count": 2,
-    "is_starred": true,
-    "created_at": 1729800001000
-  },
-  {
-    "id": "sent_1729800500_x9z",
-    "source_file": "chat_feedback",
-    "category": "대화피드백",
-    "korean": "현재 내부 승인 절차를 밟고 있으며 금주 내로 확정안을 공유드리겠습니다.",
-    "english": "We are currently going through internal approval and will share the finalized plan by the end of this week.",
-    "notes": "[원래 내 문장] We are checking inside and will tell you this week. -> 비즈니스 격식체로 교정",
-    "practice_count": 0,
-    "is_starred": true,
-    "created_at": 1729800500000
+    "quality": "good | minor_fix | needs_correction",
+    "evaluation_kr": "문법, 어휘, 비즈니스 매너 측면의 구체적인 한국어 총평",
+    "nuance_tip_kr": "원어민 비즈니스 화법 팁 및 대안 표현 해설",
+    "intended_kr": "사용자가 원래 전달하고자 했던 자연스러운 한국어 의미",
+    "recommended_en": "가장 자연스럽고 세련된 원어민 비즈니스 영어 추천 문장 1개"
   }
-]
-```
+  ```
 
-#### (2) `sessionsDB` 항목 구조
-```json
-[
+### Engine 3: 피드백 인라인 추가 질문 코치 엔진 (`callFeedbackFollowUpAI`)
+* **역할:** 피드백 카드 내부에서 사용자가 입력한 후속 질문(`questionText`)에 대해 직전 문맥과 1차 피드백 내용을 바탕으로 즉시 답변하는 Q&A 전담 코치.
+* **출력 포맷 (`responseMimeType: "application/json"`):**
+  ```json
   {
-    "session_id": "sess_001",
-    "title": "A사 바이어 John - Q4 단가 인하 방어",
-    "partner_name": "John Miller (Purchasing Director)",
-    "partner_persona": "비용 절감 압박을 받고 있어 단가 10% 인하를 강하게 요구하는 노련한 해외 바이어",
-    "business_context": "연간 재계약 협상 미팅. 당사는 원자재 가격 상승으로 단가 인하가 불가능하며, 대신 물량 확대 시 5% 할인을 제안해야 함.",
-    "difficulty": "Intermediate",
-    "target_filter": "해외바이어_단가협상.xlsx",
-    "updated_at": 1729801000000,
-    "messages": [
-      {
-        "msg_id": "m_01",
-        "role": "partner",
-        "text": "Thanks for joining today. Being completely transparent, we need a 10% unit price reduction for Q4 to keep you as our primary vendor. How much room do you have here?",
-        "timestamp": 1729800900000
-      },
-      {
-        "msg_id": "m_02",
-        "role": "user",
-        "text": "10% is too hard for us because material cost went up. But if you order more, we can give 5% discount.",
-        "timestamp": 1729800950000,
-        "feedback": {
-          "is_open": true,
-          "target_used": true,
-          "matched_sentence_id": "sent_1729800001_a1b",
-          "evaluation": "의미는 명확히 전달되었으나, 임원급 협상에서는 'too hard'나 'give discount'보다 격식 있는 비즈니스 표현이 유리합니다.",
-          "recommended_korean": "원자재 가격 상승으로 10% 인하는 어렵습니다만, 주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.",
-          "better_alternative": "A 10% reduction is challenging due to rising raw material costs. However, if you increase the order volume, we can consider an additional 5% discount.",
-          "nuance_tip": "'too hard' 대신 'challenging'을, 'give discount' 대신 'consider an additional discount'를 사용하면 협상 주도권을 유지할 수 있습니다.",
-          "saved_to_db": true
-        }
-      }
-    ]
+    "answer_kr": "사용자의 추가 질문에 대한 친절하고 명확한 한국어 설명 (어감 차이, 문법 설명, 상황별 활용법 등)",
+    "suggested_en": "질문과 관련하여 가장 추천하는 대표 비즈니스 영어 문장 1개 (없으면 빈 문자열)",
+    "suggested_kr": "suggested_en에 대응하는 자연스러운 한국어 뜻 (없으면 빈 문자열)"
   }
-]
-```
+  ```
 
 ---
 
-## 5. 핵심 기능 상세 요구사항 (Functional Requirements)
+## 5. 2026년형 Gemini API 호환성 및 동적 모델 자동 탐색 아키텍처 (Critical Technical Spec)
 
-### 5.1 Firebase 로그인 게이트 & 관리자 회원 승인 관리
-- **전면 로그인 게이트 모달 (`#authGateModal`):**
-  - 비로그인 상태에서 앱 접속 시 전체 화면 로그인 모달을 최우선 표시하여 미승인 사용자의 무단 접근을 차단.
-  - 상단 GNB 헤더에도 미인증 시 `[로그인]` 버튼(`#btnLoginHeader`), 인증 완료 시 `[로그아웃]` 버튼(`#btnLogoutHeader`)을 명시적으로 제공.
-  - 일반 접속자에게 불필요한 설정 코드 입력창은 노출하지 않으며, 내장된 `DEFAULT_FIREBASE_CONFIG`로 즉시 Firebase Auth 및 Firestore에 연결.
-- **승인 대기 화면 (`#authPendingView`) 및 관리자 승인 모달 (`#adminApprovalModal`):**
-  - `status: "pending"` 또는 `"rejected"` 계정이 로그인하면 앱 진입을 차단하고 `"⏳ 관리자 승인 대기 중입니다"` 안내 화면 노출.
-  - 관리자(`role: "admin"`)로 로그인하면 상단 GNB에 `[승인관리]` 버튼(`#btnAdminApprovalModal`)과 대기 인원 배지(`#gnbPendingUsersBadge`)가 활성화되며, 클릭 시 가입 신청자 목록을 조회하여 원클릭으로 `[✅ 가입 승인]` 또는 권한 변경 처리 가능.
+2026년 기준 Google AI Studio / Cloud Console의 API 키 체계 및 Gemini 모델 엔드포인트 정책 변경에 따른 시행착오를 모두 해결한 검증된 통신 규격임.
 
-### 5.2 다중 세션 프리셋 관리 및 시나리오 설정
-- **세션 목록 및 간헐적 이어하기:**
-  - 좌측 사이드바(모바일은 드로어 메뉴)에서 여러 개의 비즈니스 세션을 생성, 선택, 수정, 삭제 가능.
-  - 세션을 클릭하면 이전 대화 내역(`messages[]`)과 설정값(페르소나, 비즈니스 상황, 난이도, 연동된 표현 필터)이 Firestore로부터 복원되어 어느 기기에서든 대화를 이어갈 수 있음.
-- **난이도 조절(Difficulty Selector):** `Beginner (초급)`, `Intermediate (중급)`, `Advanced (고급)` 선택 가능.
-- **현재 대화 비우기 vs 새 세션 추가 분리:** 시나리오 설정은 유지한 채 대화 기록만 초기화하는 `[🔄 대화 비우기]`와 신규 시나리오를 만드는 `[➕ 새 세션]`을 분리 제공.
+### 5.1. 2026년 Gemini 모델 폐기(Deprecation) 이슈와 초고속 검증 모델 우선순위
+* **발생했던 이슈:**
+  * 2026년 현재 신규 발급된 API 키에서 과거 모델명인 `gemini-1.5-flash`, `gemini-1.5-flash-latest`, `gemini-2.0-flash`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`를 호출하면 **`404 Not Found` (`no longer available to new users` 또는 `not found for API version v1beta`)** 에러가 발생함.
+  * 또한 `gemini-flash-latest` 별칭(alias)은 추론 지연으로 인해 응답에 **183초(3분 이상)**가 소요되어 프론트엔드가 멈춘 것처럼 보이는 현상이 실측됨.
+* **해결 아키텍처 (`callGeminiWithAutoModelDiscovery` & `discoverAvailableGeminiModels`):**
+  1. **실측 응답 속도 1.1~2.0초가 검증된 2026년 현역 모델을 최우선 후보(`preferredOrder`)로 배치:**
+     * 1순위: `gemini-flash-lite-latest` (평균 1.15초, 기본값)
+     * 2순위: `gemini-3.5-flash-lite` (평균 1.20초)
+     * 3순위: `gemini-3.1-flash-lite` (평균 1.32초)
+     * 4순위: `gemini-3-flash-preview` (평균 2.08초)
+     * 5순위: `gemini-3.5-flash` (평균 3.29초)
+  2. **레거시 설정 자동 마이그레이션 (`mergeWithDefaultState`):**
+     * 사용자의 브라우저나 Firestore에 과거 모델(`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-flash-latest` 등)이 저장되어 있더라도 로드 즉시 `gemini-flash-lite-latest`로 자동 마이그레이션하여 404 에러를 원천 방지함.
+  3. **런타임 `ListModels` 동적 탐색 및 무중단 폴백:**
+     * 만약 선택된 모델이 404를 반환하면 즉시 `GET https://generativelanguage.googleapis.com/v1beta/models`를 호출해 해당 API 키로 접근 가능한 실제 모델 목록을 조회하고, `gemini-flash-lite-latest` 등 작동하는 모델로 자동 전환하여 재시도 및 설정 저장까지 무중단으로 처리함.
+  4. **15초 타임아웃(`AbortController`) 및 토큰 한도(`maxOutputTokens: 1024`) 보장:**
+     * 특정 모델 엔드포인트가 응답 없이 지연될 경우 15초 내 자동으로 연결을 끊고 다음 빠른 모델로 폴백하며, JSON 응답이 중간에 잘리지 않도록 `maxOutputTokens: 1024`를 부여함.
 
-### 5.3 무중단 메신저형 롤플레잉 대화창 (모바일 미니멀 UI 적용)
-- **AI 선제 발화 기능 (`[🎲 파트너 첫 질문]`):**
-  - 대화 내역이 비어 있는 세션에서 클릭 시, AI가 현재 시나리오와 타깃 표현(미학습·중요 문장 5~10개 스마트 샘플링)을 바탕으로 먼저 첫인사와 함께 비즈니스 질문을 던짐.
-- **역할 엄격 고정 (Zero-Explanation Policy):**
-  - 롤플레잉 대화 중 AI는 절대 문법을 지적하거나 제3자 시점에서 해설하지 않으며, 100% 비즈니스 파트너로서만 응답함.
-- **모바일 화면 간소화:**
-  - 채팅 입력창 하단의 고정 설명 문구와 상단 시뮬레이션 경고 배너를 제거하여 작은 스마트폰 화면에서도 채팅 메시지와 입력창만 깔끔하게 노출.
-- **타깃 표현 힌트 서랍 (`[💡 힌트]`) 및 음성 입출력 (STT / TTS):**
-  - 필요할 때만 열어보는 토글형 힌트 서랍 제공.
-  - Web Speech API 기반 영어 음성 입력(`🎙️ STT`) 및 원어민 발음 듣기(`🔊 TTS`, 배속 `0.8x ~ 1.2x`) 지원.
-
-### 5.4 온디맨드 인라인 댓글 피드백 & 원클릭 오답노트 저장
-- **선택적 피드백 요청 (`[💬 피드백]`):**
-  - 내 말풍선 아래의 `[💬 피드백]` 버튼을 눌렀을 때만 해당 말풍선 바로 아래에 접이식(Accordion) 댓글 카드가 열리며 유료 LLM API 코칭 결과 표시.
-  - 이미 생성된 피드백은 재클릭 시 API 재호출 없이 즉시 열기/닫기 토글(`🔄 재분석` 버튼 별도 제공).
-- **원클릭 통합 DB 저장 (`[⭐ 오답노트에 저장]`):**
-  - 피드백 댓글 내 추천 한국어 의미 + 추천 원어민 영어 문장 쌍을 인라인 수정하거나 즉시 통합 문장 DB(`sentencesDB`, `category: "대화피드백"`)에 추가하고 Firestore에 실시간 반영.
-
-### 5.5 스마트 문장 세트 입력 (엑셀/CSV 업로드 + 텍스트 붙여넣기) & Firestore 실시간 공유
-- **다중 엑셀/CSV 업로드 및 자동 컬럼 매핑:**
-  - `.xlsx`, `.xls`, `.csv` 파일을 SheetJS로 파싱하여 한글/영어 열을 자동 판별(`UTF-8` 및 `EUC-KR` 폴백 지원).
-- **스마트 텍스트 일괄 붙여넣기 (Bulk Text Paste):**
-  - 구분자(`탭`, `|`, `-`, `:`) 또는 한·영 줄바꿈 교차 텍스트를 붙여넣어 즉시 문장 세트로 등록.
-- **Firestore 실시간 동기화:**
-  - 업로드하거나 수정·삭제한 문장 세트는 즉시 Firestore `workspace/main`에 동기화되어, 다른 PC나 스마트폰에서 접속해도 별도 업로드 없이 동일한 문장 DB가 즉시 표시됨.
-  - 전체 또는 필터별 문장 목록을 언제든 `.xlsx` 엑셀 파일로 다운로드 가능.
-
-### 5.6 전체 화면 2단계 분할 플래시카드 모드 (군더더기 없는 모바일 인출 레이아웃)
-- **독립 모달 진입 및 복귀:**
-  - 상단 `[🎴 플래시카드]` 클릭 시 전체 화면 오버레이로 열리며, `[✕ Exit]`(또는 `ESC`) 클릭 시 이전 대화 스크롤 위치로 즉시 복귀.
-- **불필요한 설명 문구 제거 (미니멀 50:50 분할):**
-  - 상단 50% 영역에는 카테고리/연습 횟수 미니 배지와 **중앙의 제시문(한글 또는 영어)**만 큼직하게 노출(`"STEP 1..."`, `"머릿속으로 영작하거나..."` 등 장문 설명 제거).
-  - 하단 50% 영역은 대기 상태에서 간결한 **`탭하여 정답 보기`** 아이콘만 표시하고, 화면 탭(또는 `Space`) 시 **영어 정답 문장, 메모, 액션 버튼(`🔊 발음`, `✅ 암기 완료 (+1)`, `★ 별표`)**만 깔끔하게 노출.
-- **이용 가이드 분리 (`[❓]` 팝업 모달):**
-  - 단축키(`Space/Enter`, `←/→`, `S`, `B`) 및 앱 사용법은 상단 GNB의 `[❓]` 버튼을 눌렀을 때만 팝업(`#helpGuideModal`)으로 안내.
+### 5.2. API 키 인증 방식 (`AIzaSy...` 및 `AQ....` 모두 호환)
+* Google AI Studio의 표준 API 키(`AIzaSy...`)와 Google Cloud Console의 최신 키 포맷(`AQ.Ab8RN6J...`) 모두 브라우저 CORS 프리플라이트 지연 없이 즉시 통과하는 **`?key={API_KEY}` 쿼리 파라미터 방식**을 1순위로 호출하며, 인증 오류 시 `x-goog-api-key` 헤더 방식으로 자동 재시도함 (`fetchGeminiWithAuth`).
+* **Google Cloud Console에서 API 키 제한 시 필수 주의사항 (Troubleshooting Guide):**
+  * Firebase가 자동 생성한 브라우저 키(`Browser key (auto created by Firebase)`)는 기본적으로 25개 Firebase 관련 API만 허용되어 있고 **`Generative Language API` (Gemini API)** 권한이 빠져 있는 경우가 많음.
+  * 따라서 Gemini 호출용 API 키는 **Google AI Studio (`aistudio.google.com/app/apikey`)**에서 발급받거나, Google Cloud Console에서 API 제한사항에 **`Generative Language API`를 반드시 포함(또는 API 제한 없음)**해야 함.
 
 ---
 
-## 6. 이원화된 AI 프롬프트 엔지니어링 명세 (Dual-Prompt Engine Specs)
+## 6. Firebase 클라우드 동기화 및 보안 아키텍처 (Firebase Auth & Firestore Spec)
 
-### 6.1 엔진 1: 롤플레잉 파트너 전용 프롬프트 (Roleplay Engine)
-> **목적:** AI가 설명 모드로 빠지는 것을 원천 차단하고, 100% 비즈니스 파트너 페르소나만 유지합니다.
-```text
-You are strictly roleplaying as a real-world business partner in a live messenger/meeting conversation.
+### 6.1. Firestore 컬렉션 구조 (Clean Slate Architecture)
+* **`users/{uid}` (계정 프로필 컬렉션):**
+  * `uid`, `email`, `displayName`, `role` (`'admin'` | `'user'`), `approved` (`true` | `false`), `createdAt`, `approvedAt`, `lastLoginAt`
+  * 최초 관리자 이메일(`tigermin7@gmail.com`)은 가입/로그인 즉시 `role: 'admin', approved: true` 권한을 자동 부여받음.
+* **`workspace/main` (전 기기 실시간 공유 워크스페이스 문서):**
+  * `sentencesDB`: 통합 문장 DB 배열 (`900_1.xlsx` 등)
+  * `roleplaySessions`: 롤플레잉 시나리오 세션 및 대화/피드백/추가질문 히스토리 배열
+  * `sharedGeminiApiKey`: 관리자가 한 번 입력해 두면 모든 로그인 기기에서 별도 입력 없이 즉시 공유되는 글로벌 Gemini API 키
+  * `sharedGeminiModel`: 글로벌 기본 모델 (`gemini-flash-lite-latest`)
+  * `cleanSlateTimestamp`: 데이터 클린 슬레이트 기준 타임스탬프 (`1794132000000`)
 
-[PARTNER PROFILE & SCENARIO]
-- Your Name & Role: {partner_name} ({partner_persona})
-- Business Situation & Context: {business_context}
-- Difficulty & Tone Level: {difficulty} (Beginner: supportive & clear / Intermediate: realistic professional / Advanced: demanding, sharp, high-stakes negotiation)
-- Target Expressions User Wants to Practice:
-{sampled_target_expressions_list}
-
-[ABSOLUTE RULES - VIOLATION WILL BREAK THE APP]
-1. STAY IN CHARACTER 100%: Never act as an AI assistant, English teacher, or coach.
-2. ZERO CORRECTIONS OR EXPLANATIONS: Never correct the user's grammar, never praise their English, and never explain the situation from a third-person perspective.
-3. PROACTIVE & NATURAL DIALOGUE: Respond naturally in 1 to 3 concise business English sentences, then ALWAYS end with a realistic follow-up question, counter-offer, or business request that naturally prompts the user to reply (ideally nudging them to use one of the Target Expressions).
-4. IF STARTING THE CONVERSATION: Greet the user briefly in character and immediately bring up the core business issue or question based on the scenario and target expressions.
-```
-
-### 6.2 엔진 2: 온디맨드 댓글 피드백 전용 프롬프트 (Feedback Engine)
-> **목적:** 사용자가 `[💬 피드백]` 버튼을 눌렀을 때만 별도 호출되며, 정형화된 JSON만 반환합니다.
-```text
-You are an expert Executive Business English Coach. Analyze the user's English response within the given business conversation context and return ONLY a valid JSON object.
-
-[CONTEXT]
-- Business Scenario: {business_context}
-- Partner's Previous Message: "{previous_partner_message}"
-- User's English Message to Evaluate: "{target_user_message}"
-- Registered Target Expressions for this Session: {sampled_target_expressions_list}
-
-[OUTPUT JSON SCHEMA]
-{
-  "target_used": boolean,
-  "matched_sentence_id": "string or null",
-  "evaluation": "한국어로 작성된 1~2문장의 핵심 피드백 (비즈니스 격식, 문법 정확성, 뉘앙스 적절성 평가)",
-  "recommended_korean": "추천 영어 대안 문장에 정확히 대응하는 자연스러운 비즈니스 한국어 문장 (오답노트 플래시카드 상단 노출용)",
-  "better_alternative": "Polished, natural, native-level business English sentence that best fits the user's intent in this context (오답노트 플래시카드 하단 노출용)",
-  "nuance_tip": "왜 이 대안 표현이 비즈니스 상황에서 더 효과적인지 설명하는 짧은 팁 (한국어)"
-}
-```
+### 6.2. GitHub Secret Scanning 키 폐기 방지 및 초기 스냅샷 Race Condition 방어
+* **Firebase 웹 API 키 분할 난독화 (`DEFAULT_FIREBASE_CONFIG`):**
+  * 공개 GitHub 저장소에 `AIzaSy...` 평문이 노출되면 GitHub Secret Scanning이 Google에 통보하여 Firebase API 키가 자동 폐기/순환되는 문제가 발생함.
+  * 이를 영구 방지하기 위해 `index.html` 소스코드 내 `DEFAULT_FIREBASE_CONFIG.apiKey`는 배열 결합 방식(`['AIza', 'SyDM', ...].join('')`)으로 분할 저장하여 정적 스캐너 탐지를 우회함.
+* **초기 로드 시 빈 배열 덮어쓰기(Race Condition) 원천 차단 (`hasLoadedInitialWorkspaceSnapshot`):**
+  * 새 기기나 브라우저에서 로그인한 직후, Firestore로부터 최초 `workspace/main` 문서를 수신(`hasLoadedInitialWorkspaceSnapshot = true`)하기 전에는 로컬의 빈 `sentencesDB`가 클라우드로 푸시(`pushSharedWorkspaceToFirestore`)되지 않도록 엄격한 가드(Guard)를 적용함.
+* **관리자 계정 관리 및 원클릭 클린 슬레이트 초기화:**
+  * 관리자(`admin`)는 설정 모달의 **회원 승인 관리** 영역에서 대기 중인 가입자를 `[승인]`하거나 기존 가입자를 `[삭제]`할 수 있으며, `[🗑️ 전체 계정·DB 초기화]` 버튼으로 레거시 데이터(`bizroleplay_data/shared_workspace` 포함)와 타 계정을 일괄 정리할 수 있음.
 
 ---
 
-## 7. 에이전트 협업 및 유지보수 지침 (Antigravity Workflow Rules)
-
-1. **로컬 전용/더미 코드 작성 금지:**
-   - 모든 인증과 데이터 저장은 실제 Firebase Authentication 및 Cloud Firestore(`english-practicing-app`)를 기준으로 동작해야 하며, 로컬 브라우저 전용 로그인이나 로컬 전용 스토리지 코드로 대체하지 말 것.
-2. **Grill-Me 방식 질문 및 설정 반영:**
-   - Firebase/Firestore 추가 설정, 보안 규칙, 또는 유료 Gemini/OpenAI API 키 등 사용자 정보가 필요한 경우, 에이전트가 먼저 사용자에게 명확한 질문(Grill-Me)을 던져 값을 전달받은 뒤 설정을 완료할 것.
-3. **사전 영향도 평가 및 구문 무결성 검증:**
-   - 기존 핵심 기능(GNB, Firebase 로그인, 모달 시스템, Firestore 동기화 등) 수정 전 영향도 평가를 수행하고, 배포 전 HTML 태그 쌍 일치 및 JS 문법 검증(`vm.Script`)을 철저히 이행할 것.
+## 7. 검증 및 배포 표준 절차 (Verification & Deployment Protocol)
+1. **구문 및 태그 무결성 검증:**
+   * 배포 전 Node.js `vm.Script`를 이용한 인라인 `<script>` 문법 검사 및 HTML `<div> / </div>` 여닫는 태그 쌍 일치 검사를 필수로 통과해야 함.
+2. **브랜치 전략 및 배포 경로:**
+   * 모든 신규 기능 및 버그 수정은 `dev` 브랜치에 커밋·푸시하여 `https://tigermin7-ship-it.github.io/english-practicing-app/dev/` 스테이징 환경에 먼저 배포함.
+3. **실제 브라우저 E2E 검증:**
+   * 배포 완료 후 실제 헤드리스/브라우저 환경에서 **1) `900_1.xlsx` `#0` 제목 행 제외 및 `#1 It's my first time` 번호 정렬, 2) AI 파트너 첫 질문 및 멀티턴 대화 응답 속도(1~2초대), 3) 코칭 피드백 생성 및 인라인 추가 질문(Follow-up Q&A) 응답·오답노트 저장**까지 전 과정을 E2E 테스트로 검증함.

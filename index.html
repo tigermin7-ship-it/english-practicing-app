@@ -703,29 +703,26 @@
         <!-- Bulk Text Paste Section -->
         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-bold text-emerald-300">방식 1. 여러 문장 한꺼번에 복사·붙여넣기 (문장번호·영어·한글 자동 인식)</label>
+            <label class="text-xs font-bold text-emerald-300">방식 1. 여러 문장 한꺼번에 복사·붙여넣기 (영어·한글 2열 표준 + 자동 번호 부여)</label>
             <span id="bulkPreviewCountBadge" class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">인식된 문장: 0개</span>
           </div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
-            엑셀의 <strong>[문장번호, 영어문장, 한글문장]</strong> 3개 열(또는 2개 열)을 그대로 복사해 붙여넣거나, <code>1 | 영어문장 | 한글문장</code>, <strong>영어 한 줄 + 한국어 한 줄 교차 형태</strong>로 붙여넣으세요. 파일명(세트명)별 문장번호가 자동 관리됩니다.
+            엑셀의 <strong>[영어문장, 한글문장]</strong> 2개 열을 그대로 복사해 붙여넣거나, <code>영어문장 | 한글문장</code>, 또는 <strong>영어 한 줄 + 한국어 한 줄 교차 형태</strong>로 붙여넣으세요. 첫 행 제목(<code>Title / 해석</code> 등)은 자동 제외(#0 처리)되며 실제 문장부터 파일별 <strong>#1, #2... 순번이 자동 부여</strong>됩니다.
           </p>
           <textarea
             id="bulkPasteTextarea"
             rows="7"
             oninput="updateBulkPreviewCount()"
-            placeholder="예시 1 (문장번호 | 영어문장 | 한글문장 또는 엑셀 탭 복사):&#10;1	If you increase the order volume, we can consider a 5% discount.	주문 물량을 늘려주신다면 5% 할인을 검토해 보겠습니다.&#10;2	Let's touch base again next Tuesday.	다음 주 화요일에 다시 상황 공유하시죠.&#10;&#10;예시 2 (줄바꿈 교차):&#10;Could you share the revised quotation by Friday?&#10;금요일까지 수정된 견적서를 공유해 주실 수 있을까요?"
+            placeholder="예시 1 (엑셀 [영어문장, 한글문장] 2열 복사 또는 구분자 사용):&#10;If you increase the order volume, we can consider a 5% discount.	주문 물량을 늘려주신다면 5% 할인을 검토해 보겠습니다.&#10;Let's touch base again next Tuesday.	다음 주 화요일에 다시 상황 공유하시죠.&#10;&#10;예시 2 (줄바꿈 교차):&#10;Could you share the revised quotation by Friday?&#10;금요일까지 수정된 견적서를 공유해 주실 수 있을까요?"
             class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs md:text-sm text-slate-100 focus:border-emerald-500 focus:outline-none font-mono leading-relaxed"
           ></textarea>
         </div>
 
         <!-- Single Quick Add Section -->
         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
-          <label class="text-xs font-bold text-indigo-300 block">방식 2. 단일 문장 직접 입력 (선택사항)</label>
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <input id="singleNoInput" type="number" min="1" placeholder="문장번호 (자동)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none font-mono" />
-            <input id="singleEngInput" type="text" placeholder="영어 문장 입력 (예: We will share the finalized plan by Friday.)" class="sm:col-span-3 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <label class="text-xs font-bold text-indigo-300 block">방식 2. 단일 문장 직접 입력 (순번 자동 부여)</label>
+          <div class="grid grid-cols-1 gap-2">
+            <input id="singleEngInput" type="text" placeholder="영어 문장 입력 (예: We will share the finalized plan by Friday.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
             <input id="singleKorInput" type="text" placeholder="한글 문장 입력 (예: 금요일까지 확정안을 공유드리겠습니다.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
             <input id="singleNoteInput" type="text" placeholder="메모 / 핵심 뉘앙스 (선택사항)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
           </div>
@@ -1152,6 +1149,27 @@
       return s;
     }
 
+    function isHeaderRowPair(colA, colB) {
+      const a = String(colA ?? '').trim().toLowerCase();
+      const b = String(colB ?? '').trim().toLowerCase();
+      if (!a && !b) return true;
+      const engHeaders = new Set([
+        'title', 'english', 'eng', 'en', 'sentence', 'sentences',
+        'expression', 'expressions', 'phrase', 'phrases', 'text',
+        '영어', '영문', '영어문장', '영문장', '영어표현', '표현', '문장', '원문'
+      ]);
+      const korHeaders = new Set([
+        '해석', '한글', '한국어', '한글문장', '한국어문장', '뜻', '의미', '번역',
+        'korean', 'kor', 'kr', 'meaning', 'translation', '한글해석', '한국어해석'
+      ]);
+      if ((engHeaders.has(a) && korHeaders.has(b)) || (korHeaders.has(a) && engHeaders.has(b))) {
+        return true;
+      }
+      if (engHeaders.has(a) && engHeaders.has(b)) return true;
+      if (korHeaders.has(a) && korHeaders.has(b)) return true;
+      return false;
+    }
+
     function parseBulkSentencesText(rawText) {
       const lines = (rawText || '')
         .split(/\r?\n/)
@@ -1167,15 +1185,25 @@
 
         if (delimiterRegex.test(line)) {
           const rawParts = line.split(delimiterRegex).map(p => p.trim()).filter(Boolean);
-          // Skip header line if pasted from Excel (e.g. "문장번호 | 영어문장 | 한글문장")
-          if (i === 0 && rawParts.some(p => ['문장번호', '영어문장', '한글문장', 'sentence', 'korean', 'english'].includes(p.toLowerCase()))) {
-            i++;
-            continue;
+          // Skip #0 header line if pasted from Excel (e.g. "Title | 해석", "영어문장 | 한글문장")
+          if (i === 0) {
+            if (
+              (rawParts.length >= 2 && isHeaderRowPair(rawParts[0], rawParts[1])) ||
+              (rawParts.length >= 3 && isHeaderRowPair(rawParts[1], rawParts[2])) ||
+              rawParts.some(p => ['문장번호', '영어문장', '한글문장'].includes(p.toLowerCase()))
+            ) {
+              i++;
+              continue;
+            }
           }
           if (rawParts.length >= 3 && isNumericSentenceNo(rawParts[0])) {
-            const sentence_no = normalizeSentenceNo(rawParts[0], results.length + 1);
             let p1 = rawParts[1];
             let p2 = rawParts[2];
+            if (isHeaderRowPair(p1, p2)) {
+              i++;
+              continue;
+            }
+            const sentence_no = normalizeSentenceNo(rawParts[0], results.length + 1);
             let english = p1;
             let korean = p2;
             if (hasKoreanChars(p1) && !hasKoreanChars(p2)) {
@@ -1198,6 +1226,10 @@
               p0 = p0.replace(/^[-•*]\s*/, '').trim();
             }
             const p1 = rawParts[1];
+            if (isHeaderRowPair(p0, p1)) {
+              i++;
+              continue;
+            }
             let english = p0;
             let korean = p1;
             if (hasKoreanChars(p0) && !hasKoreanChars(p1)) {
@@ -1224,6 +1256,10 @@
         // If no delimiter on this line, check if we can pair with next line (Alternating lines)
         if (i + 1 < lines.length) {
           const nextLine = lines[i + 1].replace(/^(\d+[\.\)]\s*|[-•*]\s*)/, '').trim();
+          if (i === 0 && isHeaderRowPair(cleanedLine, nextLine)) {
+            i += 2;
+            continue;
+          }
           const line1Kor = hasKoreanChars(cleanedLine);
           const line2Kor = hasKoreanChars(nextLine);
           if (line1Kor !== line2Kor) {
@@ -1259,22 +1295,54 @@
     }
 
     function sortSentencesDBBySourceAndNo() {
-      if (!Array.isArray(AppState.sentencesDB)) return;
-      // Backfill sentence_no for any legacy items that lacked it, grouped by source_file
-      const counters = new Map();
+      if (!Array.isArray(AppState.sentencesDB)) return false;
+      let removedHeaderOrShifted = false;
+
+      // 1) Remove any #0 header row items (e.g. "Title / 해석") that were accidentally stored as a sentence
+      const filtered = AppState.sentencesDB.filter(item => {
+        if (isHeaderRowPair(item.english, item.korean)) {
+          removedHeaderOrShifted = true;
+          return false;
+        }
+        return true;
+      });
+      if (removedHeaderOrShifted) {
+        AppState.sentencesDB = filtered;
+      }
+
+      // 2) Group by source_file and ensure clean 1..N sequential numbering per file
+      const groups = new Map();
       AppState.sentencesDB.forEach(item => {
         const src = item.source_file || '기본_세트';
-        if (item.sentence_no === undefined || item.sentence_no === null || item.sentence_no === '') {
-          const next = (counters.get(src) || 0) + 1;
-          counters.set(src, next);
-          item.sentence_no = next;
-        } else {
-          const n = typeof item.sentence_no === 'number' ? item.sentence_no : parseInt(String(item.sentence_no), 10);
-          if (!isNaN(n)) {
-            counters.set(src, Math.max(counters.get(src) || 0, n));
-          }
-        }
+        if (!groups.has(src)) groups.set(src, []);
+        groups.get(src).push(item);
       });
+
+      groups.forEach((items) => {
+        // Sort by existing sentence_no or created_at to preserve file row order
+        items.sort((a, b) => {
+          const na = typeof a.sentence_no === 'number' ? a.sentence_no : parseInt(String(a.sentence_no || ''), 10);
+          const nb = typeof b.sentence_no === 'number' ? b.sentence_no : parseInt(String(b.sentence_no || ''), 10);
+          if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+          return (a.created_at || 0) - (b.created_at || 0);
+        });
+
+        // Check if numbering starts at 2 (because #1 header "Title / 해석" was removed) or has missing numbers
+        const firstNo = typeof items[0]?.sentence_no === 'number' ? items[0].sentence_no : parseInt(String(items[0]?.sentence_no || ''), 10);
+        const needsSequentialReindex = removedHeaderOrShifted || isNaN(firstNo) || firstNo !== 1;
+
+        items.forEach((item, idx) => {
+          const expectedNo = idx + 1;
+          if (needsSequentialReindex || item.sentence_no === undefined || item.sentence_no === null || item.sentence_no === '') {
+            if (item.sentence_no !== expectedNo) {
+              item.sentence_no = expectedNo;
+              removedHeaderOrShifted = true;
+            }
+          }
+        });
+      });
+
+      return removedHeaderOrShifted;
     }
 
     function mergeSentencesIntoDB(newItems, sourceFile, defaultCategory) {
@@ -1457,35 +1525,54 @@
       let startRowIdx = 0;
 
       const headerRow = nonEmptyRows[0].map(c => String(c).trim().toLowerCase());
-      headerRow.forEach((h, idx) => {
-        if (!h) return;
-        if (['문장번호', '번호', '순번', '연번', 'no', 'no.', 'num', 'number', 'idx', 'index', '#'].some(k => h === k || h.includes('문장번호') || h.includes('순번') || h.includes('번호'))) {
-          if (numCol === -1) numCol = idx;
-        } else if (['영어', '영문', '영어문장', '영문장', '표현', 'en', 'eng', 'english', 'sentence', 'expression'].some(k => h.includes(k))) {
-          if (engCol === -1) engCol = idx;
-        } else if (['한글', '한국어', '한글문장', '한국어문장', '의미', '해석', 'kr', 'kor', 'korean', '뜻'].some(k => h.includes(k))) {
-          if (korCol === -1) korCol = idx;
-        } else if (['메모', '노트', '팁', '비고', 'note', 'notes', 'tip'].some(k => h.includes(k))) {
-          if (noteCol === -1) noteCol = idx;
-        } else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) {
-          if (catCol === -1) catCol = idx;
+      // Check 2-column or 3-column #0 header row (e.g. ["Title", "해석"], ["영어문장", "한글문장"])
+      if (headerRow.length >= 2 && isHeaderRowPair(headerRow[0], headerRow[1])) {
+        startRowIdx = 1;
+        if (hasKoreanChars(headerRow[0]) && !hasKoreanChars(headerRow[1])) {
+          korCol = 0;
+          engCol = 1;
+        } else {
+          engCol = 0;
+          korCol = 1;
         }
-      });
+        if (headerRow.length >= 3) noteCol = 2;
+      } else {
+        headerRow.forEach((h, idx) => {
+          if (!h) return;
+          if (['문장번호', '번호', '순번', '연번', 'no', 'no.', 'num', 'number', 'idx', 'index', '#'].some(k => h === k || h.includes('문장번호') || h.includes('순번') || h.includes('번호'))) {
+            if (numCol === -1) numCol = idx;
+          } else if (['title', '영어', '영문', '영어문장', '영문장', '표현', 'en', 'eng', 'english', 'sentence', 'expression', 'phrase', 'text'].some(k => h === k || h.includes(k))) {
+            if (engCol === -1) engCol = idx;
+          } else if (['해석', '한글', '한국어', '한글문장', '한국어문장', '의미', '번역', 'kr', 'kor', 'korean', '뜻', 'meaning', 'translation'].some(k => h === k || h.includes(k))) {
+            if (korCol === -1) korCol = idx;
+          } else if (['메모', '노트', '팁', '비고', 'note', 'notes', 'tip'].some(k => h.includes(k))) {
+            if (noteCol === -1) noteCol = idx;
+          } else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) {
+            if (catCol === -1) catCol = idx;
+          }
+        });
+      }
 
       if (engCol !== -1 && korCol !== -1) {
         startRowIdx = 1;
-        // If 3+ columns and col 0 was not assigned, check if col 0 is sentence number
         if (numCol === -1 && engCol !== 0 && korCol !== 0 && nonEmptyRows.length > 1) {
           const secondRowCol0 = String(nonEmptyRows[1][0] ?? '').trim();
           if (isNumericSentenceNo(secondRowCol0)) numCol = 0;
         }
       } else {
-        // Check if row 0 is a header row by comparing row 0 col 0 with row 1 col 0
-        if (nonEmptyRows.length > 1 && !isNumericSentenceNo(nonEmptyRows[0][0]) && isNumericSentenceNo(nonEmptyRows[1][0])) {
+        // Check if row 0 is a #0 header row (either by header keyword on one side or non-numeric vs numeric)
+        if (
+          nonEmptyRows.length > 1 &&
+          (engCol !== -1 || korCol !== -1 || isHeaderRowPair(nonEmptyRows[0][0], nonEmptyRows[0][1]) || (!isNumericSentenceNo(nonEmptyRows[0][0]) && isNumericSentenceNo(nonEmptyRows[1][0])))
+        ) {
           startRowIdx = 1;
         }
         const sampleRows = nonEmptyRows.slice(startRowIdx, Math.min(startRowIdx + 8, nonEmptyRows.length));
         const maxCols = Math.max(...sampleRows.map(r => r.length));
+
+        numCol = -1;
+        engCol = -1;
+        korCol = -1;
 
         for (let c = 0; c < maxCols; c++) {
           const texts = sampleRows.map(r => String(r[c] ?? '').trim()).filter(Boolean);
@@ -1494,7 +1581,7 @@
           const korCount = texts.filter(t => hasKoreanChars(t)).length;
           const engCount = texts.filter(t => /[a-zA-Z]{2,}/.test(t) && !hasKoreanChars(t)).length;
 
-          if (numCount / texts.length >= 0.6 && numCol === -1) {
+          if (maxCols >= 3 && numCount / texts.length >= 0.6 && numCol === -1) {
             numCol = c;
           } else if (engCount / texts.length >= 0.4 && korCount / texts.length < 0.5 && engCol === -1) {
             engCol = c;
@@ -1503,30 +1590,29 @@
           }
         }
 
-        // Standard 3-column fallback: [문장번호(0), 영어문장(1), 한글문장(2)]
-        if (maxCols >= 3 && numCol === 0) {
-          if (engCol === -1) engCol = 1;
-          if (korCol === -1) korCol = 2;
-        } else if (maxCols >= 3 && numCol === -1 && engCol !== -1 && korCol !== -1 && engCol !== 0 && korCol !== 0) {
-          numCol = 0;
-        } else {
+        // Standard 2-column fallback: [영어문장(0), 한글문장(1)]
+        if (numCol === -1) {
           if (engCol === -1) engCol = 0;
           if (korCol === -1) korCol = engCol === 0 ? 1 : 0;
-        }
-
-        if (maxCols >= 4) {
-          noteCol = [0, 1, 2, 3].find(x => x !== numCol && x !== engCol && x !== korCol) ?? -1;
+          if (maxCols >= 3) noteCol = [0, 1, 2].find(x => x !== engCol && x !== korCol) ?? -1;
+        } else {
+          if (engCol === -1) engCol = numCol === 0 ? 1 : 0;
+          if (korCol === -1) korCol = [0, 1, 2].find(x => x !== numCol && x !== engCol) ?? 2;
+          if (maxCols >= 4) noteCol = [0, 1, 2, 3].find(x => x !== numCol && x !== engCol && x !== korCol) ?? -1;
         }
       }
 
       const dataRows = nonEmptyRows.slice(startRowIdx);
       const items = [];
 
-      dataRows.forEach((r, idx) => {
+      dataRows.forEach((r) => {
         let rawNo = numCol !== -1 ? String(r[numCol] ?? '').trim() : '';
         let engText = String(r[engCol] ?? '').trim();
         let korText = String(r[korCol] ?? '').trim();
         if (!engText || !korText) return;
+
+        // Skip if this row is a #0 header row (e.g. Title / 해석)
+        if (isHeaderRowPair(engText, korText)) return;
 
         // If a row has Korean in engCol and English in korCol, swap automatically
         if (hasKoreanChars(engText) && !hasKoreanChars(korText)) {
@@ -1556,9 +1642,9 @@
         return;
       }
       const exportData = targetList.map((s, idx) => ({
+        '영어문장(Title)': s.english,
+        '한글문장(해석)': s.korean,
         '문장번호': s.sentence_no ?? (idx + 1),
-        '영어문장': s.english,
-        '한글문장': s.korean,
         '파일명(출처)': s.source_file,
         '카테고리': s.category,
         '메모': s.notes || '',
@@ -1999,6 +2085,79 @@ ${targetLines}
       }
     }
 
+    function buildFeedbackFollowUpPrompt(session, prevPartnerMsg, userMsg, fb, userQuestion) {
+      const prevQaText = Array.isArray(fb?.qa_threads) && fb.qa_threads.length > 0
+        ? fb.qa_threads.map((q, i) => `Q${i + 1}: ${q.question}\nA${i + 1}: ${q.answer}${q.suggested_english ? ` (추천 표현: ${q.suggested_english})` : ''}`).join('\n')
+        : '(이전 추가 질문 없음)';
+
+      return `You are an expert Executive Business & Practical English Coach. The user is asking a follow-up question inside the inline coaching feedback card. Answer the user's question clearly in Korean and, if appropriate, provide a natural recommended English sentence and its Korean translation. Return ONLY a valid JSON object without markdown code fences.
+
+[CONVERSATION CONTEXT]
+- Scenario Title: ${session?.title || 'Roleplay Session'}
+- Partner Persona: ${session?.partner_name || 'Partner'} (${session?.partner_persona || ''})
+- Situation / Context: ${session?.business_context || ''}
+- Partner's Previous Line: "${prevPartnerMsg || '(Conversation start)'}"
+- User's Spoken English Line: "${userMsg}"
+
+[INITIAL COACHING FEEDBACK GIVEN]
+- Evaluation: ${fb?.evaluation || ''}
+- Nuance Tip: ${fb?.nuance_tip || ''}
+- Recommended Alternative: "${fb?.better_alternative || ''}" (${fb?.recommended_korean || ''})
+
+[PREVIOUS FOLLOW-UP Q&A IN THIS THREAD]
+${prevQaText}
+
+[USER'S NEW FOLLOW-UP QUESTION]
+"${userQuestion}"
+
+[OUTPUT JSON SCHEMA]
+{
+  "answer": "사용자의 추가 질문에 대해 친절하고 명쾌하게 설명하는 원어민 코치의 답변 (한국어, 2~4문장)",
+  "suggested_korean": "질문 내용과 관련하여 새로 추천하거나 응용할 만한 영어 표현이 있다면 그에 대응하는 자연스러운 한국어 의미 (추천 문장이 불필요한 단순 질문이면 빈 문자열 \"\")",
+  "suggested_english": "질문 내용과 관련하여 새로 추천하거나 응용할 만한 자연스러운 원어민 영어 문장 (추천 문장이 불필요한 단순 질문이면 빈 문자열 \"\")"
+}`;
+    }
+
+    async function callFeedbackFollowUpAI(session, prevPartnerMsg, userMsg, fb, userQuestion) {
+      const prompt = buildFeedbackFollowUpPrompt(session, prevPartnerMsg, userMsg, fb, userQuestion);
+      const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
+      const provider = AppState.settings.provider || 'gemini';
+      const model = AppState.settings.model || 'auto';
+
+      if (provider === 'gemini') {
+        const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1024,
+            responseMimeType: 'application/json'
+          }
+        });
+        const parts = data?.candidates?.[0]?.content?.parts || [];
+        const rawJson = parts.map(p => p.text || '').join('') || '{}';
+        const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        return JSON.parse(cleaned);
+      } else {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model.startsWith('gpt') ? model : 'gpt-4o-mini',
+            messages: [{ role: 'system', content: prompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.4
+          })
+        });
+        if (!res.ok) throw new Error(`OpenAI 추가 질문 API 오류 (${res.status})`);
+        const data = await res.json();
+        const rawJson = data?.choices?.[0]?.message?.content || '{}';
+        return JSON.parse(rawJson);
+      }
+    }
+
     // Smart Offline Simulation Fallback (when user hasn't entered an API key yet)
     function generateSimulatedPartnerReply(session, sampledTargets, isFirstTrigger) {
       const target = sampledTargets[Math.floor(Math.random() * sampledTargets.length)];
@@ -2176,9 +2335,11 @@ ${targetLines}
       }
 
       // Set temporary loading state
+      const existingQaThreads = Array.isArray(msg.feedback?.qa_threads) ? msg.feedback.qa_threads : [];
       msg.feedback = {
         is_open: true,
-        is_loading: true
+        is_loading: true,
+        qa_threads: existingQaThreads
       };
       renderChatMessages(false);
 
@@ -2194,7 +2355,9 @@ ${targetLines}
           better_alternative: result.better_alternative || msg.text,
           nuance_tip: result.nuance_tip || '',
           saved_to_db: false,
-          is_editing: false
+          is_editing: false,
+          is_qa_loading: false,
+          qa_threads: existingQaThreads
         };
 
         // Increment practice_count if a registered target expression was used
@@ -2264,6 +2427,91 @@ ${targetLines}
       await saveAppState();
       renderAll();
       showToast('⭐ [대화피드백 오답노트]에 저장되었습니다! 플래시카드에서 즉시 복습할 수 있습니다.', 'success');
+    }
+
+    function handleFeedbackQaKeydown(event, msgId) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        askFeedbackFollowUpQuestion(msgId);
+      }
+    }
+
+    async function askFeedbackFollowUpQuestion(msgId) {
+      const session = getActiveSession();
+      if (!session) return;
+      const msgIndex = session.messages.findIndex(m => m.msg_id === msgId);
+      if (msgIndex === -1) return;
+      const msg = session.messages[msgIndex];
+      if (!msg.feedback || msg.feedback.is_qa_loading) return;
+
+      const inputEl = document.getElementById(`fbQaInput_${msgId}`);
+      const questionText = (inputEl?.value || '').trim();
+      if (!questionText) {
+        showToast('코치에게 물어볼 추가 질문 내용을 입력해 주세요.', 'error');
+        return;
+      }
+
+      let prevPartnerText = '';
+      for (let i = msgIndex - 1; i >= 0; i--) {
+        if (session.messages[i].role === 'partner') {
+          prevPartnerText = session.messages[i].text;
+          break;
+        }
+      }
+
+      if (!Array.isArray(msg.feedback.qa_threads)) {
+        msg.feedback.qa_threads = [];
+      }
+      msg.feedback.is_qa_loading = true;
+      renderChatMessages(false);
+
+      try {
+        const res = await callFeedbackFollowUpAI(session, prevPartnerText, msg.text, msg.feedback, questionText);
+        msg.feedback.qa_threads.push({
+          qa_id: 'qa_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+          question: questionText,
+          answer: (res.answer || '').trim() || '질문에 대한 설명입니다.',
+          suggested_korean: (res.suggested_korean || '').trim(),
+          suggested_english: (res.suggested_english || '').trim(),
+          saved_to_db: false,
+          timestamp: Date.now()
+        });
+        msg.feedback.is_qa_loading = false;
+        await saveAppState();
+        renderChatMessages(false);
+      } catch (err) {
+        msg.feedback.is_qa_loading = false;
+        renderChatMessages(false);
+        showToast('추가 질문 답변 생성 실패: ' + err.message, 'error');
+      }
+    }
+
+    async function saveFollowUpExpressionToDB(msgId, qaId) {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      if (!msg || !msg.feedback || !Array.isArray(msg.feedback.qa_threads)) return;
+      const qaItem = msg.feedback.qa_threads.find(q => q.qa_id === qaId);
+      if (!qaItem || !qaItem.suggested_english || !qaItem.suggested_korean) return;
+
+      const notes = `[피드백 추가질문: ${qaItem.question}] ${qaItem.answer}`;
+      mergeSentencesIntoDB(
+        [{ korean: qaItem.suggested_korean, english: qaItem.suggested_english, notes, category: '대화피드백' }],
+        'chat_feedback',
+        '대화피드백'
+      );
+
+      const key = normalizeEnglishForDedup(qaItem.suggested_english);
+      const found = AppState.sentencesDB.find(s => normalizeEnglishForDedup(s.english) === key);
+      if (found) {
+        found.is_starred = true;
+        found.source_file = 'chat_feedback';
+        found.category = '대화피드백';
+      }
+
+      qaItem.saved_to_db = true;
+      await saveAppState();
+      renderAll();
+      showToast('⭐ 추가 질문에서 추천된 표현이 [대화피드백 오답노트]에 저장되었습니다!', 'success');
     }
 
     /*************************************************************************
@@ -2672,6 +2920,89 @@ ${targetLines}
                           <span>${fb.saved_to_db ? '⭐ 오답노트 저장됨 (다시 저장)' : '⭐ 오답노트에 저장'}</span>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  <!-- Follow-up Q&A Section Inside Coaching Feedback -->
+                  <div class="pt-2.5 border-t border-slate-800/90 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] font-bold text-sky-300 flex items-center gap-1">
+                        <i data-lucide="message-circle-question" class="w-3.5 h-3.5"></i>
+                        <span>코치에게 추가 질문하기 (표현 응용·뉘앙스·대안 질문)</span>
+                      </span>
+                    </div>
+
+                    ${
+                      Array.isArray(fb.qa_threads) && fb.qa_threads.length > 0
+                        ? `<div class="space-y-2">
+                            ${fb.qa_threads.map(qa => `
+                              <div class="rounded-xl bg-slate-950/90 border border-slate-800/90 p-3 space-y-2 text-xs">
+                                <div class="font-bold text-indigo-300 flex items-start gap-1.5">
+                                  <span class="shrink-0">Q.</span>
+                                  <span>${escapeHtml(qa.question)}</span>
+                                </div>
+                                <div class="text-slate-200 leading-relaxed flex items-start gap-1.5">
+                                  <span class="font-bold text-emerald-400 shrink-0">A.</span>
+                                  <span>${escapeHtml(qa.answer)}</span>
+                                </div>
+                                ${
+                                  qa.suggested_english
+                                    ? `<div class="mt-1.5 pt-2 border-t border-slate-800/80 space-y-1.5">
+                                        ${qa.suggested_korean ? `<div class="text-[11px] text-amber-200/90 font-medium">🇰🇷 ${escapeHtml(qa.suggested_korean)}</div>` : ''}
+                                        <div class="text-xs font-bold text-emerald-300">🇺🇸 "${escapeHtml(qa.suggested_english)}"</div>
+                                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                                          <button onclick="speakEnglishText(${JSON.stringify(qa.suggested_english).replace(/"/g, '&quot;')})" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] text-indigo-300 flex items-center gap-1">
+                                            <i data-lucide="volume-2" class="w-3 h-3"></i>
+                                            <span>발음 듣기</span>
+                                          </button>
+                                          ${
+                                            qa.suggested_korean
+                                              ? `<button onclick="saveFollowUpExpressionToDB('${escapeHtml(msg.msg_id)}', '${escapeHtml(qa.qa_id)}')" class="px-2.5 py-1 rounded-lg ${
+                                                  qa.saved_to_db
+                                                    ? 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
+                                                    : 'bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-bold'
+                                                } text-[11px] flex items-center gap-1 transition">
+                                                  <i data-lucide="star" class="w-3 h-3"></i>
+                                                  <span>${qa.saved_to_db ? '⭐ 오답노트 저장됨' : '⭐ 이 표현도 오답노트에 저장'}</span>
+                                                </button>`
+                                              : ''
+                                          }
+                                        </div>
+                                      </div>`
+                                    : ''
+                                }
+                              </div>
+                            `).join('')}
+                          </div>`
+                        : ''
+                    }
+
+                    ${
+                      fb.is_qa_loading
+                        ? `<div class="rounded-xl bg-slate-950/80 border border-sky-500/30 px-3 py-2 text-xs text-sky-200 flex items-center gap-2">
+                            <div class="w-3.5 h-3.5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                            <span>원어민 코치가 추가 질문에 대한 답변을 작성 중입니다...</span>
+                          </div>`
+                        : ''
+                    }
+
+                    <div class="flex items-center gap-1.5">
+                      <input
+                        id="fbQaInput_${escapeHtml(msg.msg_id)}"
+                        type="text"
+                        placeholder="예: 다른 표현이나 정중히 거절하는 표현은 영어로 어떻게 말하나요? (Enter)"
+                        onkeydown="handleFeedbackQaKeydown(event, '${escapeHtml(msg.msg_id)}')"
+                        class="flex-1 rounded-xl bg-slate-950 border border-slate-700/90 focus:border-sky-500 px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
+                      />
+                      <button
+                        id="btnFbQaSend_${escapeHtml(msg.msg_id)}"
+                        onclick="askFeedbackFollowUpQuestion('${escapeHtml(msg.msg_id)}')"
+                        ${fb.is_qa_loading ? 'disabled' : ''}
+                        class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-bold shrink-0 flex items-center gap-1 shadow-md shadow-sky-600/20 transition"
+                      >
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span>질문하기</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -3999,13 +4330,18 @@ ${targetLines}
         }
         hasLoadedInitialWorkspaceSnapshot = true;
         isApplyingRemoteSnapshot = true;
+        let didAutoMigrateSentences = false;
         try {
           lastLocalSaveTimestamp = remote.updated_at || Date.now();
           AppState = mergeWithDefaultState(remote);
+          didAutoMigrateSentences = sortSentencesDBBySourceAndNo();
           applyTheme(AppState.settings?.theme || 'dark');
           renderAll();
         } finally {
           isApplyingRemoteSnapshot = false;
+        }
+        if (didAutoMigrateSentences) {
+          await pushSharedWorkspaceToFirestore(Date.now());
         }
       }, (err) => {
         console.warn('Firestore workspace sync listener error:', err);
