@@ -1022,176 +1022,18 @@
     function getInitialOnboardingData() {
       const now = Date.now();
       return {
-        sentencesDB: [
-          {
-            id: 'sent_init_01',
-            source_file: '해외바이어_단가협상.xlsx',
-            category: '단가협상',
-            korean: '주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.',
-            english: 'If you increase the order volume, we can consider an additional 5% discount.',
-            notes: '무조건적인 단가 인하 요구에 물량 확대를 조건으로 역제안하는 핵심 협상 표현',
-            practice_count: 2,
-            is_starred: true,
-            created_at: now - 86400000
-          },
-          {
-            id: 'sent_init_02',
-            source_file: '해외바이어_단가협상.xlsx',
-            category: '단가협상',
-            korean: '원자재 가격 상승으로 인해 10% 단가 인하는 현실적으로 어렵습니다.',
-            english: 'A 10% unit price reduction is challenging due to rising raw material costs.',
-            notes: "'too hard' 대신 'challenging due to ~'를 사용하여 전문적인 톤 유지",
-            practice_count: 1,
-            is_starred: true,
-            created_at: now - 85000000
-          },
-          {
-            id: 'sent_init_03',
-            source_file: '해외바이어_단가협상.xlsx',
-            category: '단가협상',
-            korean: '장기적인 파트너십을 고려하여 결제 조건을 완화하는 대안을 제안드립니다.',
-            english: 'Considering our long-term partnership, we would like to propose more flexible payment terms as an alternative.',
-            notes: '가격 인하 대신 결제 조건(Payment terms)으로 협상 프레임을 전환할 때 활용',
-            practice_count: 0,
-            is_starred: false,
-            created_at: now - 84000000
-          },
-          {
-            id: 'sent_init_04',
-            source_file: '해외바이어_단가협상.xlsx',
-            category: '단가협상',
-            korean: '연간 최소 발주 수량(MOQ)을 보장해 주시면 해당 단가를 맞춰드리겠습니다.',
-            english: 'If you can guarantee the annual minimum order quantity, we can meet your target price.',
-            notes: '타깃 단가 수용 조건으로 MOQ 개런티를 요구할 때 사용',
-            practice_count: 0,
-            is_starred: false,
-            created_at: now - 83000000
-          },
-          {
-            id: 'sent_init_05',
-            source_file: '글로벌PM_일정조율.xlsx',
-            category: '일정조율',
-            korean: '품질 검증 강화를 위해 정식 출시 일정을 2주 연기하는 것을 제안드립니다.',
-            english: 'To ensure thorough quality assurance, we propose pushing back the official launch date by two weeks.',
-            notes: "일정 지연('delay') 대신 'push back ~ to ensure quality'로 긍정적 프레이밍",
-            practice_count: 1,
-            is_starred: true,
-            created_at: now - 82000000
-          },
-          {
-            id: 'sent_init_06',
-            source_file: '글로벌PM_일정조율.xlsx',
-            category: '일정조율',
-            korean: '핵심 기능부터 1차로 먼저 배포하고, 부가 기능은 다음 스프린트에 반영하겠습니다.',
-            english: 'We will roll out the core features in Phase 1 and include the add-on features in the next sprint.',
-            notes: '일정 압박 시 단계적 배포(Phased rollout)로 타협안을 제시하는 표현',
-            practice_count: 0,
-            is_starred: false,
-            created_at: now - 81000000
-          },
-          {
-            id: 'sent_init_07',
-            source_file: '글로벌PM_일정조율.xlsx',
-            category: '일정조율',
-            korean: '다음 주 화요일에 다시 진행 상황을 점검하시죠.',
-            english: "Let's touch base again next Tuesday to review our progress.",
-            notes: "'touch base'는 실무 미팅에서 가장 자주 쓰이는 '상황을 공유/점검하다' 관용구",
-            practice_count: 3,
-            is_starred: false,
-            created_at: now - 80000000
-          },
-          {
-            id: 'sent_init_08',
-            source_file: '비즈니스_이메일필수.csv',
-            category: '이메일/보고',
-            korean: '요청하신 수정 견적서를 첨부파일로 공유해 드립니다.',
-            english: 'Please find attached the revised quotation you requested.',
-            notes: '첨부파일 전달 시 정중한 표준 비즈니스 표현',
-            practice_count: 2,
-            is_starred: false,
-            created_at: now - 79000000
-          },
-          {
-            id: 'sent_init_09',
-            source_file: 'chat_feedback',
-            category: '대화피드백',
-            korean: '현재 내부 승인 절차를 밟고 있으며 금주 내로 확정안을 공유드리겠습니다.',
-            english: 'We are currently going through internal approval and will share the finalized plan by the end of this week.',
-            notes: '[원래 내 문장] We are checking inside and will tell you this week. -> 비즈니스 격식체로 교정',
-            practice_count: 0,
-            is_starred: true,
-            created_at: now - 3600000
-          },
-          {
-            id: 'sent_init_10',
-            source_file: 'chat_feedback',
-            category: '대화피드백',
-            korean: '말씀하신 우려 사항은 충분히 이해합니다만, 품질 유지를 위한 마지노선입니다.',
-            english: 'I fully understand your concern, but this is our bottom line to maintain product quality.',
-            notes: '[원래 내 문장] I know your worry, but we cannot go down more for quality. -> bottom line 활용 교정',
-            practice_count: 1,
-            is_starred: true,
-            created_at: now - 1800000
-          }
-        ],
+        sentencesDB: [],
         sessionsDB: [
           {
             session_id: 'sess_001',
-            title: 'A사 바이어 John - Q4 단가 인하 방어',
-            partner_name: 'John Miller (Purchasing Director)',
-            partner_persona: '비용 절감 압박을 받고 있어 단가 10% 인하를 강하게 요구하는 노련한 미국 바이어',
-            business_context: '연간 재계약 협상 미팅. 당사는 원자재 가격 상승으로 10% 단가 인하가 불가능하며, 대신 주문 물량 확대 시 5% 추가 할인이나 결제 조건 완화를 역제안해야 함.',
+            title: '새 비즈니스 롤플레잉 세션',
+            partner_name: 'Alex Rivera (Business Partner)',
+            partner_persona: '논리적이고 전문적인 비즈니스 협상 파트너',
+            business_context: '비즈니스 파트너십 협상 및 프로젝트 조율 미팅',
             difficulty: 'Intermediate',
-            target_filter: '해외바이어_단가협상.xlsx',
-            updated_at: now - 600000,
-            messages: [
-              {
-                msg_id: 'm_init_01',
-                role: 'partner',
-                text: 'Thanks for joining today. Being completely transparent, we need a 10% unit price reduction for Q4 to keep you as our primary vendor. How much room do you have here?',
-                timestamp: now - 660000
-              },
-              {
-                msg_id: 'm_init_02',
-                role: 'user',
-                text: '10% is too hard for us because material cost went up. But if you order more, we can give 5% discount.',
-                timestamp: now - 600000,
-                feedback: {
-                  is_open: true,
-                  target_used: true,
-                  matched_sentence_id: 'sent_init_01',
-                  evaluation: "핵심 협상 논리(원자재 상승 + 물량 조건부 5% 할인)는 훌륭하게 전달되었으나, 임원급 미팅에서는 'too hard'나 'give discount'보다 격식 있는 표현이 설득력을 높입니다.",
-                  recommended_korean: '원자재 가격 상승으로 10% 인하는 어렵습니다만, 주문 물량을 늘려주신다면 5% 추가 할인을 검토해 보겠습니다.',
-                  better_alternative: 'A 10% reduction is challenging due to rising raw material costs. However, if you increase the order volume, we can consider an additional 5% discount.',
-                  nuance_tip: "'too hard' 대신 'challenging'을, 'give discount' 대신 'consider an additional discount'를 사용하면 협상 주도권을 유지할 수 있습니다.",
-                  saved_to_db: false
-                }
-              },
-              {
-                msg_id: 'm_init_03',
-                role: 'partner',
-                text: 'I hear you on the raw material costs, but 5% only works for us if the volume threshold is realistic. What kind of volume increase are you looking for, and could we also look at extending our payment terms?',
-                timestamp: now - 540000
-              }
-            ]
-          },
-          {
-            session_id: 'sess_002',
-            title: '글로벌 PM Sarah - 런칭 일정 2주 연기 조율',
-            partner_name: 'Sarah Jenkins (Global Product Lead)',
-            partner_persona: '마케팅 캠페인 일정에 맞춰 정시 출시를 중요하게 생각하지만 합리적인 대안에는 열려 있는 글로벌 PM',
-            business_context: '신규 서비스 글로벌 출시 점검 미팅. QA 단계에서 발견된 이슈 해결을 위해 전체 일정을 2주 연기하거나, 핵심 기능만 Phase 1으로 먼저 배포하는 대안을 설득해야 함.',
-            difficulty: 'Intermediate',
-            target_filter: '글로벌PM_일정조율.xlsx',
-            updated_at: now - 7200000,
-            messages: [
-              {
-                msg_id: 'm_init_201',
-                role: 'partner',
-                text: "Hi there! Marketing is ready to kick off the campaign next Monday as scheduled. Are we still on track for the full release, or is there any risk I should know about?",
-                timestamp: now - 7200000
-              }
-            ]
+            target_filter: 'ALL',
+            updated_at: now,
+            messages: []
           }
         ],
         activeSessionId: 'sess_001',
