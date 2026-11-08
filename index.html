@@ -703,17 +703,17 @@
         <!-- Bulk Text Paste Section -->
         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-bold text-emerald-300">방식 1. 여러 문장 한꺼번에 복사·붙여넣기 (자동 한/영 분리)</label>
+            <label class="text-xs font-bold text-emerald-300">방식 1. 여러 문장 한꺼번에 복사·붙여넣기 (문장번호·영어·한글 자동 인식)</label>
             <span id="bulkPreviewCountBadge" class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">인식된 문장: 0개</span>
           </div>
           <p class="text-[11px] text-slate-400 leading-relaxed">
-            엑셀에서 두 열을 복사해 붙여넣거나(탭 구분), <code>영어 | 한국어</code>, <code>한국어 - 영어</code>, 또는 <strong>영어 한 줄 + 한국어 한 줄 교차 형태</strong>로 자유롭게 붙여넣으세요. 한글/영어 순서는 자동으로 판별합니다.
+            엑셀의 <strong>[문장번호, 영어문장, 한글문장]</strong> 3개 열(또는 2개 열)을 그대로 복사해 붙여넣거나, <code>1 | 영어문장 | 한글문장</code>, <strong>영어 한 줄 + 한국어 한 줄 교차 형태</strong>로 붙여넣으세요. 파일명(세트명)별 문장번호가 자동 관리됩니다.
           </p>
           <textarea
             id="bulkPasteTextarea"
             rows="7"
             oninput="updateBulkPreviewCount()"
-            placeholder="예시 1 (구분자 사용):&#10;If you increase the order volume, we can consider a 5% discount. | 주문 물량을 늘려주신다면 5% 할인을 검토해 보겠습니다.&#10;Let's touch base again next Tuesday. | 다음 주 화요일에 다시 상황 공유하시죠.&#10;&#10;예시 2 (줄바꿈 교차):&#10;Could you share the revised quotation by Friday?&#10;금요일까지 수정된 견적서를 공유해 주실 수 있을까요?"
+            placeholder="예시 1 (문장번호 | 영어문장 | 한글문장 또는 엑셀 탭 복사):&#10;1	If you increase the order volume, we can consider a 5% discount.	주문 물량을 늘려주신다면 5% 할인을 검토해 보겠습니다.&#10;2	Let's touch base again next Tuesday.	다음 주 화요일에 다시 상황 공유하시죠.&#10;&#10;예시 2 (줄바꿈 교차):&#10;Could you share the revised quotation by Friday?&#10;금요일까지 수정된 견적서를 공유해 주실 수 있을까요?"
             class="w-full rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2.5 text-xs md:text-sm text-slate-100 focus:border-emerald-500 focus:outline-none font-mono leading-relaxed"
           ></textarea>
         </div>
@@ -721,9 +721,12 @@
         <!-- Single Quick Add Section -->
         <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
           <label class="text-xs font-bold text-indigo-300 block">방식 2. 단일 문장 직접 입력 (선택사항)</label>
-          <div class="grid grid-cols-1 gap-2">
-            <input id="singleKorInput" type="text" placeholder="한국어 의미 입력 (예: 금주 내로 확정안을 공유드리겠습니다.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
-            <input id="singleEngInput" type="text" placeholder="영어 문장 입력 (예: We will share the finalized plan by the end of this week.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <input id="singleNoInput" type="number" min="1" placeholder="문장번호 (자동)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none font-mono" />
+            <input id="singleEngInput" type="text" placeholder="영어 문장 입력 (예: We will share the finalized plan by Friday.)" class="sm:col-span-3 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input id="singleKorInput" type="text" placeholder="한글 문장 입력 (예: 금요일까지 확정안을 공유드리겠습니다.)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
             <input id="singleNoteInput" type="text" placeholder="메모 / 핵심 뉘앙스 (선택사항)" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:border-indigo-500 focus:outline-none" />
           </div>
         </div>
@@ -774,7 +777,7 @@
             <option value="ALL">전체 문장 보기</option>
           </select>
           <div class="relative flex-1 max-w-md">
-            <input id="dbModalSearchInput" type="text" oninput="renderDBManagerTable()" placeholder="한글 의미, 영어 표현, 메모 검색..." class="w-full rounded-lg bg-slate-900 border border-slate-700 pl-3 pr-8 py-2 text-slate-200 focus:border-indigo-500 focus:outline-none" />
+            <input id="dbModalSearchInput" type="text" oninput="renderDBManagerTable()" placeholder="문장번호(예: 15, #15), 파일명, 영어/한글 문장 검색..." class="w-full rounded-lg bg-slate-900 border border-slate-700 pl-3 pr-8 py-2 text-slate-200 focus:border-indigo-500 focus:outline-none" />
           </div>
         </div>
         <button onclick="deleteFilteredSentencesInDBModal()" class="px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300 text-xs font-medium">
@@ -1137,6 +1140,18 @@
       return (eng || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
+    function isNumericSentenceNo(val) {
+      const s = String(val ?? '').trim();
+      return /^#?\d+([.-]\d+)?$/.test(s);
+    }
+
+    function normalizeSentenceNo(val, fallbackNo) {
+      const s = String(val ?? '').trim().replace(/^#/, '');
+      if (!s) return fallbackNo;
+      if (/^\d+$/.test(s)) return parseInt(s, 10);
+      return s;
+    }
+
     function parseBulkSentencesText(rawText) {
       const lines = (rawText || '')
         .split(/\r?\n/)
@@ -1149,29 +1164,62 @@
       let i = 0;
       while (i < lines.length) {
         const line = lines[i];
-        // Clean bullet numbering if present (e.g., "1. " or "- ")
-        const cleanedLine = line.replace(/^(\d+[\.\)]\s*|[-•*]\s*)/, '').trim();
 
-        if (delimiterRegex.test(cleanedLine)) {
-          const parts = cleanedLine.split(delimiterRegex).map(p => p.trim()).filter(Boolean);
-          if (parts.length >= 2) {
-            const firstIsKor = hasKoreanChars(parts[0]) && !hasKoreanChars(parts[1]);
-            const secondIsKor = hasKoreanChars(parts[1]) && !hasKoreanChars(parts[0]);
-            let korean = parts[0];
-            let english = parts[1];
-            if (!firstIsKor && secondIsKor) {
-              english = parts[0];
-              korean = parts[1];
-            } else if (hasKoreanChars(parts[1]) && !hasKoreanChars(parts[0])) {
-              english = parts[0];
-              korean = parts[1];
+        if (delimiterRegex.test(line)) {
+          const rawParts = line.split(delimiterRegex).map(p => p.trim()).filter(Boolean);
+          // Skip header line if pasted from Excel (e.g. "문장번호 | 영어문장 | 한글문장")
+          if (i === 0 && rawParts.some(p => ['문장번호', '영어문장', '한글문장', 'sentence', 'korean', 'english'].includes(p.toLowerCase()))) {
+            i++;
+            continue;
+          }
+          if (rawParts.length >= 3 && isNumericSentenceNo(rawParts[0])) {
+            const sentence_no = normalizeSentenceNo(rawParts[0], results.length + 1);
+            let p1 = rawParts[1];
+            let p2 = rawParts[2];
+            let english = p1;
+            let korean = p2;
+            if (hasKoreanChars(p1) && !hasKoreanChars(p2)) {
+              korean = p1;
+              english = p2;
             }
-            const notes = parts.slice(2).join(' | ');
-            results.push({ korean, english, notes });
+            const notes = rawParts.slice(3).join(' | ');
+            results.push({ sentence_no, korean, english, notes });
+            i++;
+            continue;
+          }
+          if (rawParts.length >= 2) {
+            let leadingNo = null;
+            let p0 = rawParts[0];
+            const bulletMatch = p0.match(/^(\d+)[\.\)]\s*(.+)$/);
+            if (bulletMatch) {
+              leadingNo = parseInt(bulletMatch[1], 10);
+              p0 = bulletMatch[2].trim();
+            } else {
+              p0 = p0.replace(/^[-•*]\s*/, '').trim();
+            }
+            const p1 = rawParts[1];
+            let english = p0;
+            let korean = p1;
+            if (hasKoreanChars(p0) && !hasKoreanChars(p1)) {
+              korean = p0;
+              english = p1;
+            }
+            const notes = rawParts.slice(2).join(' | ');
+            results.push({
+              sentence_no: leadingNo ?? (results.length + 1),
+              korean,
+              english,
+              notes
+            });
             i++;
             continue;
           }
         }
+
+        // Clean bullet numbering if present (e.g., "1. " or "- ")
+        const bulletMatch = line.match(/^(\d+)[\.\)]\s*(.+)$/);
+        const leadingNo = bulletMatch ? parseInt(bulletMatch[1], 10) : null;
+        const cleanedLine = bulletMatch ? bulletMatch[2].trim() : line.replace(/^[-•*]\s*/, '').trim();
 
         // If no delimiter on this line, check if we can pair with next line (Alternating lines)
         if (i + 1 < lines.length) {
@@ -1180,6 +1228,7 @@
           const line2Kor = hasKoreanChars(nextLine);
           if (line1Kor !== line2Kor) {
             results.push({
+              sentence_no: leadingNo ?? (results.length + 1),
               korean: line1Kor ? cleanedLine : nextLine,
               english: line1Kor ? nextLine : cleanedLine,
               notes: ''
@@ -1199,45 +1248,96 @@
       document.getElementById('bulkPreviewCountBadge').textContent = `인식된 문장: ${parsed.length}개`;
     }
 
+    function getNextSentenceNoForSource(sourceFile) {
+      const existingForFile = (AppState.sentencesDB || []).filter(s => s.source_file === sourceFile);
+      let maxNo = 0;
+      existingForFile.forEach(s => {
+        const n = typeof s.sentence_no === 'number' ? s.sentence_no : parseInt(String(s.sentence_no || ''), 10);
+        if (!isNaN(n) && n > maxNo) maxNo = n;
+      });
+      return Math.max(maxNo, existingForFile.length) + 1;
+    }
+
+    function sortSentencesDBBySourceAndNo() {
+      if (!Array.isArray(AppState.sentencesDB)) return;
+      // Backfill sentence_no for any legacy items that lacked it, grouped by source_file
+      const counters = new Map();
+      AppState.sentencesDB.forEach(item => {
+        const src = item.source_file || '기본_세트';
+        if (item.sentence_no === undefined || item.sentence_no === null || item.sentence_no === '') {
+          const next = (counters.get(src) || 0) + 1;
+          counters.set(src, next);
+          item.sentence_no = next;
+        } else {
+          const n = typeof item.sentence_no === 'number' ? item.sentence_no : parseInt(String(item.sentence_no), 10);
+          if (!isNaN(n)) {
+            counters.set(src, Math.max(counters.get(src) || 0, n));
+          }
+        }
+      });
+    }
+
     function mergeSentencesIntoDB(newItems, sourceFile, defaultCategory) {
       let addedCount = 0;
       let updatedCount = 0;
+      const targetSource = (sourceFile || '수기입력_세트').trim();
 
-      const existingMap = new Map();
+      sortSentencesDBBySourceAndNo();
+
+      // Index existing items by (source_file + englishKey) and (source_file + sentence_no)
+      const existingBySourceAndEng = new Map();
+      const existingBySourceAndNo = new Map();
       AppState.sentencesDB.forEach(item => {
-        const key = normalizeEnglishForDedup(item.english);
-        if (key) existingMap.set(key, item);
+        const src = item.source_file || '수기입력_세트';
+        const engKey = normalizeEnglishForDedup(item.english);
+        if (engKey) existingBySourceAndEng.set(`${src}::${engKey}`, item);
+        if (item.sentence_no !== undefined && item.sentence_no !== null && item.sentence_no !== '') {
+          existingBySourceAndNo.set(`${src}::#${item.sentence_no}`, item);
+        }
       });
+
+      let autoSeq = getNextSentenceNoForSource(targetSource);
 
       newItems.forEach((raw, idx) => {
         const kor = (raw.korean || '').trim();
         const eng = (raw.english || '').trim();
         if (!kor || !eng) return;
 
-        const key = normalizeEnglishForDedup(eng);
-        if (!key) return;
+        const engKey = normalizeEnglishForDedup(eng);
+        if (!engKey) return;
 
-        if (existingMap.has(key)) {
-          const existing = existingMap.get(key);
+        const hasExplicitNo = raw.sentence_no !== undefined && raw.sentence_no !== null && String(raw.sentence_no).trim() !== '';
+        const sentNo = hasExplicitNo ? normalizeSentenceNo(raw.sentence_no, idx + 1) : autoSeq++;
+
+        const existing = existingBySourceAndEng.get(`${targetSource}::${engKey}`)
+          || (hasExplicitNo ? existingBySourceAndNo.get(`${targetSource}::#${sentNo}`) : null);
+
+        if (existing) {
+          existing.sentence_no = sentNo;
           existing.korean = kor;
           existing.english = eng;
+          existing.source_file = targetSource;
           if (raw.notes) existing.notes = raw.notes.trim();
           if (raw.category) existing.category = raw.category.trim();
+          existingBySourceAndEng.set(`${targetSource}::${engKey}`, existing);
+          existingBySourceAndNo.set(`${targetSource}::#${sentNo}`, existing);
           updatedCount++;
         } else {
           const newEntry = {
             id: `sent_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${idx}`,
-            source_file: sourceFile || '수기입력_세트',
+            source_file: targetSource,
+            sentence_no: sentNo,
             category: (raw.category || defaultCategory || '비즈니스회화').trim(),
             korean: kor,
             english: eng,
             notes: (raw.notes || '').trim(),
             practice_count: 0,
             is_starred: false,
-            created_at: Date.now()
+            created_at: Date.now() + idx
           };
-          AppState.sentencesDB.unshift(newEntry);
-          existingMap.set(key, newEntry);
+          AppState.sentencesDB.push(newEntry);
+          existingBySourceAndEng.set(`${targetSource}::${engKey}`, newEntry);
+          existingBySourceAndNo.set(`${targetSource}::#${sentNo}`, newEntry);
           addedCount++;
         }
       });
@@ -1249,13 +1349,20 @@
       const sourceTitle = document.getElementById('bulkSetTitleInput').value.trim() || '내 학습 문장 세트';
       const category = document.getElementById('bulkCategoryInput').value.trim() || '비즈니스회화';
       const bulkRaw = document.getElementById('bulkPasteTextarea').value;
+      const singleNoRaw = document.getElementById('singleNoInput')?.value?.trim() || '';
       const singleKor = document.getElementById('singleKorInput').value.trim();
       const singleEng = document.getElementById('singleEngInput').value.trim();
       const singleNote = document.getElementById('singleNoteInput').value.trim();
 
       const itemsToMerge = parseBulkSentencesText(bulkRaw);
       if (singleKor && singleEng) {
-        itemsToMerge.push({ korean: singleKor, english: singleEng, notes: singleNote, category });
+        itemsToMerge.push({
+          sentence_no: singleNoRaw ? normalizeSentenceNo(singleNoRaw, undefined) : undefined,
+          korean: singleKor,
+          english: singleEng,
+          notes: singleNote,
+          category
+        });
       }
 
       if (itemsToMerge.length === 0) {
@@ -1272,6 +1379,7 @@
       }
 
       document.getElementById('bulkPasteTextarea').value = '';
+      if (document.getElementById('singleNoInput')) document.getElementById('singleNoInput').value = '';
       document.getElementById('singleKorInput').value = '';
       document.getElementById('singleEngInput').value = '';
       document.getElementById('singleNoteInput').value = '';
@@ -1316,7 +1424,7 @@
 
           if (!rows || rows.length === 0) continue;
 
-          // Detect columns (Korean vs English vs Category vs Notes)
+          // Detect columns (문장번호, 영어문장, 한글문장, 메모, 카테고리)
           const extracted = extractSentencesFromSheetRows(rows, file.name.replace(/\.[^.]+$/, ''));
           grandRawRows += extracted.totalCandidateRows;
           const res = mergeSentencesIntoDB(extracted.items, file.name, file.name.replace(/\.[^.]+$/, ''));
@@ -1334,69 +1442,105 @@
       }
       await saveAppState();
       renderAll();
-      showToast(`📁 총 ${grandRawRows}개 행 중 유효한 ${grandValidMerged}개 문장이 병합되었습니다.`, 'success');
+      showToast(`📁 [${lastFileName}] 총 ${grandRawRows}개 행 중 유효한 ${grandValidMerged}개 문장(문장번호 포함)이 등록되었습니다.`, 'success');
     }
 
     function extractSentencesFromSheetRows(rows, defaultCat) {
       const nonEmptyRows = rows.filter(r => Array.isArray(r) && r.some(cell => String(cell).trim() !== ''));
       if (nonEmptyRows.length === 0) return { totalCandidateRows: 0, items: [] };
 
-      let korCol = -1;
+      let numCol = -1;
       let engCol = -1;
+      let korCol = -1;
       let noteCol = -1;
       let catCol = -1;
       let startRowIdx = 0;
 
       const headerRow = nonEmptyRows[0].map(c => String(c).trim().toLowerCase());
       headerRow.forEach((h, idx) => {
-        if (['한글', '한국어', '의미', '해석', 'kr', 'kor', 'korean', '뜻'].some(k => h.includes(k))) korCol = idx;
-        else if (['영어', '영문', '표현', '문장', 'en', 'eng', 'english', 'sentence', 'expression'].some(k => h.includes(k))) engCol = idx;
-        else if (['메모', '노트', '팁', '비고', 'note', 'notes', 'tip'].some(k => h.includes(k))) noteCol = idx;
-        else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) catCol = idx;
+        if (!h) return;
+        if (['문장번호', '번호', '순번', '연번', 'no', 'no.', 'num', 'number', 'idx', 'index', '#'].some(k => h === k || h.includes('문장번호') || h.includes('순번') || h.includes('번호'))) {
+          if (numCol === -1) numCol = idx;
+        } else if (['영어', '영문', '영어문장', '영문장', '표현', 'en', 'eng', 'english', 'sentence', 'expression'].some(k => h.includes(k))) {
+          if (engCol === -1) engCol = idx;
+        } else if (['한글', '한국어', '한글문장', '한국어문장', '의미', '해석', 'kr', 'kor', 'korean', '뜻'].some(k => h.includes(k))) {
+          if (korCol === -1) korCol = idx;
+        } else if (['메모', '노트', '팁', '비고', 'note', 'notes', 'tip'].some(k => h.includes(k))) {
+          if (noteCol === -1) noteCol = idx;
+        } else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) {
+          if (catCol === -1) catCol = idx;
+        }
       });
 
-      if (korCol !== -1 && engCol !== -1) {
+      if (engCol !== -1 && korCol !== -1) {
         startRowIdx = 1;
+        // If 3+ columns and col 0 was not assigned, check if col 0 is sentence number
+        if (numCol === -1 && engCol !== 0 && korCol !== 0 && nonEmptyRows.length > 1) {
+          const secondRowCol0 = String(nonEmptyRows[1][0] ?? '').trim();
+          if (isNumericSentenceNo(secondRowCol0)) numCol = 0;
+        }
       } else {
-        // Auto-detect columns by inspecting Korean character ratios across first 5 rows
-        const sampleRows = nonEmptyRows.slice(0, Math.min(5, nonEmptyRows.length));
+        // Check if row 0 is a header row by comparing row 0 col 0 with row 1 col 0
+        if (nonEmptyRows.length > 1 && !isNumericSentenceNo(nonEmptyRows[0][0]) && isNumericSentenceNo(nonEmptyRows[1][0])) {
+          startRowIdx = 1;
+        }
+        const sampleRows = nonEmptyRows.slice(startRowIdx, Math.min(startRowIdx + 8, nonEmptyRows.length));
         const maxCols = Math.max(...sampleRows.map(r => r.length));
-        let bestKorCol = 0;
-        let bestEngCol = 1;
 
         for (let c = 0; c < maxCols; c++) {
-          const texts = sampleRows.map(r => String(r[c] || '').trim()).filter(Boolean);
+          const texts = sampleRows.map(r => String(r[c] ?? '').trim()).filter(Boolean);
           if (texts.length === 0) continue;
+          const numCount = texts.filter(t => isNumericSentenceNo(t)).length;
           const korCount = texts.filter(t => hasKoreanChars(t)).length;
-          if (korCount / texts.length >= 0.5 && korCol === -1) {
-            korCol = c;
-          } else if (korCount / texts.length < 0.5 && engCol === -1) {
+          const engCount = texts.filter(t => /[a-zA-Z]{2,}/.test(t) && !hasKoreanChars(t)).length;
+
+          if (numCount / texts.length >= 0.6 && numCol === -1) {
+            numCol = c;
+          } else if (engCount / texts.length >= 0.4 && korCount / texts.length < 0.5 && engCol === -1) {
             engCol = c;
+          } else if (korCount / texts.length >= 0.4 && korCol === -1) {
+            korCol = c;
           }
         }
-        if (korCol === -1) korCol = bestKorCol;
-        if (engCol === -1) engCol = bestEngCol === korCol ? 1 : bestEngCol;
-        if (maxCols >= 3) noteCol = [0, 1, 2].find(x => x !== korCol && x !== engCol) ?? -1;
+
+        // Standard 3-column fallback: [문장번호(0), 영어문장(1), 한글문장(2)]
+        if (maxCols >= 3 && numCol === 0) {
+          if (engCol === -1) engCol = 1;
+          if (korCol === -1) korCol = 2;
+        } else if (maxCols >= 3 && numCol === -1 && engCol !== -1 && korCol !== -1 && engCol !== 0 && korCol !== 0) {
+          numCol = 0;
+        } else {
+          if (engCol === -1) engCol = 0;
+          if (korCol === -1) korCol = engCol === 0 ? 1 : 0;
+        }
+
+        if (maxCols >= 4) {
+          noteCol = [0, 1, 2, 3].find(x => x !== numCol && x !== engCol && x !== korCol) ?? -1;
+        }
       }
 
       const dataRows = nonEmptyRows.slice(startRowIdx);
       const items = [];
 
-      dataRows.forEach(r => {
-        let c1 = String(r[korCol] ?? '').trim();
-        let c2 = String(r[engCol] ?? '').trim();
-        if (!c1 || !c2) return;
+      dataRows.forEach((r, idx) => {
+        let rawNo = numCol !== -1 ? String(r[numCol] ?? '').trim() : '';
+        let engText = String(r[engCol] ?? '').trim();
+        let korText = String(r[korCol] ?? '').trim();
+        if (!engText || !korText) return;
 
-        // If headerless row has English in c1 and Korean in c2, swap automatically
-        if (!hasKoreanChars(c1) && hasKoreanChars(c2)) {
-          const tmp = c1;
-          c1 = c2;
-          c2 = tmp;
+        // If a row has Korean in engCol and English in korCol, swap automatically
+        if (hasKoreanChars(engText) && !hasKoreanChars(korText)) {
+          const tmp = engText;
+          engText = korText;
+          korText = tmp;
         }
 
+        const sentence_no = normalizeSentenceNo(rawNo, items.length + 1);
+
         items.push({
-          korean: c1,
-          english: c2,
+          sentence_no,
+          korean: korText,
+          english: engText,
           notes: noteCol !== -1 ? String(r[noteCol] ?? '').trim() : '',
           category: catCol !== -1 && String(r[catCol] ?? '').trim() ? String(r[catCol]).trim() : defaultCat
         });
@@ -1411,14 +1555,15 @@
         showToast('내보낼 문장이 없습니다.', 'error');
         return;
       }
-      const exportData = targetList.map(s => ({
-        '출처(Source)': s.source_file,
-        '카테고리(Category)': s.category,
-        '한국어(Korean)': s.korean,
-        '영어(English)': s.english,
-        '메모(Notes)': s.notes || '',
-        '연습횟수(Practice Count)': s.practice_count || 0,
-        '중요별표(Starred)': s.is_starred ? 'Y' : 'N'
+      const exportData = targetList.map((s, idx) => ({
+        '문장번호': s.sentence_no ?? (idx + 1),
+        '영어문장': s.english,
+        '한글문장': s.korean,
+        '파일명(출처)': s.source_file,
+        '카테고리': s.category,
+        '메모': s.notes || '',
+        '연습횟수': s.practice_count || 0,
+        '중요별표': s.is_starred ? 'Y' : 'N'
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
@@ -2346,10 +2491,11 @@ ${targetLines}
         return;
       }
 
-      listEl.innerHTML = targetPool.map(item => `
+      listEl.innerHTML = targetPool.map((item, idx) => `
         <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5 mb-0.5">
+            <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+              <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold">${escapeHtml(item.source_file || '세트')} #${escapeHtml(item.sentence_no ?? (idx + 1))}</span>
               <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${escapeHtml(item.category)}</span>
               <span class="text-[10px] text-emerald-400">연습 ${item.practice_count || 0}회</span>
             </div>
@@ -2612,13 +2758,23 @@ ${targetLines}
     }
 
     function buildFlashcardDeck() {
+      sortSentencesDBBySourceAndNo();
       const fc = AppState.uiState.flashcard;
-      let list = getFilteredSentences(fc.filter);
+      let list = [...getFilteredSentences(fc.filter)];
       if (list.length === 0 && fc.filter !== 'ALL') {
         showToast('선택한 필터에 문장이 없어 전체 문장을 표시합니다.', 'info');
         fc.filter = 'ALL';
-        list = getFilteredSentences('ALL');
+        list = [...getFilteredSentences('ALL')];
       }
+      list.sort((a, b) => {
+        if (fc.filter === 'ALL' && a.source_file !== b.source_file) {
+          return String(a.source_file || '').localeCompare(String(b.source_file || ''));
+        }
+        const na = typeof a.sentence_no === 'number' ? a.sentence_no : parseInt(String(a.sentence_no || '999999'), 10);
+        const nb = typeof b.sentence_no === 'number' ? b.sentence_no : parseInt(String(b.sentence_no || '999999'), 10);
+        if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+        return String(a.sentence_no || '').localeCompare(String(b.sentence_no || ''));
+      });
       let ids = list.map(s => s.id);
       if (fc.isShuffle) {
         for (let i = ids.length - 1; i > 0; i--) {
@@ -3031,17 +3187,49 @@ ${targetLines}
     }
 
     function renderDBManagerTable() {
+      sortSentencesDBBySourceAndNo();
       const filterVal = document.getElementById('dbModalFilterSelect')?.value || 'ALL';
-      const query = (document.getElementById('dbModalSearchInput')?.value || '').trim().toLowerCase();
-      let list = getFilteredSentences(filterVal);
+      const rawQuery = (document.getElementById('dbModalSearchInput')?.value || '').trim();
+      const query = rawQuery.toLowerCase();
+      let list = [...getFilteredSentences(filterVal)];
+
+      // Sort by source_file and ascending sentence_no
+      list.sort((a, b) => {
+        if (filterVal === 'ALL' && a.source_file !== b.source_file) {
+          return String(a.source_file || '').localeCompare(String(b.source_file || ''));
+        }
+        const na = typeof a.sentence_no === 'number' ? a.sentence_no : parseInt(String(a.sentence_no || '999999'), 10);
+        const nb = typeof b.sentence_no === 'number' ? b.sentence_no : parseInt(String(b.sentence_no || '999999'), 10);
+        if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+        return String(a.sentence_no || '').localeCompare(String(b.sentence_no || ''));
+      });
 
       if (query) {
-        list = list.filter(s =>
-          (s.korean || '').toLowerCase().includes(query) ||
-          (s.english || '').toLowerCase().includes(query) ||
-          (s.notes || '').toLowerCase().includes(query) ||
-          (s.category || '').toLowerCase().includes(query)
-        );
+        const cleanNoQuery = query.replace(/^#/, '');
+        const isPureNumberSearch = /^\d+$/.test(cleanNoQuery);
+
+        list = list.filter(s => {
+          const sentNoStr = String(s.sentence_no ?? '').toLowerCase();
+          const sourceStr = String(s.source_file ?? '').toLowerCase();
+          const combinedRef = `${sourceStr} #${sentNoStr} ${sourceStr} ${sentNoStr}`;
+          if (isPureNumberSearch && sentNoStr === cleanNoQuery) return true;
+          if (query.startsWith('#') && sentNoStr === cleanNoQuery) return true;
+          return (
+            combinedRef.includes(query) ||
+            (s.korean || '').toLowerCase().includes(query) ||
+            (s.english || '').toLowerCase().includes(query) ||
+            (s.notes || '').toLowerCase().includes(query) ||
+            (s.category || '').toLowerCase().includes(query)
+          );
+        });
+
+        if (isPureNumberSearch) {
+          list.sort((a, b) => {
+            const aExact = String(a.sentence_no ?? '') === cleanNoQuery ? 0 : 1;
+            const bExact = String(b.sentence_no ?? '') === cleanNoQuery ? 0 : 1;
+            return aExact - bExact;
+          });
+        }
       }
 
       document.getElementById('dbModalCountBadge').textContent = `${list.length}문장`;
@@ -3053,16 +3241,18 @@ ${targetLines}
         return;
       }
 
-      container.innerHTML = list.map(item => `
+      container.innerHTML = list.map((item, idx) => {
+        const dispNo = item.sentence_no ?? (idx + 1);
+        return `
         <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div class="flex-1 min-w-0 space-y-1">
             <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold">📄 ${escapeHtml(item.source_file)} · #${escapeHtml(dispNo)}</span>
               <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">${escapeHtml(item.category)}</span>
-              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">${escapeHtml(item.source_file)}</span>
               <span class="text-emerald-400 font-medium">인출 연습 ${item.practice_count || 0}회</span>
             </div>
+            <p class="text-xs md:text-sm font-semibold text-white"><span class="text-slate-400 font-mono mr-1.5">[#${escapeHtml(dispNo)}]</span>${escapeHtml(item.english)}</p>
             <p class="text-xs md:text-sm font-bold text-amber-200">${escapeHtml(item.korean)}</p>
-            <p class="text-xs md:text-sm font-semibold text-white">${escapeHtml(item.english)}</p>
             ${item.notes ? `<p class="text-xs text-slate-400">💡 ${escapeHtml(item.notes)}</p>` : ''}
           </div>
           <div class="flex items-center gap-1.5 shrink-0 self-end md:self-center">
@@ -3082,7 +3272,8 @@ ${targetLines}
             </button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       if (window.lucide) lucide.createIcons();
     }
@@ -3099,20 +3290,25 @@ ${targetLines}
     async function editSentenceInDBModal(sentId) {
       const item = AppState.sentencesDB.find(s => s.id === sentId);
       if (!item) return;
-      const newKor = prompt('한국어 의미 수정:', item.korean);
-      if (newKor === null) return;
+      const newNo = prompt(`[${item.source_file}] 문장번호 수정:`, item.sentence_no ?? '');
+      if (newNo === null) return;
       const newEng = prompt('영어 문장 수정:', item.english);
       if (newEng === null) return;
+      const newKor = prompt('한글 문장 수정:', item.korean);
+      if (newKor === null) return;
       const newNotes = prompt('메모 수정:', item.notes || '');
       if (newNotes === null) return;
 
-      item.korean = newKor.trim() || item.korean;
+      if (newNo.trim() !== '') {
+        item.sentence_no = normalizeSentenceNo(newNo.trim(), item.sentence_no);
+      }
       item.english = newEng.trim() || item.english;
+      item.korean = newKor.trim() || item.korean;
       item.notes = newNotes.trim();
       await saveAppState();
       renderDBManagerTable();
       renderAll();
-      showToast('문장이 수정되었습니다.', 'success');
+      showToast('문장 정보가 수정되었습니다.', 'success');
     }
 
     async function deleteSentenceInDBModal(sentId) {
