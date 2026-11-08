@@ -3134,6 +3134,17 @@ ${prevQaText}
       return (AppState.sentencesDB || []).find(s => s.id === id) || null;
     }
 
+    function formatFlashcardTextWithSubnote(rawText) {
+      const str = String(rawText || '');
+      const markerIdx = str.indexOf('>>');
+      if (markerIdx === -1) {
+        return escapeHtml(str);
+      }
+      const mainPart = str.slice(0, markerIdx).trim();
+      const subPart = str.slice(markerIdx + 2).trim();
+      return `<span class="fc-main-text">${escapeHtml(mainPart)}</span><span class="fc-subnote-text block mt-2.5 font-medium text-slate-300/85 leading-relaxed tracking-normal" style="font-size: 0.3em;">&gt;&gt; ${escapeHtml(subPart)}</span>`;
+    }
+
     function renderCurrentFlashcard() {
       const fc = AppState.uiState.flashcard;
       const item = getCurrentFlashcardItem();
@@ -3178,8 +3189,8 @@ ${prevQaText}
       document.getElementById('btnFcStar').className = starColorClass;
 
       const isKrToEn = fc.direction === 'KR_TO_EN';
-      document.getElementById('fcTopPromptText').textContent = isKrToEn ? item.korean : item.english;
-      document.getElementById('fcBottomAnswerText').textContent = isKrToEn ? item.english : item.korean;
+      document.getElementById('fcTopPromptText').innerHTML = formatFlashcardTextWithSubnote(isKrToEn ? item.korean : item.english);
+      document.getElementById('fcBottomAnswerText').innerHTML = formatFlashcardTextWithSubnote(isKrToEn ? item.english : item.korean);
 
       const notesEl = document.getElementById('fcBottomNotesText');
       if (item.notes) {
@@ -3327,7 +3338,8 @@ ${prevQaText}
     function speakCurrentFlashcard() {
       const item = getCurrentFlashcardItem();
       if (!item) return;
-      speakEnglishText(item.english);
+      const pureEng = String(item.english || '').split('>>')[0].trim();
+      speakEnglishText(pureEng || item.english);
     }
 
     /*************************************************************************

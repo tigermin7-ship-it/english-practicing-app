@@ -68,8 +68,9 @@
   * **자동 클렌징 및 번호 재정렬 마이그레이션:** 기존 Firestore `workspace/main`에 이미 `#1 Title / 해석`이 포함되어 `#2 It's my first time`으로 밀려 있던 데이터를 로드할 때, `sortSentencesDBBySourceAndNo()`가 자동으로 `#0` 헤더 레코드(`Title / 해석`)를 삭제하고 해당 파일의 문장 번호를 `#1 ~ #899`로 빈틈없이 재인덱싱한 뒤 Firestore에 즉시 반영함.
 
 #### 3) 플래시카드 UI vs 문장 DB 관리 모달 UI 역할 분리
-* **플래시카드 학습 모달 (`renderCurrentFlashcard` & `jumpToFlashcardSentenceNo`):**
+* **플래시카드 학습 모달 (`renderCurrentFlashcard`, `formatFlashcardTextWithSubnote`, `jumpToFlashcardSentenceNo`):**
   * **본문 가독성 극대화 (모바일 160% 확대):** 카드 상단 질문(`#fcTopPromptText`)과 하단 정답(`#fcBottomAnswerText`)에는 문장 번호를 섞지 않고 오직 한글/영어 문장 암기에만 몰입하도록 구성하며, 스마트폰 화면에서도 한눈에 시원하게 읽히도록 기본 폰트 크기를 기존 `20px`(`1.25rem`) 대비 **160% 확대한 `32px`(`text-[2rem]`, 태블릿 `sm:text-[2.5rem]`, 데스크톱 `md:text-[3.25rem]`)**으로 적용함.
+  * **`>>` 부연 설명 30% 크기 분리 표시 (`formatFlashcardTextWithSubnote`):** 문장 텍스트 내에 `'>>'` 구분자가 포함된 경우, `'>>'` 이전의 핵심 문장은 `100%` 대형 크기로 유지하고 **`'>>'` 이하의 부연 설명은 줄바꿈 후 본문 대비 30% 크기(`font-size: 0.3em`) 및 차분한 보조 색상**으로 분리 렌더링함. 또한 원어민 발음 듣기(`speakCurrentFlashcard`) 시에는 `'>>'` 앞의 순수 영어 본문만 TTS로 읽도록 처리함.
   * **상단 배지 중복 제거 및 `#문장번호` 직관화:** 좌측 상단 첫 번째 배지(`#fcTopCategoryBadge`)에는 확장자를 제거한 단일 카테고리명(`📁 900_1` 또는 `⭐ 대화피드백`)만 깔끔하게 표시하여 중복 노출(`900_1` + `900_1.xlsx`)을 제거하고, 두 번째 배지(`#fcTopSourceBadge`)에는 현재 파일 내 고유 문장번호(`#11`, `#138`)를 강조 표시함.
   * **특정 문장번호 바로가기 및 연속 순차 학습 (`#fcJumpInput` & `jumpToFlashcardSentenceNo`):**
     * 상단 헤더에 **`[# 번호 입력 ➔ 이동]`** 컨트롤을 배치하고, `#문장번호` 배지나 진행률 배지(`11 / 899`)를 클릭해도 입력창으로 즉시 포커스됨.
