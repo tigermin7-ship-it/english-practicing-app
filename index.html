@@ -984,11 +984,14 @@
         </div>
 
         <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-          <button onclick="toggleAuthFirebaseSetupBox()" class="hover:text-indigo-400 flex items-center gap-1 font-medium">
+          <button onclick="toggleAuthFirebaseSetupBox()" class="hover:text-indigo-400 hidden items-center gap-1 font-medium">
             <i data-lucide="database" class="w-3.5 h-3.5"></i>
             <span>Firebase DB 연결 설정</span>
           </button>
-          <span id="authModeIndicator" class="text-slate-500">로컬/Firebase 인증 지원</span>
+          <span id="authModeIndicator" class="mx-auto flex items-center gap-1 text-emerald-400 font-medium">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            <span>🔥 클라우드 실시간 동기화 DB 연결됨</span>
+          </span>
         </div>
 
         <!-- Collapsible Firebase Config Input inside Login Screen -->
@@ -3440,7 +3443,7 @@ ${targetLines}
       document.getElementById('cloudSyncUrlInput').value = AppState.settings.cloudSyncUrl || '';
       const fbTextarea = document.getElementById('firebaseConfigTextarea');
       if (fbTextarea) {
-        const savedFbCfg = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || '';
+        const savedFbCfg = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
         fbTextarea.value = savedFbCfg;
       }
       switchSecurityModalTab(tab);
@@ -3528,6 +3531,16 @@ ${targetLines}
     /*************************************************************************
      * 11. V2 UPGRADE: FIREBASE AUTH + ADMIN APPROVAL GATE + FIRESTORE REAL-TIME DB
      *************************************************************************/
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDE9y61OBmL7fy4gjRaIic1LyU6Wbcb9f8",
+      authDomain: "english-practicing-app.firebaseapp.com",
+      projectId: "english-practicing-app",
+      storageBucket: "english-practicing-app.firebasestorage.app",
+      messagingSenderId: "539985157866",
+      appId: "1:539985157866:web:4d3dcc2f6c8b48f6bbc193",
+      measurementId: "G-8FX59Z9P72"
+    };
+
     const FIREBASE_CONFIG_STORAGE_KEY = 'BIZROLEPLAY_FIREBASE_CONFIG_V2';
     const LOCAL_AUTH_ACCOUNTS_KEY = 'BIZROLEPLAY_LOCAL_ACCOUNTS_V2';
     const LOCAL_AUTH_SESSION_KEY = 'BIZROLEPLAY_LOCAL_SESSION_V2';
@@ -3596,11 +3609,8 @@ ${targetLines}
       const rawText = document.getElementById(inputId)?.value?.trim() || '';
       if (!rawText) {
         localStorage.removeItem(FIREBASE_CONFIG_STORAGE_KEY);
-        fbApp = null;
-        fbAuth = null;
-        fbDb = null;
-        updateSecurityBadges();
-        showToast('Firebase 연동 설정이 해제되었습니다 (로컬 인증/저장 모드).', 'info');
+        await connectFirebaseInstance(DEFAULT_FIREBASE_CONFIG);
+        showToast('Firebase 설정이 기본 프로젝트로 재설정되었습니다.', 'info');
         return;
       }
 
@@ -3635,8 +3645,8 @@ ${targetLines}
         updateSecurityBadges();
         const modeEl = document.getElementById('authModeIndicator');
         if (modeEl) {
-          modeEl.textContent = `🔥 Firebase 연결됨 (${cfg.projectId})`;
-          modeEl.className = 'text-emerald-400 font-semibold';
+          modeEl.innerHTML = `<i data-lucide="shield-check" class="w-3.5 h-3.5"></i><span>🔥 클라우드 실시간 동기화 DB 연결됨 (${escapeHtml(cfg.projectId)})</span>`;
+          modeEl.className = 'mx-auto flex items-center gap-1 text-emerald-400 font-semibold text-[11px]';
         }
 
         fbAuth.onAuthStateChanged(async (user) => {
@@ -3658,12 +3668,20 @@ ${targetLines}
 
     function initAuthAndFirestoreGateOnStartup() {
       const savedCfgRaw = localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY);
+      let cfg = DEFAULT_FIREBASE_CONFIG;
       if (savedCfgRaw) {
-        const cfg = parseFirebaseConfigInput(savedCfgRaw);
-        if (cfg) {
-          connectFirebaseInstance(cfg);
-          return;
-        }
+        const parsed = parseFirebaseConfigInput(savedCfgRaw);
+        if (parsed) cfg = parsed;
+      }
+
+      if (cfg) {
+        connectFirebaseInstance(cfg).then(ok => {
+          if (!ok) {
+            console.warn('Firebase connection failed, falling back to local gate');
+            initLocalAuthGate();
+          }
+        });
+        return;
       }
       // Fallback Local Auth Gate check when Firebase Config is not set yet
       initLocalAuthGate();
