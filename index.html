@@ -480,9 +480,25 @@
 
       <!-- Center Progress & Controls -->
       <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
-        <span id="fcProgressBadge" class="px-2 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200">
+        <span id="fcProgressBadge" onclick="focusFlashcardJumpInput()" class="px-2 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer transition" title="클릭하여 특정 문장번호로 바로 이동">
           0 / 0
         </span>
+
+        <!-- Direct Sentence Number Jump (#138 -> 이동) -->
+        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-0.5 text-xs" title="특정 문장번호(예: 138) 입력 후 Enter 또는 이동 클릭">
+          <span class="text-amber-400 font-bold mr-0.5">#</span>
+          <input
+            id="fcJumpInput"
+            type="number"
+            min="1"
+            placeholder="번호"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToFlashcardSentenceNo();}"
+            class="w-11 sm:w-14 bg-transparent text-slate-100 font-bold text-xs text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <button onclick="jumpToFlashcardSentenceNo()" class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition shrink-0">
+            이동
+          </button>
+        </div>
 
         <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="출제 방향 전환 (한글->영어 / 영어->한글)">
           <span id="fcDirectionText">한➔영</span>
@@ -520,9 +536,9 @@
       <div onclick="handleFlashcardAreaClick()" class="h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-4 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative group">
         <!-- Top Badges Row -->
         <div class="w-full max-w-4xl flex items-center justify-between text-xs">
-          <div class="flex items-center gap-1.5 min-w-0">
-            <span id="fcTopCategoryBadge" class="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold truncate">카테고리</span>
-            <span id="fcTopSourceBadge" class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 truncate max-w-[130px] sm:max-w-[220px]">출처 파일</span>
+          <div class="flex items-center gap-1.5 min-w-0" onclick="event.stopPropagation()">
+            <span id="fcTopCategoryBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold truncate">카테고리</span>
+            <span id="fcTopSourceBadge" onclick="focusFlashcardJumpInput()" class="px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold cursor-pointer transition" title="클릭하여 특정 문장번호로 이동">#1</span>
           </div>
           <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
             <span id="fcPracticeCountBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">0회</span>
@@ -532,10 +548,10 @@
           </div>
         </div>
 
-        <!-- Center Korean Sentence -->
-        <div class="my-auto max-w-4xl px-2">
+        <!-- Center Korean Sentence (160% Enlarged for Mobile & Desktop) -->
+        <div class="my-auto max-w-4xl px-3 overflow-y-auto max-h-full flex items-center justify-center">
           <div id="fcTopLabel" class="hidden"></div>
-          <h1 id="fcTopPromptText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-white leading-snug tracking-tight break-keep">
+          <h1 id="fcTopPromptText" class="text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight break-keep">
             문장을 불러오는 중입니다...
           </h1>
         </div>
@@ -558,8 +574,8 @@
         <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full">
           <div class="h-1"></div>
 
-          <div class="my-auto py-2">
-            <h2 id="fcBottomAnswerText" class="text-xl sm:text-2xl md:text-4xl font-extrabold text-emerald-300 leading-snug tracking-tight">
+          <div class="my-auto py-2 px-3 overflow-y-auto">
+            <h2 id="fcBottomAnswerText" class="text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-emerald-300 leading-tight tracking-tight break-keep">
               English sentence goes here.
             </h2>
             <p id="fcBottomNotesText" class="mt-3 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl"></p>
@@ -1727,25 +1743,21 @@
       return scored.slice(0, maxCount).map(x => x.item);
     }
 
-    function buildRoleplaySystemPrompt(session, sampledTargets) {
-      const targetLines = sampledTargets.length > 0
-        ? sampledTargets.map((s, i) => `${i + 1}. [ID: ${s.id}] "${s.english}" (Meaning: ${s.korean})`).join('\n')
-        : 'No specific target expressions registered; use natural business English.';
-
-      return `You are strictly roleplaying as a real-world business partner in a live messenger/meeting conversation.
+    function buildRoleplaySystemPrompt(session) {
+      return `You are strictly roleplaying as a real-world business partner in a live 1:1 messenger/meeting conversation.
 
 [PARTNER PROFILE & SCENARIO]
 - Your Name & Role: ${session.partner_name} (${session.partner_persona})
-- Business Situation & Context: ${session.business_context}
+- Business Situation & User's Goal (Context): ${session.business_context}
 - Difficulty & Tone Level: ${session.difficulty} (Beginner: supportive & clear / Intermediate: realistic professional / Advanced: demanding, sharp, high-stakes negotiation)
-- Target Expressions User Wants to Practice:
-${targetLines}
 
 [ABSOLUTE RULES - VIOLATION WILL BREAK THE APP]
 1. STAY IN CHARACTER 100%: Never act as an AI assistant, English teacher, or coach.
 2. ZERO CORRECTIONS OR EXPLANATIONS: Never correct the user's grammar, never praise their English, and never explain the situation from a third-person perspective.
-3. PROACTIVE & NATURAL DIALOGUE: Respond naturally in 1 to 3 concise business English sentences, then ALWAYS end with a realistic follow-up question, counter-offer, or business request that naturally prompts the user to reply (ideally nudging them to use one of the Target Expressions).
-4. IF STARTING THE CONVERSATION: Greet the user briefly in character and immediately bring up the core business issue or question based on the scenario and target expressions.`;
+3. 100% SCENARIO FOCUS: Focus strictly and exclusively on the core business agenda, goals, and realistic issues described in [Business Situation & User's Goal]. Never bring up random, off-topic small talk (such as asking about favorite drinks or unrelated personal questions) unless the scenario explicitly calls for it.
+4. PROACTIVE & NATURAL DIALOGUE: Respond naturally in 1 to 3 concise business English sentences, then ALWAYS end with a realistic, context-driven follow-up question, proposal, or business inquiry that directly advances the agenda in [Business Situation & User's Goal].
+5. IF STARTING THE CONVERSATION: Greet the user briefly in character and immediately open the core business discussion or ask a sharp, relevant question directly addressing the main agenda in [Business Situation & User's Goal].
+6. PLAIN SPOKEN TEXT ONLY: Output pure spoken English sentences only. Do NOT use Markdown formatting such as **bold**, *italics*, or bullet lists.`;
     }
 
     function buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampledTargets) {
@@ -1956,8 +1968,7 @@ ${targetLines}
     }
 
     async function callRoleplayPartnerAI(session, isFirstTrigger = false) {
-      const sampled = sampleTargetSentencesForSession(session, 8);
-      const systemPrompt = buildRoleplaySystemPrompt(session, sampled);
+      const systemPrompt = buildRoleplaySystemPrompt(session);
       const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const historyMessages = (session.messages || []).slice(-10);
@@ -2006,7 +2017,7 @@ ${targetLines}
           generationConfig: { temperature: 0.75, maxOutputTokens: 1024 }
         });
         const parts = data?.candidates?.[0]?.content?.parts || [];
-        const reply = parts.map(p => p.text || '').join('').trim();
+        const reply = parts.map(p => p.text || '').join('').replace(/\*\*/g, '').trim();
         if (!reply) throw new Error('AI 응답이 비어 있습니다.');
         return reply;
       } else {
@@ -3150,9 +3161,16 @@ ${prevQaText}
       document.getElementById('fcProgressBadge').textContent = `${idxDisplay} / ${totalDisplay}`;
       document.getElementById('fcProgressBar').style.width = `${((fc.currentIndex + 1) / total) * 100}%`;
 
-      document.getElementById('fcTopCategoryBadge').textContent = item.category || '비즈니스';
-      document.getElementById('fcTopSourceBadge').textContent = item.source_file || '기본 세트';
+      const cleanCategoryName = (item.category || item.source_file || '비즈니스').replace(/\.(xlsx|xls|csv)$/i, '');
+      const currentNo = item.sentence_no || (fc.currentIndex + 1);
+      document.getElementById('fcTopCategoryBadge').textContent = cleanCategoryName === '대화피드백' ? '⭐ 대화피드백' : `📁 ${cleanCategoryName}`;
+      document.getElementById('fcTopSourceBadge').textContent = `#${currentNo}`;
       document.getElementById('fcPracticeCountBadge').textContent = `${item.practice_count || 0}회`;
+
+      const jumpInputEl = document.getElementById('fcJumpInput');
+      if (jumpInputEl && document.activeElement !== jumpInputEl) {
+        jumpInputEl.value = currentNo;
+      }
 
       const starColorClass = item.is_starred
         ? 'p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 transition'
@@ -3210,6 +3228,58 @@ ${prevQaText}
       fc.currentIndex = (fc.currentIndex - 1 + fc.deckIds.length) % fc.deckIds.length;
       fc.isRevealed = false;
       renderCurrentFlashcard();
+    }
+
+    function focusFlashcardJumpInput() {
+      const input = document.getElementById('fcJumpInput');
+      if (!input) return;
+      input.focus();
+      input.select();
+    }
+
+    function jumpToFlashcardSentenceNo(explicitNo) {
+      const fc = AppState.uiState.flashcard;
+      const input = document.getElementById('fcJumpInput');
+      const rawVal = explicitNo !== undefined ? explicitNo : (input?.value || '');
+      const targetNo = parseInt(String(rawVal).replace(/^#/, '').trim(), 10);
+      if (isNaN(targetNo) || targetNo < 1) {
+        showToast('이동할 문장번호(1 이상의 숫자)를 입력해 주세요.', 'error');
+        return;
+      }
+
+      // If shuffle is ON, turn it OFF so subsequent cards continue sequentially (e.g. 138 -> 139 -> 140)
+      if (fc.isShuffle) {
+        fc.isShuffle = false;
+        buildFlashcardDeck();
+      }
+
+      if (fc.deckIds.length === 0) {
+        showToast('표시할 문장이 없습니다.', 'error');
+        return;
+      }
+
+      const allMap = new Map((AppState.sentencesDB || []).map(s => [s.id, s]));
+      let foundIndex = fc.deckIds.findIndex(id => {
+        const s = allMap.get(id);
+        const sNo = typeof s?.sentence_no === 'number' ? s.sentence_no : parseInt(String(s?.sentence_no || ''), 10);
+        return sNo === targetNo;
+      });
+
+      if (foundIndex === -1) {
+        if (targetNo <= fc.deckIds.length) {
+          foundIndex = targetNo - 1;
+        } else {
+          showToast(`현재 선택된 범위에 #${targetNo}번 문장이 없습니다 (최대 ${fc.deckIds.length}번).`, 'error');
+          return;
+        }
+      }
+
+      fc.currentIndex = foundIndex;
+      fc.isRevealed = false;
+      renderCurrentFlashcard();
+      const movedItem = getCurrentFlashcardItem();
+      const movedNo = movedItem?.sentence_no || (foundIndex + 1);
+      showToast(`📍 #${movedNo}번 문장으로 이동했습니다. (다음 버튼으로 #${Number(movedNo) + 1}번부터 이어서 학습)`, 'success');
     }
 
     function changeFlashcardFilter(newFilter) {
