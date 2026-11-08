@@ -1525,13 +1525,8 @@ ${targetLines}
     async function callRoleplayPartnerAI(session, isFirstTrigger = false) {
       const sampled = sampleTargetSentencesForSession(session, 8);
       const systemPrompt = buildRoleplaySystemPrompt(session, sampled);
-      const apiKey = (AppState.settings.apiKey || '').trim();
-
-      // Fallback to smart simulation if API key is not configured
-      if (!apiKey) {
-        await new Promise(r => setTimeout(r, 650));
-        return generateSimulatedPartnerReply(session, sampled, isFirstTrigger);
-      }
+      // Use user-configured apiKey or fallback to embedded project key
+      const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const historyMessages = (session.messages || []).slice(-10);
       const provider = AppState.settings.provider || 'gemini';
@@ -1611,12 +1606,8 @@ ${targetLines}
     async function callFeedbackCoachAI(session, prevPartnerMsg, userMsg) {
       const sampled = getFilteredSentences(session?.target_filter || 'ALL').slice(0, 15);
       const prompt = buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampled);
-      const apiKey = (AppState.settings.apiKey || '').trim();
-
-      if (!apiKey) {
-        await new Promise(r => setTimeout(r, 550));
-        return generateSimulatedFeedback(session, userMsg, sampled);
-      }
+      // Use user-configured apiKey or fallback to embedded project key
+      const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const provider = AppState.settings.provider || 'gemini';
       let model = AppState.settings.model || 'gemini-2.0-flash';
