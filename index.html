@@ -3142,7 +3142,7 @@ ${prevQaText}
       }
       const mainPart = str.slice(0, markerIdx).trim();
       const subPart = str.slice(markerIdx + 2).trim();
-      return `<span class="fc-main-text">${escapeHtml(mainPart)}</span><span class="fc-subnote-text block mt-2.5 font-medium text-slate-300/85 leading-relaxed tracking-normal" style="font-size: 0.3em;">&gt;&gt; ${escapeHtml(subPart)}</span>`;
+      return `<span class="fc-main-text">${escapeHtml(mainPart)}</span><span class="fc-subnote-text block mt-3 font-semibold text-slate-300/90 leading-snug tracking-normal text-[20px] sm:text-[24px] md:text-[30px]">&gt;&gt; ${escapeHtml(subPart)}</span>`;
     }
 
     function renderCurrentFlashcard() {
