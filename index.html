@@ -824,11 +824,12 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">모델 선택 (Model)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">모델 선택 (Model · 자동 탐색 지원)</label>
             <select id="settingModelSelect" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
-              <option value="gemini-2.0-flash">gemini-2.0-flash (빠름·공식 최신 추천)</option>
-              <option value="gemini-1.5-flash">gemini-1.5-flash (안정적)</option>
-              <option value="gemini-1.5-pro">gemini-1.5-pro (고성능 코칭)</option>
+              <option value="auto">✨ 자동 탐색 (내 API 키에서 사용 가능한 최신 Gemini 모델 자동 선택)</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+              <option value="gemini-flash-latest">gemini-flash-latest</option>
+              <option value="gemini-pro-latest">gemini-pro-latest</option>
               <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
               <option value="gpt-4o">gpt-4o (OpenAI)</option>
             </select>
@@ -1039,7 +1040,7 @@
         activeSessionId: 'sess_001',
         settings: {
           provider: 'gemini',
-          model: 'gemini-2.0-flash',
+          model: 'auto',
           apiKey: '',
           ttsSpeed: 1.0,
           theme: 'dark'
@@ -1522,17 +1523,158 @@ ${targetLines}
 }`;
     }
 
+    const cachedDiscoveredModelsByKey = {};
+    const cachedWorkingModelByKey = {};
+
+    async function fetchGeminiWithAuth(endpointPath, apiKey, method = 'GET', bodyObj = null) {
+      const baseUrl = `https://generativelanguage.googleapis.com/v1beta/${endpointPath}`;
+      const isBearerToken = apiKey.startsWith('AQ.') || (!apiKey.startsWith('AIza') && apiKey.length > 40);
+
+      const makeReq = async (useBearer) => {
+        const headers = { 'Content-Type': 'application/json' };
+        let url = baseUrl;
+        if (useBearer) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        } else {
+          const sep = url.includes('?') ? '&' : '?';
+          url = `${url}${sep}key=${encodeURIComponent(apiKey)}`;
+        }
+        const opts = { method, headers };
+        if (bodyObj) opts.body = JSON.stringify(bodyObj);
+        return await fetch(url, opts);
+      };
+
+      let res = await makeReq(isBearerToken);
+      if ((res.status === 401 || res.status === 403) && isBearerToken) {
+        res = await makeReq(false);
+      }
+      return res;
+    }
+
+    async function discoverAvailableGeminiModels(apiKey) {
+      if (!apiKey) return [];
+      if (cachedDiscoveredModelsByKey[apiKey]?.length) {
+        return cachedDiscoveredModelsByKey[apiKey];
+      }
+      try {
+        const res = await fetchGeminiWithAuth('models', apiKey, 'GET');
+        if (!res.ok) return [];
+        const data = await res.json();
+        const rawModels = Array.isArray(data.models) ? data.models : [];
+        const excludedKeywords = ['embedding', 'imagen', 'veo', 'aqa', 'tts', 'audio', 'whisper', 'robotics', 'computer-use', 'learnlm', 'vision', 'bisheng'];
+
+        const validNames = rawModels
+          .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => (m.name || '').replace(/^models\//, ''))
+          .filter(name => name.startsWith('gemini') && !excludedKeywords.some(kw => name.includes(kw)));
+
+        const scoreModel = (name) => {
+          // Deprioritize legacy models that Google blocks for new users
+          if (name === 'gemini-1.5-flash' || name === 'gemini-1.5-flash-latest' || name === 'gemini-1.5-pro') return 10;
+          if (name === 'gemini-2.0-flash' || name === 'gemini-2.0-flash-exp') return 15;
+          if (name === 'gemini-2.5-flash') return 25;
+          if (name === 'gemini-flash-latest') return 98;
+          if (name.includes('gemini-3') && name.includes('flash')) return 96;
+          if (name === 'gemini-2.5-flash-lite' || name.startsWith('gemini-2.5-flash-lite')) return 95;
+          if (name.startsWith('gemini-2.5-flash-preview')) return 92;
+          if (name.includes('flash-lite')) return 90;
+          if (name.includes('flash')) return 85;
+          if (name === 'gemini-pro-latest') return 80;
+          if (name.includes('pro')) return 75;
+          return 50;
+        };
+
+        validNames.sort((a, b) => scoreModel(b) - scoreModel(a));
+        if (validNames.length > 0) {
+          cachedDiscoveredModelsByKey[apiKey] = validNames;
+          populateDiscoveredModelsDropdown(validNames);
+        }
+        return validNames;
+      } catch (err) {
+        console.warn('discoverAvailableGeminiModels warning:', err);
+        return [];
+      }
+    }
+
+    function populateDiscoveredModelsDropdown(modelNames) {
+      const sel = document.getElementById('settingModelSelect');
+      if (!sel || !Array.isArray(modelNames) || modelNames.length === 0) return;
+      const currentVal = AppState.settings.model || 'auto';
+      const optionsHtml = [
+        `<option value="auto">✨ 자동 탐색 (${escapeHtml(modelNames[0])} 활성)</option>`,
+        ...modelNames.slice(0, 10).map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`),
+        `<option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>`,
+        `<option value="gpt-4o">gpt-4o (OpenAI)</option>`
+      ].join('');
+      sel.innerHTML = optionsHtml;
+      if ([...sel.options].some(o => o.value === currentVal)) {
+        sel.value = currentVal;
+      } else {
+        sel.value = 'auto';
+      }
+    }
+
+    async function callGeminiWithAutoModelDiscovery(apiKey, preferredModel, requestBody) {
+      const retiredModels = new Set(['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-2.5-flash', 'auto', '']);
+      const discovered = await discoverAvailableGeminiModels(apiKey);
+      const fallbackDefaults = [
+        'gemini-flash-latest',
+        'gemini-2.5-flash-lite',
+        'gemini-3-flash-preview',
+        'gemini-2.0-flash-lite',
+        'gemini-pro-latest',
+        'gemini-2.5-pro'
+      ];
+
+      const candidates = [];
+      const addCandidate = (m) => {
+        if (m && m !== 'auto' && !candidates.includes(m)) candidates.push(m);
+      };
+
+      // 1) If we already found a working model for this key in this session, try it first
+      if (cachedWorkingModelByKey[apiKey]) {
+        addCandidate(cachedWorkingModelByKey[apiKey]);
+      }
+      // 2) If user explicitly chose a non-retired model, try it
+      if (preferredModel && !retiredModels.has(preferredModel)) {
+        addCandidate(preferredModel);
+      }
+      // 3) Add all models dynamically discovered from Google ListModels API
+      discovered.forEach(addCandidate);
+      // 4) Add fallback candidates
+      fallbackDefaults.forEach(addCandidate);
+
+      let lastRes = null;
+      let lastErrText = '';
+
+      for (const candidateModel of candidates) {
+        const res = await fetchGeminiWithAuth(`models/${encodeURIComponent(candidateModel)}:generateContent`, apiKey, 'POST', requestBody);
+        if (res.ok) {
+          cachedWorkingModelByKey[apiKey] = candidateModel;
+          return await res.json();
+        }
+        lastRes = res;
+        lastErrText = await res.text().catch(() => '');
+        // If 404 (model retired / unavailable to new users) or 400 (model doesn't support feature), try next model in list
+        if (res.status === 404 || res.status === 400) {
+          console.warn(`Gemini model ${candidateModel} returned ${res.status}, trying next available model...`);
+          continue;
+        }
+        // For 401/403/429, stop and report
+        break;
+      }
+
+      throw new Error(`Gemini API 오류 (${lastRes ? lastRes.status : 'Error'}): ${(lastErrText || '사용 가능한 모델을 찾을 수 없습니다.').slice(0, 140)}`);
+    }
+
     async function callRoleplayPartnerAI(session, isFirstTrigger = false) {
       const sampled = sampleTargetSentencesForSession(session, 8);
       const systemPrompt = buildRoleplaySystemPrompt(session, sampled);
-      // Use user-configured apiKey or fallback to embedded project key
       const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const historyMessages = (session.messages || []).slice(-10);
       const provider = AppState.settings.provider || 'gemini';
-      let model = AppState.settings.model || 'gemini-1.5-flash';
-      // Normalize legacy/deprecated experimental model names
-      if (model.includes('2.5') || model === 'gemini-2.0-flash') model = 'gemini-1.5-flash';
+      const model = AppState.settings.model || 'auto';
 
       if (provider === 'gemini') {
         const contents = [];
@@ -1545,39 +1687,15 @@ ${targetLines}
         if (isFirstTrigger || contents.length === 0 || contents[contents.length - 1].role === 'model') {
           contents.push({
             role: 'user',
-            parts: [{ text: '[SYSTEM TRIGGER: Start or continue the business conversation proactively in character by asking a relevant question or raising an agenda item that nudges the user to respond.]' }]
+            parts: [{ text: '[SYSTEM TRIGGER: Start or continue the conversation proactively in character based on our scenario by asking a relevant question or raising an item that nudges the user to respond.]' }]
           });
         }
 
-        // Try primary model, auto-fallback to gemini-1.5-flash if 404
-        const tryCallGemini = async (modelName) => {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-          return await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              contents,
-              generationConfig: { temperature: 0.75, maxOutputTokens: 350 }
-            })
-          });
-        };
-
-        let res = await tryCallGemini(model);
-        if (res.status === 404 && model !== 'gemini-1.5-flash') {
-          console.warn(`Model ${model} returned 404, falling back to gemini-1.5-flash`);
-          res = await tryCallGemini('gemini-1.5-flash');
-        }
-        if (res.status === 404) {
-          console.warn('Falling back to gemini-1.5-flash-latest');
-          res = await tryCallGemini('gemini-1.5-flash-latest');
-        }
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Gemini API 오류 (${res.status}): ${errText.slice(0, 120)}`);
-        }
-        const data = await res.json();
+        const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { temperature: 0.75, maxOutputTokens: 350 }
+        });
         const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (!reply) throw new Error('AI 응답이 비어 있습니다.');
         return reply;
@@ -1620,43 +1738,19 @@ ${targetLines}
     async function callFeedbackCoachAI(session, prevPartnerMsg, userMsg) {
       const sampled = getFilteredSentences(session?.target_filter || 'ALL').slice(0, 15);
       const prompt = buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampled);
-      // Use user-configured apiKey or fallback to embedded project key
       const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const provider = AppState.settings.provider || 'gemini';
-      let model = AppState.settings.model || 'gemini-1.5-flash';
-      // Normalize legacy/deprecated experimental model names
-      if (model.includes('2.5') || model === 'gemini-2.0-flash') model = 'gemini-1.5-flash';
+      const model = AppState.settings.model || 'auto';
 
       if (provider === 'gemini') {
-        const tryCallFeedback = async (modelName) => {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-          return await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              generationConfig: {
-                temperature: 0.3,
-                responseMimeType: 'application/json'
-              }
-            })
-          });
-        };
-
-        let res = await tryCallFeedback(model);
-        if (res.status === 404 && model !== 'gemini-1.5-flash') {
-          res = await tryCallFeedback('gemini-1.5-flash');
-        }
-        if (res.status === 404) {
-          res = await tryCallFeedback('gemini-1.5-flash-latest');
-        }
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Gemini 피드백 API 오류 (${res.status}): ${errText.slice(0, 120)}`);
-        }
-        const data = await res.json();
+        const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            responseMimeType: 'application/json'
+          }
+        });
         const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
         return JSON.parse(cleaned);
@@ -2943,8 +3037,17 @@ ${targetLines}
 
     function openSecurityModal(tab = 'api') {
       document.getElementById('settingProviderSelect').value = AppState.settings.provider || 'gemini';
-      document.getElementById('settingModelSelect').value = AppState.settings.model || 'gemini-2.5-flash';
+      const modelSel = document.getElementById('settingModelSelect');
+      const savedModel = AppState.settings.model || 'auto';
+      modelSel.value = savedModel;
+      if (!modelSel.value) {
+        modelSel.value = 'auto';
+      }
       document.getElementById('settingApiKeyInput').value = AppState.settings.apiKey || '';
+      const activeKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
+      if (activeKey && (AppState.settings.provider || 'gemini') === 'gemini') {
+        discoverAvailableGeminiModels(activeKey).catch(() => {});
+      }
       const themeSel = document.getElementById('settingThemeSelect');
       if (themeSel) themeSel.value = AppState.settings.theme || 'dark';
       switchSecurityModalTab(tab);
@@ -2979,8 +3082,8 @@ ${targetLines}
       const prov = document.getElementById('settingProviderSelect').value;
       const modelSel = document.getElementById('settingModelSelect');
       if (prov === 'gemini' && modelSel.value.startsWith('gpt')) {
-        modelSel.value = 'gemini-2.0-flash';
-      } else if (prov === 'openai' && modelSel.value.startsWith('gemini')) {
+        modelSel.value = 'auto';
+      } else if (prov === 'openai' && (modelSel.value.startsWith('gemini') || modelSel.value === 'auto')) {
         modelSel.value = 'gpt-4o-mini';
       }
     }
@@ -2992,8 +3095,12 @@ ${targetLines}
 
     async function saveApiSettings() {
       AppState.settings.provider = document.getElementById('settingProviderSelect').value;
-      AppState.settings.model = document.getElementById('settingModelSelect').value;
+      AppState.settings.model = document.getElementById('settingModelSelect').value || 'auto';
       AppState.settings.apiKey = document.getElementById('settingApiKeyInput').value.trim();
+      if (AppState.settings.apiKey) {
+        delete cachedWorkingModelByKey[AppState.settings.apiKey];
+        delete cachedDiscoveredModelsByKey[AppState.settings.apiKey];
+      }
       const themeSel = document.getElementById('settingThemeSelect');
       if (themeSel) {
         AppState.settings.theme = themeSel.value === 'light' ? 'light' : 'dark';
