@@ -465,7 +465,7 @@
               rows="2"
               placeholder="영어로 답변 입력... (Enter: 전송)"
               onkeydown="handleChatInputKeydown(event)"
-              oninput="handleChatInputSaveDraft(this.value)"
+              oninput="handleChatInputManualEdit(this.value)"
               class="w-full rounded-xl bg-slate-950 border border-slate-700/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 px-3.5 py-2.5 text-base sm:text-sm font-medium text-slate-100 placeholder-slate-500 resize-none focus:outline-none leading-relaxed"
             ></textarea>
           </div>
@@ -476,7 +476,7 @@
             <i data-lucide="send" class="w-4 h-4"></i>
           </button>
         </div>
-        <div id="sttStatusText" class="max-w-4xl mx-auto mt-1 text-right text-[11px] text-rose-400 font-medium hidden px-1">🎙️ 음성 인식 중... 영어로 말씀해 주세요</div>
+        <div id="sttStatusText" class="max-w-4xl mx-auto mt-1 text-right text-[11px] text-rose-400 font-medium hidden px-1">🎙️ 음성 인식 중... 잠시 멈춰도 20초간 대기 (종료: 마이크 또는 전송 클릭)</div>
       </footer>
     </main>
   </div>
@@ -2497,6 +2497,9 @@ ${prevQaText}
     }
 
     async function sendUserRoleplayMessage() {
+      if (sttWantRecording || isSttRecording) {
+        stopSpeechRecognition(false);
+      }
       const inputEl = document.getElementById('chatInputTextarea');
       const text = inputEl.value.trim();
       if (!text) return;
@@ -3997,8 +4000,184 @@ ${prevQaText}
       saveAppState();
     }
 
+    const STT_SILENCE_TIMEOUT_MS = 20000;
     let speechRecognitionInstance = null;
     let isSttRecording = false;
+    let sttWantRecording = false;
+    let sttBaseText = '';
+    let sttLatestSessionFinal = '';
+    let sttLatestSessionInterim = '';
+    let sttSilenceTimer = null;
+    let sttRestartTimer = null;
+
+    function updateSttActiveUI(active) {
+      const micBtn = document.getElementById('btnSttMic');
+      const statusText = document.getElementById('sttStatusText');
+      if (micBtn) {
+        micBtn.classList.toggle('stt-recording', active);
+        micBtn.classList.toggle('bg-rose-600', active);
+        micBtn.classList.toggle('text-white', active);
+        micBtn.classList.toggle('border-rose-500', active);
+      }
+      if (statusText) {
+        statusText.classList.toggle('hidden', !active);
+      }
+    }
+
+    function clearSttTimers() {
+      if (sttSilenceTimer) {
+        clearTimeout(sttSilenceTimer);
+        sttSilenceTimer = null;
+      }
+      if (sttRestartTimer) {
+        clearTimeout(sttRestartTimer);
+        sttRestartTimer = null;
+      }
+    }
+
+    function resetSttSilenceTimer() {
+      if (sttSilenceTimer) clearTimeout(sttSilenceTimer);
+      if (!sttWantRecording) return;
+      sttSilenceTimer = setTimeout(() => {
+        if (sttWantRecording) {
+          stopSpeechRecognition(true);
+        }
+      }, STT_SILENCE_TIMEOUT_MS);
+    }
+
+    function commitSttBufferToTextarea(includeInterim) {
+      const textarea = document.getElementById('chatInputTextarea');
+      if (!textarea) return;
+      const parts = [sttBaseText, sttLatestSessionFinal];
+      if (includeInterim && sttLatestSessionInterim) {
+        parts.push(sttLatestSessionInterim);
+      }
+      const nextVal = parts.map(p => String(p || '').trim()).filter(Boolean).join(' ');
+      textarea.value = nextVal;
+      handleChatInputSaveDraft(nextVal);
+      return nextVal;
+    }
+
+    function stopSpeechRecognition(fromSilenceTimeout = false) {
+      sttWantRecording = false;
+      clearSttTimers();
+
+      const committed = commitSttBufferToTextarea(true);
+      if (typeof committed === 'string') {
+        sttBaseText = committed;
+      }
+      sttLatestSessionFinal = '';
+      sttLatestSessionInterim = '';
+      isSttRecording = false;
+      updateSttActiveUI(false);
+
+      if (speechRecognitionInstance) {
+        const inst = speechRecognitionInstance;
+        speechRecognitionInstance = null;
+        try { inst.onend = null; inst.onerror = null; inst.stop(); } catch (_) {}
+      }
+
+      if (fromSilenceTimeout) {
+        showToast('🎙️ 20초간 추가 음성이 없어 마이크를 종료했습니다.', 'info');
+      }
+    }
+
+    function startSpeechRecognitionSession() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition || !sttWantRecording) return;
+
+      const recognition = new SpeechRecognition();
+      speechRecognitionInstance = recognition;
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      sttLatestSessionFinal = '';
+      sttLatestSessionInterim = '';
+
+      recognition.onstart = () => {
+        if (!sttWantRecording) {
+          try { recognition.stop(); } catch (_) {}
+          return;
+        }
+        isSttRecording = true;
+        updateSttActiveUI(true);
+        resetSttSilenceTimer();
+      };
+
+      recognition.onspeechstart = () => resetSttSilenceTimer();
+      recognition.onsoundstart = () => resetSttSilenceTimer();
+
+      recognition.onresult = (event) => {
+        if (recognition !== speechRecognitionInstance) return;
+        resetSttSilenceTimer();
+
+        const finals = [];
+        const interims = [];
+        for (let i = 0; i < (event.results?.length || 0); i++) {
+          const res = event.results[i];
+          const textChunk = String(res?.[0]?.transcript || '').trim();
+          if (!textChunk) continue;
+          if (res.isFinal) {
+            finals.push(textChunk);
+          } else {
+            interims.push(textChunk);
+          }
+        }
+        sttLatestSessionFinal = finals.join(' ');
+        sttLatestSessionInterim = interims.join(' ');
+        commitSttBufferToTextarea(true);
+      };
+
+      recognition.onerror = (event) => {
+        if (recognition !== speechRecognitionInstance) return;
+        const errCode = String(event?.error || '');
+        // Transient pause errors ('no-speech', 'aborted') should silently allow auto-restart within 20s window
+        if (sttWantRecording && (errCode === 'no-speech' || errCode === 'aborted')) {
+          return;
+        }
+        sttWantRecording = false;
+        clearSttTimers();
+        isSttRecording = false;
+        updateSttActiveUI(false);
+        showToast('음성 인식 오류: ' + errCode, 'error');
+      };
+
+      recognition.onend = () => {
+        if (recognition !== speechRecognitionInstance) return;
+        isSttRecording = false;
+
+        // Fold finalized (or trailing interim on iOS Safari silence cut) before restarting or ending
+        const rescuedTail = sttLatestSessionFinal || sttLatestSessionInterim;
+        sttBaseText = [sttBaseText, rescuedTail].map(p => String(p || '').trim()).filter(Boolean).join(' ');
+        sttLatestSessionFinal = '';
+        sttLatestSessionInterim = '';
+        commitSttBufferToTextarea(false);
+
+        if (sttWantRecording) {
+          sttRestartTimer = setTimeout(() => {
+            sttRestartTimer = null;
+            if (sttWantRecording) {
+              startSpeechRecognitionSession();
+            }
+          }, 120);
+        } else {
+          updateSttActiveUI(false);
+          speechRecognitionInstance = null;
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch (err) {
+        sttWantRecording = false;
+        isSttRecording = false;
+        clearSttTimers();
+        updateSttActiveUI(false);
+        showToast('음성 인식을 시작할 수 없습니다: ' + (err?.message || err), 'error');
+      }
+    }
 
     function toggleSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -4007,46 +4186,19 @@ ${prevQaText}
         return;
       }
 
-      const micBtn = document.getElementById('btnSttMic');
-      const statusText = document.getElementById('sttStatusText');
-
-      if (isSttRecording && speechRecognitionInstance) {
-        speechRecognitionInstance.stop();
+      if (sttWantRecording || isSttRecording) {
+        stopSpeechRecognition(false);
+        document.getElementById('chatInputTextarea')?.focus();
         return;
       }
 
-      speechRecognitionInstance = new SpeechRecognition();
-      speechRecognitionInstance.lang = 'en-US';
-      speechRecognitionInstance.interimResults = false;
-      speechRecognitionInstance.maxAlternatives = 1;
-
-      speechRecognitionInstance.onstart = () => {
-        isSttRecording = true;
-        micBtn.classList.add('stt-recording', 'bg-rose-600', 'text-white', 'border-rose-500');
-        statusText.classList.remove('hidden');
-      };
-
-      speechRecognitionInstance.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript || '';
-        if (transcript) {
-          const textarea = document.getElementById('chatInputTextarea');
-          textarea.value = (textarea.value ? textarea.value.trim() + ' ' : '') + transcript;
-          handleChatInputSaveDraft(textarea.value);
-          textarea.focus();
-        }
-      };
-
-      speechRecognitionInstance.onerror = (event) => {
-        showToast('음성 인식 오류: ' + event.error, 'error');
-      };
-
-      speechRecognitionInstance.onend = () => {
-        isSttRecording = false;
-        micBtn.classList.remove('stt-recording', 'bg-rose-600', 'text-white', 'border-rose-500');
-        statusText.classList.add('hidden');
-      };
-
-      speechRecognitionInstance.start();
+      const textarea = document.getElementById('chatInputTextarea');
+      sttBaseText = String(textarea?.value || '').trim();
+      sttWantRecording = true;
+      updateSttActiveUI(true);
+      resetSttSilenceTimer();
+      startSpeechRecognitionSession();
+      textarea?.focus();
     }
 
     /*************************************************************************
@@ -5186,6 +5338,15 @@ ${prevQaText}
         event.preventDefault();
         sendUserRoleplayMessage();
       }
+    }
+
+    function handleChatInputManualEdit(val) {
+      if (sttWantRecording) {
+        sttBaseText = String(val || '').trim();
+        sttLatestSessionFinal = '';
+        sttLatestSessionInterim = '';
+      }
+      handleChatInputSaveDraft(val);
     }
 
     function handleChatInputSaveDraft(val) {
