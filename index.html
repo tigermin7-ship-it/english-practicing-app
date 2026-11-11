@@ -1884,6 +1884,7 @@
       ];
 
       const candidates = [];
+      const triedModels = new Set();
       const addCandidate = (m) => {
         if (m && m !== 'auto' && !candidates.includes(m)) candidates.push(m);
       };
@@ -1896,34 +1897,46 @@
       if (preferredModel && !retiredOrSlowModels.has(preferredModel)) {
         addCandidate(preferredModel);
       }
-      // 3) Add fast verified models first so we don't even have to wait if ListModels is slow
+      // 3) Add fast verified defaults immediately WITHOUT waiting for ListModels first
       fastVerifiedDefaults.forEach(addCandidate);
-      // 4) Add any additional models dynamically discovered from Google ListModels API
-      const discovered = await discoverAvailableGeminiModels(apiKey);
-      discovered.forEach(addCandidate);
 
       let lastRes = null;
       let lastErrText = '';
 
-      for (const candidateModel of candidates) {
-        try {
-          const res = await fetchGeminiWithAuth(`models/${encodeURIComponent(candidateModel)}:generateContent`, apiKey, 'POST', requestBody, 15000);
-          if (res.ok) {
-            cachedWorkingModelByKey[apiKey] = candidateModel;
-            return await res.json();
-          }
-          lastRes = res;
-          lastErrText = await res.text().catch(() => '');
-          if (res.status === 404 || res.status === 400 || res.status === 429 || res.status >= 500) {
-            console.warn(`Gemini model ${candidateModel} returned ${res.status}, trying next available model...`);
+      const tryCandidateList = async (list) => {
+        for (const candidateModel of list) {
+          if (triedModels.has(candidateModel)) continue;
+          triedModels.add(candidateModel);
+          try {
+            const res = await fetchGeminiWithAuth(`models/${encodeURIComponent(candidateModel)}:generateContent`, apiKey, 'POST', requestBody, 15000);
+            if (res.ok) {
+              cachedWorkingModelByKey[apiKey] = candidateModel;
+              return await res.json();
+            }
+            lastRes = res;
+            lastErrText = await res.text().catch(() => '');
+            if (res.status === 404 || res.status === 400 || res.status === 429 || res.status >= 500) {
+              console.warn(`Gemini model ${candidateModel} returned ${res.status}, trying next available model...`);
+              continue;
+            }
+            return null;
+          } catch (fetchErr) {
+            console.warn(`Gemini model ${candidateModel} timed out or failed (${fetchErr.message}), trying next model...`);
+            lastErrText = fetchErr.message;
             continue;
           }
-          break;
-        } catch (fetchErr) {
-          console.warn(`Gemini model ${candidateModel} timed out or failed (${fetchErr.message}), trying next model...`);
-          lastErrText = fetchErr.message;
-          continue;
         }
+        return undefined;
+      };
+
+      const fastResult = await tryCandidateList(candidates);
+      if (fastResult && typeof fastResult === 'object') return fastResult;
+
+      // 4) Lazy fallback: query Google ListModels ONLY if all fast defaults failed
+      if (fastResult !== null) {
+        const discovered = await discoverAvailableGeminiModels(apiKey);
+        const fallbackResult = await tryCandidateList(discovered);
+        if (fallbackResult && typeof fallbackResult === 'object') return fallbackResult;
       }
 
       throw new Error(`Gemini API 오류 (${lastRes ? lastRes.status : 'Error'}): ${(lastErrText || '사용 가능한 모델을 찾을 수 없습니다.').slice(0, 140)}`);
@@ -1976,7 +1989,7 @@
         const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
-          generationConfig: { temperature: 0.75, maxOutputTokens: 1024 }
+          generationConfig: { temperature: 0.75, maxOutputTokens: 384 }
         });
         const parts = data?.candidates?.[0]?.content?.parts || [];
         const reply = parts.map(p => p.text || '').join('').replace(/\*\*/g, '').trim();
@@ -2222,9 +2235,9 @@ ${prevQaText}
           timestamp: Date.now()
         });
         session.updated_at = Date.now();
-        await saveAppState();
         renderChatMessages(true);
         renderSessionList();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
       } catch (err) {
         showToast(err.message, 'error');
       } finally {
@@ -2281,9 +2294,9 @@ ${prevQaText}
           timestamp: Date.now()
         });
         session.updated_at = Date.now();
-        await saveAppState();
         renderChatMessages(true);
         renderSessionList();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
       } catch (err) {
         showToast(err.message, 'error');
       } finally {
@@ -2368,6 +2381,35 @@ ${prevQaText}
       renderChatMessages(false);
     }
 
+    function upsertFeedbackSentenceToDB(korean, english, notes) {
+      mergeSentencesIntoDB(
+        [{ korean, english, notes, category: '대화피드백' }],
+        'chat_feedback',
+        '대화피드백'
+      );
+      const key = normalizeEnglishForDedup(english);
+      const found = AppState.sentencesDB.find(s => s.source_file === 'chat_feedback' && normalizeEnglishForDedup(s.english) === key);
+      if (found) {
+        found.is_starred = true;
+        found.source_file = 'chat_feedback';
+        found.category = '대화피드백';
+      }
+    }
+
+    function removeFeedbackSentenceFromDB(english) {
+      const key = normalizeEnglishForDedup(english);
+      if (!key) return false;
+      const beforeLen = AppState.sentencesDB.length;
+      AppState.sentencesDB = AppState.sentencesDB.filter(
+        s => !(s.source_file === 'chat_feedback' && normalizeEnglishForDedup(s.english) === key)
+      );
+      if (AppState.sentencesDB.length !== beforeLen) {
+        sortSentencesDBBySourceAndNo();
+        return true;
+      }
+      return false;
+    }
+
     async function saveFeedbackToWrongAnswerDB(msgId) {
       const session = getActiveSession();
       const msg = session?.messages?.find(m => m.msg_id === msgId);
@@ -2375,6 +2417,7 @@ ${prevQaText}
 
       const korInput = document.getElementById(`fbEditKor_${msgId}`);
       const engInput = document.getElementById(`fbEditEng_${msgId}`);
+      const wasEditing = Boolean(msg.feedback.is_editing);
       if (korInput && engInput) {
         msg.feedback.recommended_korean = korInput.value.trim();
         msg.feedback.better_alternative = engInput.value.trim();
@@ -2388,25 +2431,21 @@ ${prevQaText}
         return;
       }
 
-      const notes = `[원래 내 문장] ${msg.text}${msg.feedback.nuance_tip ? ' | 💡 ' + msg.feedback.nuance_tip : ''}`;
-      mergeSentencesIntoDB(
-        [{ korean: kor, english: eng, notes, category: '대화피드백' }],
-        'chat_feedback',
-        '대화피드백'
-      );
-
-      // Mark the newly added/updated sentence as starred for review
-      const key = normalizeEnglishForDedup(eng);
-      const found = AppState.sentencesDB.find(s => normalizeEnglishForDedup(s.english) === key);
-      if (found) {
-        found.is_starred = true;
-        found.source_file = 'chat_feedback';
-        found.category = '대화피드백';
+      if (msg.feedback.saved_to_db && !wasEditing) {
+        removeFeedbackSentenceFromDB(eng);
+        msg.feedback.saved_to_db = false;
+        renderAll();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
+        showToast('☆ [대화피드백 오답노트]에서 저장 해제되었습니다.', 'info');
+        return;
       }
 
+      const notes = `[원래 내 문장] ${msg.text}${msg.feedback.nuance_tip ? ' | 💡 ' + msg.feedback.nuance_tip : ''}`;
+      upsertFeedbackSentenceToDB(kor, eng, notes);
+
       msg.feedback.saved_to_db = true;
-      await saveAppState();
       renderAll();
+      saveAppState().catch(err => console.warn('Background save failed:', err));
       showToast('⭐ [대화피드백 오답노트]에 저장되었습니다! 플래시카드에서 즉시 복습할 수 있습니다.', 'success');
     }
 
@@ -2474,24 +2513,21 @@ ${prevQaText}
       const qaItem = msg.feedback.qa_threads.find(q => q.qa_id === qaId);
       if (!qaItem || !qaItem.suggested_english || !qaItem.suggested_korean) return;
 
-      const notes = `[피드백 추가질문: ${qaItem.question}] ${qaItem.answer}`;
-      mergeSentencesIntoDB(
-        [{ korean: qaItem.suggested_korean, english: qaItem.suggested_english, notes, category: '대화피드백' }],
-        'chat_feedback',
-        '대화피드백'
-      );
-
-      const key = normalizeEnglishForDedup(qaItem.suggested_english);
-      const found = AppState.sentencesDB.find(s => normalizeEnglishForDedup(s.english) === key);
-      if (found) {
-        found.is_starred = true;
-        found.source_file = 'chat_feedback';
-        found.category = '대화피드백';
+      if (qaItem.saved_to_db) {
+        removeFeedbackSentenceFromDB(qaItem.suggested_english);
+        qaItem.saved_to_db = false;
+        renderAll();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
+        showToast('☆ 추가 질문 표현이 오답노트에서 해제되었습니다.', 'info');
+        return;
       }
 
+      const notes = `[피드백 추가질문: ${qaItem.question}] ${qaItem.answer}`;
+      upsertFeedbackSentenceToDB(qaItem.suggested_korean, qaItem.suggested_english, notes);
+
       qaItem.saved_to_db = true;
-      await saveAppState();
       renderAll();
+      saveAppState().catch(err => console.warn('Background save failed:', err));
       showToast('⭐ 추가 질문에서 추천된 표현이 [대화피드백 오답노트]에 저장되었습니다!', 'success');
     }
 
@@ -2843,15 +2879,12 @@ ${prevQaText}
                 <div class="flex items-center gap-2 mb-1">
                   <span class="text-xs font-bold text-slate-300">${escapeHtml(sess.partner_name)}</span>
                   <span class="text-[10px] text-slate-500">${timeStr}</span>
+                  <button onclick="speakEnglishText(${JSON.stringify(msg.text).replace(/"/g, '&quot;')})" class="p-1 rounded-md text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                  </button>
                 </div>
                 <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm">
                   ${escapeHtml(msg.text)}
-                </div>
-                <div class="mt-1 flex items-center gap-2">
-                  <button onclick="speakEnglishText(${JSON.stringify(msg.text).replace(/"/g, '&quot;')})" class="text-[11px] text-slate-400 hover:text-indigo-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-slate-900 transition">
-                    <i data-lucide="volume-2" class="w-3 h-3"></i>
-                    <span>발음 듣기</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -2939,7 +2972,7 @@ ${prevQaText}
                           fb.saved_to_db
                             ? 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
                             : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold'
-                        } flex items-center justify-center transition active:scale-95" title="${fb.saved_to_db ? '오답노트 저장됨 (다시 저장)' : '오답노트에 저장'}" aria-label="${fb.saved_to_db ? '오답노트 저장됨 (다시 저장)' : '오답노트에 저장'}">
+                        } flex items-center justify-center transition active:scale-95" title="${fb.saved_to_db ? '오답노트 저장됨 (클릭 시 저장 해제)' : '오답노트에 저장'}" aria-label="${fb.saved_to_db ? '오답노트 저장됨 (클릭 시 저장 해제)' : '오답노트에 저장'}">
                           <i data-lucide="star" class="w-4 h-4 ${fb.saved_to_db ? 'fill-current' : ''}"></i>
                         </button>
                       </div>
@@ -2983,7 +3016,7 @@ ${prevQaText}
                                                   qa.saved_to_db
                                                     ? 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
                                                     : 'bg-amber-500/90 hover:bg-amber-400 text-slate-950 font-bold'
-                                                } flex items-center justify-center transition active:scale-95" title="${qa.saved_to_db ? '오답노트 저장됨' : '이 표현도 오답노트에 저장'}" aria-label="${qa.saved_to_db ? '오답노트 저장됨' : '이 표현도 오답노트에 저장'}">
+                                                } flex items-center justify-center transition active:scale-95" title="${qa.saved_to_db ? '오답노트 저장됨 (클릭 시 저장 해제)' : '이 표현도 오답노트에 저장'}" aria-label="${qa.saved_to_db ? '오답노트 저장됨 (클릭 시 저장 해제)' : '이 표현도 오답노트에 저장'}">
                                                   <i data-lucide="star" class="w-4 h-4 ${qa.saved_to_db ? 'fill-current' : ''}"></i>
                                                 </button>`
                                               : ''
@@ -3374,15 +3407,21 @@ ${prevQaText}
     let activeUtterance = null;
     let ttsCancelTimer = null;
 
+    function isIOSDevice() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
     function initTtsVoices() {
       if (!('speechSynthesis' in window)) return;
       const voices = window.speechSynthesis.getVoices();
       if (!voices || voices.length === 0) return;
 
-      // Prefer high-quality local or natural English voices without remote streaming lag
-      const localEnVoice = voices.find(v => v.lang.startsWith('en') && v.localService && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Siri') || v.name.includes('Microsoft')));
-      const highQualityVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Samantha')));
-      const defaultEnVoice = voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
+      // Prefer non-Siri high-quality local English voices without remote streaming lag
+      const usableEn = voices.filter(v => v.lang && v.lang.startsWith('en') && !v.name.includes('Siri'));
+      const localEnVoice = usableEn.find(v => v.localService && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Microsoft') || v.name.includes('Daniel')));
+      const highQualityVoice = usableEn.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Samantha'));
+      const defaultEnVoice = usableEn.find(v => v.lang.startsWith('en-US')) || usableEn[0] || voices.find(v => v.lang.startsWith('en'));
 
       cachedTtsVoice = localEnVoice || highQualityVoice || defaultEnVoice || null;
     }
@@ -3408,30 +3447,29 @@ ${prevQaText}
         ttsCancelTimer = null;
       }
 
-      // Stop previous utterance
-      window.speechSynthesis.cancel();
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      }
+      const synth = window.speechSynthesis;
+      const wasSpeaking = synth.speaking || synth.pending;
+      const isIOS = isIOSDevice();
 
       if (!cachedTtsVoice) {
         initTtsVoices();
       }
 
-      // 80ms buffer stabilization delay:
-      // Prevents Chromium/Safari hardware buffer clipping where the first 1-2 words are swallowed.
-      ttsCancelTimer = setTimeout(() => {
-        ttsCancelTimer = null;
+      const startSpeak = () => {
         try {
+          if (synth.paused) {
+            synth.resume();
+          }
           const utterance = new SpeechSynthesisUtterance(rawClean);
           utterance.lang = 'en-US';
           utterance.rate = Number(AppState.settings.ttsSpeed || 1.0);
 
-          if (cachedTtsVoice) {
+          // On iOS Safari/Chrome WebKit, setting certain Voice instances in PWA mode can silently fail;
+          // letting iOS use default lang='en-US' or verified non-Siri local en-US avoids silent mute.
+          if (cachedTtsVoice && (!isIOS || (cachedTtsVoice.localService && !cachedTtsVoice.name.includes('Siri')))) {
             utterance.voice = cachedTtsVoice;
           }
 
-          // Retain reference on window/module to prevent premature Garbage Collection in Chromium
           activeUtterance = utterance;
           utterance.onend = () => {
             if (activeUtterance === utterance) activeUtterance = null;
@@ -3443,11 +3481,26 @@ ${prevQaText}
             }
           };
 
-          window.speechSynthesis.speak(utterance);
+          synth.speak(utterance);
         } catch (err) {
           console.warn('TTS speak execution failed:', err);
         }
-      }, 80);
+      };
+
+      if (wasSpeaking) {
+        synth.cancel();
+      }
+
+      // iOS WebKit requires speechSynthesis.speak() synchronously inside the user tap call stack;
+      // defer with 80ms buffer stabilization only on non-iOS browsers when interrupting active speech.
+      if (isIOS || !wasSpeaking) {
+        startSpeak();
+      } else {
+        ttsCancelTimer = setTimeout(() => {
+          ttsCancelTimer = null;
+          startSpeak();
+        }, 80);
+      }
     }
 
     function updateTtsSpeed(val) {
