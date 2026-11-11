@@ -4007,6 +4007,8 @@ ${prevQaText}
     let sttBaseText = '';
     let sttLatestSessionFinal = '';
     let sttLatestSessionInterim = '';
+    let sttSessionResultOffset = 0;
+    let sttLatestResultLength = 0;
     let sttSilenceTimer = null;
     let sttRestartTimer = null;
 
@@ -4095,6 +4097,8 @@ ${prevQaText}
 
       sttLatestSessionFinal = '';
       sttLatestSessionInterim = '';
+      sttSessionResultOffset = 0;
+      sttLatestResultLength = 0;
 
       recognition.onstart = () => {
         if (!sttWantRecording) {
@@ -4113,9 +4117,12 @@ ${prevQaText}
         if (recognition !== speechRecognitionInstance) return;
         resetSttSilenceTimer();
 
+        const totalResults = event.results?.length || 0;
+        sttLatestResultLength = totalResults;
+
         const finals = [];
         const interims = [];
-        for (let i = 0; i < (event.results?.length || 0); i++) {
+        for (let i = sttSessionResultOffset; i < totalResults; i++) {
           const res = event.results[i];
           const textChunk = String(res?.[0]?.transcript || '').trim();
           if (!textChunk) continue;
@@ -5343,6 +5350,7 @@ ${prevQaText}
     function handleChatInputManualEdit(val) {
       if (sttWantRecording) {
         sttBaseText = String(val || '').trim();
+        sttSessionResultOffset = sttLatestResultLength;
         sttLatestSessionFinal = '';
         sttLatestSessionInterim = '';
       }
