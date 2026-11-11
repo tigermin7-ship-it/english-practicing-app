@@ -3260,23 +3260,84 @@ ${prevQaText}
     /*************************************************************************
      * 9. WEB SPEECH API (TTS PRONUNCIATION & STT VOICE INPUT)
      *************************************************************************/
+    let cachedTtsVoice = null;
+    let activeUtterance = null;
+    let ttsCancelTimer = null;
+
+    function initTtsVoices() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return;
+
+      // Prefer high-quality local or natural English voices without remote streaming lag
+      const localEnVoice = voices.find(v => v.lang.startsWith('en') && v.localService && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Siri') || v.name.includes('Microsoft')));
+      const highQualityVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Samantha')));
+      const defaultEnVoice = voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
+
+      cachedTtsVoice = localEnVoice || highQualityVoice || defaultEnVoice || null;
+    }
+
+    if ('speechSynthesis' in window) {
+      initTtsVoices();
+      if (typeof window.speechSynthesis.onvoiceschanged !== 'undefined') {
+        window.speechSynthesis.onvoiceschanged = initTtsVoices;
+      }
+    }
+
     function speakEnglishText(text) {
       if (!('speechSynthesis' in window)) {
         showToast('현재 브라우저에서 음성 합성(TTS)을 지원하지 않습니다.', 'error');
         return;
       }
+
+      const rawClean = String(text || '').trim();
+      if (!rawClean) return;
+
+      if (ttsCancelTimer) {
+        clearTimeout(ttsCancelTimer);
+        ttsCancelTimer = null;
+      }
+
+      // Stop previous utterance
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = Number(AppState.settings.ttsSpeed || 1.0);
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
 
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Microsoft')))
-        || voices.find(v => v.lang.startsWith('en-US'))
-        || voices.find(v => v.lang.startsWith('en'));
-      if (preferredVoice) utterance.voice = preferredVoice;
+      if (!cachedTtsVoice) {
+        initTtsVoices();
+      }
 
-      window.speechSynthesis.speak(utterance);
+      // 80ms buffer stabilization delay:
+      // Prevents Chromium/Safari hardware buffer clipping where the first 1-2 words are swallowed.
+      ttsCancelTimer = setTimeout(() => {
+        ttsCancelTimer = null;
+        try {
+          const utterance = new SpeechSynthesisUtterance(rawClean);
+          utterance.lang = 'en-US';
+          utterance.rate = Number(AppState.settings.ttsSpeed || 1.0);
+
+          if (cachedTtsVoice) {
+            utterance.voice = cachedTtsVoice;
+          }
+
+          // Retain reference on window/module to prevent premature Garbage Collection in Chromium
+          activeUtterance = utterance;
+          utterance.onend = () => {
+            if (activeUtterance === utterance) activeUtterance = null;
+          };
+          utterance.onerror = (e) => {
+            if (activeUtterance === utterance) activeUtterance = null;
+            if (e.error !== 'interrupted' && e.error !== 'canceled') {
+              console.warn('TTS 발음 오류:', e);
+            }
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          console.warn('TTS speak execution failed:', err);
+        }
+      }, 80);
     }
 
     function updateTtsSpeed(val) {
