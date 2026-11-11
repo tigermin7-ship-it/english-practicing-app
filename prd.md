@@ -103,12 +103,13 @@
   * **모바일 대화창 폰트 확대, 말풍선 볼드 처리 & 발음 아이콘 인라인 배치:**
     * 스마트폰 환경에서의 시인성을 높이기 위해 **AI 파트너·사용자 대화 말풍선 본문을 `15.5px~16px` 굵은 볼드체(`font-bold`)**로 강화하고, 코칭 피드백의 추천 원어민 문장(`16px~17px font-bold`), 평가/뉘앙스 팁/추가 질문 본문(`14px`), 입력창(`16px` 모바일 자동 확대 방지)을 일괄 확대함.
     * AI 상대방 메시지의 발음 듣기 버튼(`[🔊]`)을 하단 별도 줄에서 제거하고 **상단 이름·시각 메타 라인(`Jane 오후 10:57 [🔊]`) 바로 옆에 인라인 배치**하여 대화창 세로 공간을 절약함.
-  * **AI 첫 마디 선공 기능 (`[AI가 먼저 질문 던지기]` / `[파트너 첫 질문]`) & 초고속 낙관적 UI:**
+  * **AI 첫 마디 선공 기능 (`[AI가 먼저 질문 던지기]` / `[파트너 첫 질문]`) & 실시간 SSE 스트리밍 초고속 UX:**
     * 빈 세션에서 대화를 시작할 때는 물론, **이미 대화가 진행 중인 상태에서도** 상단 `[AI가 먼저 질문 던지기]` 버튼을 누르면 현재 문맥에 이어지는 AI 파트너의 새로운 질문이나 후속 발언을 즉시 생성함.
-    * Gemini API 호출 시 사전 `ListModels` 블로킹 대기를 제거하여 **고속 검증 모델로 즉시 생성 요청**(`maxOutputTokens: 384`)을 수행하고, 답변 수신 즉시 화면에 먼저 렌더링한 뒤 **Firestore 동기화(`saveAppState`)는 백그라운드 비동기 처리**하여 체감 응답 지연을 최소화함.
-  * **음성 입력(STT) & iOS·데스크톱 겸용 무지연 음성 출력(TTS 최적화):**
+    * `<head>` `preconnect` + `ListModels` 지연 폴백 + 모델군별 저지연 추론 설정(`gemini-3*`: `thinkingLevel: 'minimal'`, `gemini-2.5*`/`flash-lite-latest`: `thinkingBudget: 0`, 미지원 시 400 자동 재시도) + **SSE 실시간 스트리밍(`:streamGenerateContent?alt=sse`)**을 결합해 첫 토큰(TTFB) 수신 즉시 라이브 말풍선으로 출력하고, **Firestore 동기화(`saveAppState`)는 백그라운드 비동기 처리**하여 체감 응답 지연을 최소화함.
+  * **음성 입력(STT) & iOS·데스크톱 겸용 무지연 음성 출력(하이브리드 TTS + Gemini Audio 폴백):**
     * 마이크 버튼(`webkitSpeechRecognition`)으로 실제 말하듯 영어를 입력함.
-    * iOS Safari/Chrome WebKit의 사용자 터치 제스처 동기 실행 정책을 준수하여 **iOS 및 대기 상태에서는 `setTimeout` 없이 클릭 즉시 `speechSynthesis.speak()`를 동기 호출**해 모바일 스피커 무반응을 원천 해결하며, 데스크톱 Chromium에서 기존 발음을 중단할 때만 `80ms` 버퍼 안정화 딜레이를 적용함. 또한 비-Siri 로컬 `en-US` 음성과 GC 방지 전역 참조를 함께 적용함.
+    * iOS Safari/Chrome WebKit/Standalone PWA 호환성을 위해 **ID 기반 클릭 핸들러(`speakSessionMessage`, `speakFeedbackAlternative`, `speakFollowUpSuggestion`)**로 교체하고, iOS에서는 **`utterance.voice` 미지정(`lang = 'en-US'`만 지정) + 터치 동기 호출**을 적용함.
+    * 동시에 탭 시점에 `<audio id="ttsFallbackAudio" playsinline>` 요소를 동기 언락(Unlock)하고 `500ms` 워치독(`onstart` 미수신·무음 조기 종료·`onerror` 감지)을 감시해 **iOS WebKit TTS가 무반응일 경우 자동으로 Gemini Native Audio TTS(`gemini-2.5-flash-preview-tts` / `gemini-3.1-flash-tts-preview`) 24kHz PCM→WAV 오디오 폴백 재생(세션 캐싱 포함)**을 수행함.
 
 ---
 
