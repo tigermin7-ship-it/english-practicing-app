@@ -111,7 +111,8 @@
     * 빈 세션에서 대화를 시작할 때는 물론, **이미 대화가 진행 중인 상태에서도** 상단 `[AI가 먼저 질문 던지기]` 버튼을 누르면 현재 문맥에 이어지는 AI 파트너의 새로운 질문이나 후속 발언을 즉시 생성함.
     * `<head>` `preconnect` + `ListModels` 지연 폴백 + 모델군별 저지연 추론 설정(`gemini-3*`: `thinkingLevel: 'minimal'`, `gemini-2.5*`/`flash-lite-latest`: `thinkingBudget: 0`, 미지원 시 400 자동 재시도) + **SSE 실시간 스트리밍(`:streamGenerateContent?alt=sse`)**을 결합해 첫 토큰(TTFB) 수신 즉시 라이브 말풍선으로 출력하고, **Firestore 동기화(`saveAppState`)는 백그라운드 비동기 처리**하여 체감 응답 지연을 최소화함.
   * **음성 입력(STT) & iOS·데스크톱 겸용 무지연 음성 출력(하이브리드 TTS + Gemini Audio 폴백):**
-    * 마이크 버튼(`SpeechRecognition` / `webkitSpeechRecognition`)은 **`continuous: true` + `interimResults: true` + 최대 20초 무음 대기·자동 재연결**을 지원해 말을 천천히 하거나 중간에 쉬어도 마이크가 끊기지 않으며, 마이크 재클릭 또는 `[전송]` 시 깔끔히 종료됨.
+    * 마이크 버튼(`SpeechRecognition` / `webkitSpeechRecognition`)은 **`continuous: true` + `interimResults: true` + 최대 20초 무음 대기·자동 재연결**을 지원해 말을 천천히 하거나 중간에 쉬어도 마이크가 끊기지 않으며, 말하기 도중 입력창을 직접 수정해도 기준 텍스트(`sttBaseText`)와 결과 오프셋(`sttSessionResultOffset`)을 갱신해 기존 수정을 덮어쓰지 않음 (마이크 재클릭 또는 `[전송]` 시 깔끔히 종료).
+    * **로그인 폼 `<form>` 격리 & Chrome 비밀번호 관리자 오탐 방지:** 로그인 영역(`#authLoginFormView`)만 `<form autocomplete="on">` 으로 분리하고, API Key 입력창(`#settingApiKeyInput`)은 `type="password"` 대신 CSS `-webkit-text-security: disc` 마스킹(`autocomplete="off"`)을 적용해 코치 추가 질문창·채팅창에서 저장된 비밀번호 목록이 뜬금없이 노출되지 않도록 처리함.
     * iOS Safari/Chrome WebKit/Standalone PWA 호환성을 위해 **ID 기반 클릭 핸들러(`speakSessionMessage`, `speakFeedbackAlternative`, `speakFollowUpSuggestion`)**로 교체하고, iOS에서는 **`utterance.voice` 미지정(`lang = 'en-US'`만 지정) + 터치 동기 호출**을 적용함.
     * 동시에 탭 시점에 `<audio id="ttsFallbackAudio" playsinline>` 요소를 동기 언락(Unlock)하고 `500ms` 워치독(`onstart` 미수신·무음 조기 종료·`onerror` 감지)을 감시해 **iOS WebKit TTS가 무반응일 경우 자동으로 Gemini Native Audio TTS(`gemini-2.5-flash-preview-tts` / `gemini-3.1-flash-tts-preview`) 24kHz PCM→WAV 오디오 폴백 재생(세션 캐싱 포함)**을 수행함.
 
