@@ -75,6 +75,21 @@
     .flashcard-half {
       transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    @media (max-height: 520px) {
+      .fc-header-bar {
+        height: 2.75rem !important;
+      }
+      .fc-footer-bar {
+        height: 2.75rem !important;
+      }
+      .fc-split-half {
+        padding: 0.45rem 0.75rem !important;
+      }
+      .fc-prompt-text {
+        font-size: clamp(1.2rem, 5.2vh, 1.75rem) !important;
+        line-height: 1.25 !important;
+      }
+    }
     @supports (padding: env(safe-area-inset-bottom)) {
       .chat-composer-footer {
         padding-bottom: calc(0.625rem + env(safe-area-inset-bottom));
@@ -469,29 +484,24 @@
   <!-- ==================== FULL-SCREEN 2-STAGE SPLIT FLASHCARD MODAL (z-index: 50) ==================== -->
   <div id="flashcardModal" class="fixed inset-0 z-50 bg-slate-950 flex flex-col hidden">
     <!-- Flashcard Top Header -->
-    <div class="h-14 shrink-0 bg-slate-900 border-b border-slate-800 px-3 md:px-6 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2 min-w-0">
-        <div class="flex items-center gap-1.5 text-amber-400 font-bold text-xs md:text-base shrink-0">
-          <i data-lucide="layers" class="w-4 h-4 md:w-5 md:h-5"></i>
-          <span class="hidden sm:inline">Flashcard</span>
-        </div>
-
-        <!-- Flashcard Scope Filter -->
-        <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
-          <select id="fcFilterSelect" onchange="changeFlashcardFilter(this.value)" class="bg-transparent text-slate-100 font-semibold focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[240px] truncate">
+    <div class="fc-header-bar h-12 md:h-14 shrink-0 bg-slate-900 border-b border-slate-800 px-2.5 md:px-6 flex items-center justify-between gap-1.5 md:gap-2">
+      <!-- Compact Scope Filter (short title preview; full titles inside dropdown) -->
+      <div class="flex items-center min-w-0 shrink">
+        <div class="min-w-0 shrink flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs">
+          <select id="fcFilterSelect" onchange="changeFlashcardFilter(this.value)" class="w-[88px] sm:w-[132px] lg:w-[200px] min-w-0 max-w-full bg-transparent text-slate-100 font-semibold text-xs focus:outline-none cursor-pointer truncate">
             <option value="ALL">전체 문장</option>
           </select>
         </div>
       </div>
 
-      <!-- Center Progress & Controls -->
-      <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
-        <span id="fcProgressBadge" onclick="focusFlashcardJumpInput()" class="px-2 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer transition" title="클릭하여 특정 문장번호로 바로 이동">
+      <!-- Progress + Jump + Controls -->
+      <div class="flex items-center gap-1 sm:gap-1.5 lg:gap-2 shrink-0">
+        <span id="fcProgressBadge" onclick="focusFlashcardJumpInput()" class="px-1.5 sm:px-2 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] sm:text-xs font-bold text-slate-200 cursor-pointer whitespace-nowrap transition" title="클릭하여 특정 문장번호로 바로 이동">
           0 / 0
         </span>
 
         <!-- Direct Sentence Number Jump (#138 -> 이동) -->
-        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-0.5 text-xs" title="특정 문장번호(예: 138) 입력 후 Enter 또는 이동 클릭">
+        <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-1.5 py-0.5 text-xs shrink-0" title="특정 문장번호(예: 138) 입력 후 Enter 또는 이동 클릭">
           <span class="text-amber-400 font-bold mr-0.5">#</span>
           <input
             id="fcJumpInput"
@@ -499,34 +509,72 @@
             min="1"
             placeholder="번호"
             onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToFlashcardSentenceNo();}"
-            class="w-11 sm:w-14 bg-transparent text-slate-100 font-bold text-xs text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            class="w-9 sm:w-12 lg:w-14 bg-transparent text-slate-100 font-bold text-xs text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <button onclick="jumpToFlashcardSentenceNo()" class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition shrink-0">
+          <button onclick="jumpToFlashcardSentenceNo()" class="ml-0.5 sm:ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition shrink-0 whitespace-nowrap">
             이동
           </button>
         </div>
 
-        <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="출제 방향 전환 (한글->영어 / 영어->한글)">
-          <span id="fcDirectionText">한➔영</span>
-        </button>
+        <!-- Desktop (>= 1024px) Direct Action Controls -->
+        <div class="hidden lg:flex items-center gap-2 shrink-0">
+          <button id="btnFcDirection" onclick="toggleFlashcardDirection()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="출제 방향 전환 (한글->영어 / 영어->한글)">
+            <span id="fcDirectionText">한➔영</span>
+          </button>
 
-        <button id="btnFcShuffle" onclick="toggleFlashcardShuffle()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="카드 순서 랜덤 셔플">
-          <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
-          <span id="fcShuffleText" class="hidden sm:inline">셔플 OFF</span>
-        </button>
+          <button id="btnFcShuffle" onclick="toggleFlashcardShuffle()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1 transition" title="카드 순서 랜덤 셔플">
+            <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
+            <span id="fcShuffleText">셔플 OFF</span>
+          </button>
 
-        <!-- TTS Speed Selector -->
-        <select id="fcTtsSpeedSelect" onchange="updateTtsSpeed(this.value)" class="hidden sm:block bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none">
-          <option value="0.85">🔊 0.85x</option>
-          <option value="1.0" selected>🔊 1.0x</option>
-          <option value="1.15">🔊 1.15x</option>
-        </select>
+          <!-- TTS Speed Selector -->
+          <select id="fcTtsSpeedSelect" onchange="updateTtsSpeed(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none">
+            <option value="0.85">🔊 0.85x</option>
+            <option value="1.0" selected>🔊 1.0x</option>
+            <option value="1.15">🔊 1.15x</option>
+          </select>
 
-        <!-- Exit Flashcard Overlay Button -->
-        <button onclick="closeFlashcardModal()" class="ml-0.5 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs md:text-sm flex items-center gap-1 shadow-lg shadow-rose-600/20 transition">
-          <i data-lucide="x" class="w-4 h-4"></i>
-          <span>Exit</span>
-        </button>
+          <!-- Exit Flashcard Overlay Button -->
+          <button onclick="closeFlashcardModal()" class="ml-0.5 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs md:text-sm flex items-center gap-1 shadow-lg shadow-rose-600/20 transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+            <span>Exit</span>
+          </button>
+        </div>
+
+        <!-- Mobile / Tablet (< 1024px) Compact Menu Button Grouping (Direction, Shuffle, Speed, Exit) -->
+        <div class="lg:hidden relative shrink-0">
+          <button id="btnFcHeaderMenu" onclick="toggleFlashcardHeaderMenu(event)" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1 text-xs font-bold transition" title="학습 옵션 및 닫기 메뉴">
+            <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+          </button>
+
+          <div id="fcHeaderMenuPopover" onclick="event.stopPropagation()" class="hidden absolute right-0 top-full mt-1.5 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 flex flex-col gap-1.5">
+            <button id="btnFcDirectionMobile" onclick="toggleFlashcardDirection()" class="w-full px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-between transition">
+              <span>출제 방향</span>
+              <span id="fcDirectionTextMobile" class="text-amber-300 font-bold">한 ➔ 영</span>
+            </button>
+
+            <button id="btnFcShuffleMobile" onclick="toggleFlashcardShuffle()" class="w-full px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-between transition">
+              <span class="flex items-center gap-1.5"><i data-lucide="shuffle" class="w-3.5 h-3.5"></i><span>순서</span></span>
+              <span id="fcShuffleTextMobile">셔플 OFF</span>
+            </button>
+
+            <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200">
+              <span class="font-semibold">음성 속도</span>
+              <select id="fcTtsSpeedSelectMobile" onchange="updateTtsSpeed(this.value)" class="bg-transparent font-bold text-indigo-300 focus:outline-none cursor-pointer">
+                <option value="0.85">0.85x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.15">1.15x</option>
+              </select>
+            </div>
+
+            <div class="border-t border-slate-800 my-0.5"></div>
+
+            <button onclick="closeFlashcardHeaderMenu(); closeFlashcardModal();" class="w-full px-2.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/20 transition">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              <span>Exit (닫기)</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -539,9 +587,9 @@
     <div class="flex-1 flex flex-col min-h-0 select-none">
 
       <!-- TOP 50%: KOREAN PROMPT AREA (De-cluttered for mobile) -->
-      <div onclick="handleFlashcardAreaClick()" class="h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-4 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative group">
+      <div onclick="handleFlashcardAreaClick()" class="fc-split-half h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-3 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative group min-h-0">
         <!-- Top Badges Row -->
-        <div class="w-full max-w-4xl flex items-center justify-between text-xs">
+        <div class="w-full max-w-4xl flex items-center justify-between text-xs shrink-0">
           <div class="flex items-center gap-1.5 min-w-0" onclick="event.stopPropagation()">
             <span id="fcTopCategoryBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-semibold truncate">카테고리</span>
             <span id="fcTopSourceBadge" onclick="focusFlashcardJumpInput()" class="px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold cursor-pointer transition" title="클릭하여 특정 문장번호로 이동">#1</span>
@@ -554,22 +602,20 @@
           </div>
         </div>
 
-        <!-- Center Korean Sentence (160% Enlarged for Mobile & Desktop) -->
-        <div class="my-auto max-w-4xl px-3 overflow-y-auto max-h-full flex items-center justify-center">
+        <!-- Center Korean Sentence (160% Enlarged for Mobile & Desktop; scrolls cleanly on short landscape) -->
+        <div class="flex-1 min-h-0 w-full max-w-4xl px-3 py-1 overflow-y-auto flex flex-col items-center">
           <div id="fcTopLabel" class="hidden"></div>
-          <h1 id="fcTopPromptText" class="text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight break-keep">
+          <h1 id="fcTopPromptText" class="fc-prompt-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight break-keep">
             문장을 불러오는 중입니다...
           </h1>
         </div>
-
-        <div class="h-2"></div>
       </div>
 
       <!-- BOTTOM 50%: ENGLISH ANSWER REVEAL AREA (De-cluttered for mobile) -->
-      <div onclick="handleFlashcardAreaClick()" class="h-1/2 bg-slate-950 p-4 md:p-8 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-y-auto">
+      <div onclick="handleFlashcardAreaClick()" class="fc-split-half h-1/2 bg-slate-950 p-3 md:p-8 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-hidden min-h-0">
         
         <!-- Stage 1: Minimal Hidden Cover State -->
-        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-2 py-4">
+        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-2 py-2">
           <div class="px-4 py-2 rounded-full bg-slate-900 border border-slate-800 flex items-center gap-2 text-amber-400 text-xs md:text-sm font-bold shadow-inner">
             <i data-lucide="eye" class="w-4 h-4"></i>
             <span>탭하여 정답 확인</span>
@@ -577,18 +623,16 @@
         </div>
 
         <!-- Stage 2: Revealed Answer State -->
-        <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full">
-          <div class="h-1"></div>
-
-          <div class="my-auto py-2 px-3 overflow-y-auto">
-            <h2 id="fcBottomAnswerText" class="text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-emerald-300 leading-tight tracking-tight break-keep">
+        <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full min-h-0">
+          <div class="w-full flex-1 min-h-0 py-1 px-3 overflow-y-auto flex flex-col items-center">
+            <h2 id="fcBottomAnswerText" class="fc-prompt-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-emerald-300 leading-tight tracking-tight break-keep">
               English sentence goes here.
             </h2>
-            <p id="fcBottomNotesText" class="mt-3 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl"></p>
+            <p id="fcBottomNotesText" class="mt-2 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl shrink-0"></p>
           </div>
 
           <!-- Action Buttons inside Revealed State -->
-          <div class="flex flex-wrap items-center justify-center gap-2 pt-1" onclick="event.stopPropagation()">
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-1 shrink-0" onclick="event.stopPropagation()">
             <button onclick="speakCurrentFlashcard()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
               <span>발음 (S)</span>
@@ -609,7 +653,7 @@
     </div>
 
     <!-- Flashcard Bottom Navigation Bar -->
-    <div class="h-14 md:h-16 shrink-0 bg-slate-900 border-t border-slate-800 px-3 md:px-8 flex items-center justify-between gap-2">
+    <div class="fc-footer-bar h-12 md:h-16 shrink-0 bg-slate-900 border-t border-slate-800 px-3 md:px-8 flex items-center justify-between gap-2">
       <button onclick="prevFlashcard()" class="px-3 md:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs md:text-sm flex items-center gap-1 transition">
         <i data-lucide="chevron-left" class="w-4 h-4"></i>
         <span>이전</span>
@@ -2964,12 +3008,33 @@ ${prevQaText}
       if (pop) pop.classList.add('hidden');
     }
 
+    function toggleFlashcardHeaderMenu(e) {
+      if (e) e.stopPropagation();
+      const pop = document.getElementById('fcHeaderMenuPopover');
+      if (!pop) return;
+      pop.classList.toggle('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeFlashcardHeaderMenu() {
+      const pop = document.getElementById('fcHeaderMenuPopover');
+      if (pop) pop.classList.add('hidden');
+    }
+
     function handleMobilePopoverOutsideDismiss(e) {
       const pop = document.getElementById('mobilePartnerPopover');
       const btn = document.getElementById('mobilePartnerAvatarBtn');
-      if (!pop || pop.classList.contains('hidden')) return;
-      if (!pop.contains(e.target) && (!btn || !btn.contains(e.target))) {
-        pop.classList.add('hidden');
+      if (pop && !pop.classList.contains('hidden')) {
+        if (!pop.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          pop.classList.add('hidden');
+        }
+      }
+      const fcPop = document.getElementById('fcHeaderMenuPopover');
+      const fcBtn = document.getElementById('btnFcHeaderMenu');
+      if (fcPop && !fcPop.classList.contains('hidden')) {
+        if (!fcPop.contains(e.target) && (!fcBtn || !fcBtn.contains(e.target))) {
+          fcPop.classList.add('hidden');
+        }
       }
     }
     document.addEventListener('click', handleMobilePopoverOutsideDismiss);
@@ -3329,6 +3394,7 @@ ${prevQaText}
 
     function closeFlashcardModal() {
       AppState.uiState.flashcard.isOpen = false;
+      closeFlashcardHeaderMenu();
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
@@ -3391,13 +3457,35 @@ ${prevQaText}
       const item = getCurrentFlashcardItem();
       const total = fc.deckIds.length;
 
-      document.getElementById('fcDirectionText').textContent = fc.direction === 'KR_TO_EN' ? '한 ➔ 영' : '영 ➔ 한';
-      document.getElementById('fcShuffleText').textContent = fc.isShuffle ? '셔플 ON' : '셔플 OFF';
-      document.getElementById('btnFcShuffle').className = `px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
-        fc.isShuffle
-          ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-          : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
-      }`;
+      const dirLabel = fc.direction === 'KR_TO_EN' ? '한 ➔ 영' : '영 ➔ 한';
+      const shuffleLabel = fc.isShuffle ? '셔플 ON' : '셔플 OFF';
+      const dirDesktop = document.getElementById('fcDirectionText');
+      if (dirDesktop) dirDesktop.textContent = dirLabel;
+      const dirMobile = document.getElementById('fcDirectionTextMobile');
+      if (dirMobile) dirMobile.textContent = dirLabel;
+
+      const shufDesktop = document.getElementById('fcShuffleText');
+      if (shufDesktop) shufDesktop.textContent = shuffleLabel;
+      const shufMobile = document.getElementById('fcShuffleTextMobile');
+      if (shufMobile) shufMobile.textContent = shuffleLabel;
+
+      const btnShuffleDesktop = document.getElementById('btnFcShuffle');
+      if (btnShuffleDesktop) {
+        btnShuffleDesktop.className = `px-2.5 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
+          fc.isShuffle
+            ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+            : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+        }`;
+      }
+      const btnShuffleMobile = document.getElementById('btnFcShuffleMobile');
+      if (btnShuffleMobile) {
+        btnShuffleMobile.className = `w-full px-2.5 py-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition ${
+          fc.isShuffle
+            ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+            : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+        }`;
+      }
+      syncFlashcardTtsSpeedSelects();
 
       if (!item || total === 0) {
         document.getElementById('fcProgressBadge').textContent = '0 / 0';
@@ -3892,8 +3980,19 @@ ${prevQaText}
       }
     }
 
+    function syncFlashcardTtsSpeedSelects() {
+      const targetVal = String(Number(AppState.settings.ttsSpeed || 1.0));
+      ['fcTtsSpeedSelect', 'fcTtsSpeedSelectMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const matched = Array.from(el.options).find(opt => Number(opt.value) === Number(targetVal));
+        if (matched) el.value = matched.value;
+      });
+    }
+
     function updateTtsSpeed(val) {
       AppState.settings.ttsSpeed = Number(val) || 1.0;
+      syncFlashcardTtsSpeedSelects();
       saveAppState();
     }
 
