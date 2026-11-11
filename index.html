@@ -121,6 +121,9 @@
     body.theme-light .text-white {
       color: #0f172a !important;
     }
+    body.theme-light .fc-subnote-text {
+      color: #0f172a !important;
+    }
     /* Preserve white text on solid accent buttons and avatars in Light Mode */
     body.theme-light .bg-indigo-600,
     body.theme-light .bg-indigo-600 .text-white,
@@ -197,63 +200,32 @@
       </div>
     </div>
 
-    <!-- Right Controls -->
-    <div class="flex items-center gap-1.5 md:gap-2.5 shrink-0">
-      <!-- Target Filter Quick Selector -->
-      <div class="hidden xl:flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/70 rounded-lg px-2.5 py-1 text-xs">
-        <i data-lucide="target" class="w-3.5 h-3.5 text-indigo-400"></i>
-        <span class="text-slate-400">타깃:</span>
-        <select id="gnbTargetFilterSelect" onchange="handleQuickTargetFilterChange(this.value)" class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer max-w-[160px] truncate">
-          <option value="ALL">전체 문장</option>
-        </select>
-      </div>
-
+    <!-- Right Controls (Simplified for Mobile & Desktop: Flashcard, DB, Settings) -->
+    <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
       <!-- Flashcard Mode Trigger Button -->
       <button onclick="openFlashcardModal()" class="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs md:text-sm shadow-lg shadow-amber-500/15 transition transform active:scale-95">
         <i data-lucide="layers" class="w-4 h-4"></i>
-        <span class="hidden xs:inline sm:inline">플래시카드</span>
+        <span>플래시카드</span>
         <span id="gnbSentenceCountBadge" class="px-1.5 py-0.2 bg-slate-950/25 rounded text-[11px] font-extrabold">0</span>
       </button>
 
       <!-- DB Manage Quick Button -->
       <button onclick="openDBManagerModal()" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="통합 문장 DB 관리 및 추가">
         <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
-        <span class="hidden md:inline">문장 DB</span>
+        <span class="hidden sm:inline">문장 DB</span>
       </button>
 
-      <!-- Quick Theme Toggle Button (Dark <-> White) -->
-      <button id="btnThemeQuickToggle" onclick="toggleThemeQuick()" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="화면 테마 전환 (Dark / White)">
-        <i id="gnbThemeIcon" data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
-        <span id="gnbThemeLabel" class="hidden md:inline">White</span>
-      </button>
-
-      <!-- Admin User Approval Button (Only visible to Admin) -->
-      <button id="btnAdminApprovalModal" onclick="openAdminApprovalModal()" class="hidden p-2 md:px-2.5 md:py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold items-center gap-1 transition" title="회원 가입 승인 관리 (관리자 전용)">
-        <i data-lucide="user-check" class="w-4 h-4 text-indigo-400"></i>
-        <span class="hidden lg:inline">승인관리</span>
+      <!-- Unified Settings Button (API, Theme, Admin Approval, Shortcuts, Logout) -->
+      <button onclick="openSecurityModal('api')" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition relative" title="설정 (AI API · 화면 테마 · 회원 승인관리 · 단축키 · 로그아웃)">
+        <i id="gnbLockIcon" data-lucide="settings" class="w-4 h-4 text-sky-400"></i>
+        <span id="gnbSyncBadgeText" class="hidden sm:inline">설정</span>
         <span id="gnbPendingUsersBadge" class="hidden px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold">0</span>
       </button>
 
-      <!-- Security / Cloud Sync / API Settings Button -->
-      <button onclick="openSecurityModal('api')" class="p-2 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition" title="AI API 키 · Firestore DB · 보안 설정">
-        <i id="gnbLockIcon" data-lucide="settings" class="w-4 h-4 text-sky-400"></i>
-        <span id="gnbSyncBadgeText" class="hidden lg:inline">설정</span>
-      </button>
-
-      <!-- Help Guide Popup Button -->
-      <button onclick="openHelpGuideModal()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-bold transition" title="이용 가이드 및 단축키 보기">
-        <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
-      </button>
-
-      <!-- GNB Login Button (visible when not authenticated) -->
+      <!-- GNB Login Button (visible only when not authenticated) -->
       <button id="btnLoginHeader" onclick="showAuthGateLoginView()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition" title="로그인 모달 열기">
         <i data-lucide="log-in" class="w-4 h-4"></i>
         <span>로그인</span>
-      </button>
-
-      <!-- Logout Button (visible when authenticated) -->
-      <button id="btnLogoutHeader" onclick="handleUserLogout()" class="hidden p-2 rounded-lg bg-slate-800 hover:bg-rose-950 border border-slate-700 text-slate-400 hover:text-rose-300 text-xs transition" title="로그아웃">
-        <i data-lucide="log-out" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
@@ -376,40 +348,10 @@
               <span>AI가 먼저 질문 던지기</span>
             </button>
 
-            <button onclick="toggleHintDrawer()" id="btnToggleHintDrawer" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition" title="이번 세션에서 연습할 타깃 한/영 표현 힌트 보기">
-              <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-amber-400"></i>
-              <span>타깃 표현 힌트</span>
-              <span id="hintTargetCountBadge" class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[11px]">0</span>
-            </button>
-
             <button onclick="resetActiveSessionHistory()" class="p-1.5 md:px-2.5 md:py-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-medium flex items-center gap-1 transition" title="시나리오 설정은 유지하고 현재 대화 기록만 비웁니다">
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
               <span class="hidden md:inline">대화 비우기</span>
             </button>
-          </div>
-        </div>
-
-        <!-- Collapsible Target Expression Hint Drawer -->
-        <div id="targetHintDrawer" class="hidden mt-2.5 pt-2.5 border-t border-slate-800/90">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2 text-xs">
-              <span class="font-bold text-amber-300 flex items-center gap-1">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                이번 세션 목표 표현 (대화 중 자연스럽게 활용해 보세요)
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="flex items-center gap-1 text-[11px] text-slate-400 cursor-pointer">
-                <input type="checkbox" id="chkShowHintEnglish" checked onchange="renderTargetHintDrawer()" class="rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-0" />
-                <span>영어 정답 함께 보기</span>
-              </label>
-              <button onclick="openFlashcardModalWithCurrentFilter()" class="text-[11px] text-amber-400 hover:underline font-medium">
-                이 범위만 플래시카드 암기 →
-              </button>
-            </div>
-          </div>
-          <div id="targetHintList" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-            <!-- Dynamically rendered by renderTargetHintDrawer() -->
           </div>
         </div>
       </section>
@@ -675,13 +617,6 @@
           <label class="block text-xs font-semibold text-slate-300 mb-1">비즈니스 상황 및 나의 목표 (Business Context)</label>
           <textarea id="inputBusinessContext" rows="3" placeholder="예: 연간 재계약 협상 미팅. 원자재 가격 상승으로 10% 인하는 불가하며, 대신 물량 확대 시 5% 추가 할인을 역제안해야 함." class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none resize-none"></textarea>
         </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">이 세션에서 집중 연습할 문장 세트 (Target Filter)</label>
-          <select id="inputSessionTargetFilter" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
-            <option value="ALL">전체 문장</option>
-          </select>
-        </div>
       </div>
 
       <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950/60 flex items-center justify-end gap-2">
@@ -805,32 +740,39 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL 4: AI ENGINE & FIRESTORE CLOUD SYNC SETTINGS ==================== -->
+  <!-- ==================== MODAL 4: UNIFIED SETTINGS (AI · THEME · SHORTCUTS · ADMIN APPROVAL · SYNC · LOGOUT) ==================== -->
   <div id="securityModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
       <!-- Modal Header & Tabs -->
       <div class="px-5 pt-4 border-b border-slate-800 bg-slate-950/50">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h3 class="text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="settings" class="w-5 h-5 text-sky-400"></i>
-            <span>AI 엔진 설정 & Cloud Firestore 동기화</span>
+            <span>통합 설정</span>
           </h3>
-          <button onclick="closeSecurityModal()" class="p-1 text-slate-400 hover:text-white">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
+          <div class="flex items-center gap-2">
+            <span id="settingsUserBadge" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-300 font-semibold hidden"></span>
+            <button id="btnLogoutInSettings" onclick="closeSecurityModal(); handleUserLogout();" class="hidden px-2.5 py-1 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1 transition" title="현재 계정에서 로그아웃">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              <span>로그아웃</span>
+            </button>
+            <button onclick="closeSecurityModal()" class="p-1 text-slate-400 hover:text-white">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
         </div>
-        <div class="flex gap-4 text-xs font-bold">
-          <button id="tabBtnApi" onclick="switchSecurityModalTab('api')" class="pb-2.5 border-b-2 border-indigo-500 text-indigo-400">🤖 LLM API & 테마 설정</button>
-          <button id="tabBtnSync" onclick="switchSecurityModalTab('sync')" class="pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200">🔥 Firestore 실시간 DB 상태</button>
+        <div class="flex flex-wrap gap-4 text-xs font-bold">
+          <button id="tabBtnApi" onclick="switchSecurityModalTab('api')" class="pb-2.5 border-b-2 border-indigo-500 text-indigo-400">🤖 AI · 테마 · 단축키</button>
+          <button id="tabBtnAdmin" onclick="switchSecurityModalTab('admin')" class="hidden pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 items-center gap-1.5">
+            <span>👥 회원 승인 관리</span>
+            <span id="settingsPendingUsersBadge" class="hidden px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold">0</span>
+          </button>
+          <button id="tabBtnSync" onclick="switchSecurityModalTab('sync')" class="pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200">🔥 Firestore DB 상태</button>
         </div>
       </div>
 
-      <!-- Tab 1: LLM API Settings -->
+      <!-- Tab 1: LLM API, Theme & Essential Shortcuts -->
       <div id="tabContentApi" class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm">
-        <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3.5 text-xs text-indigo-200 leading-relaxed">
-          💡 <strong>이원화 프롬프트(Dual-Prompt) & Firestore 연동 안내:</strong> 입력하신 유료/무료 API 키는 Cloud Firestore 설정에 안전하게 동기화되어, 스마트폰이나 다른 PC에서 로그인할 때 다시 입력할 필요 없이 즉시 실제 AI 파트너와 대화가 작동합니다.
-        </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">AI 공급자 (Provider)</label>
@@ -865,17 +807,48 @@
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">화면 테마 설정 (Display Theme)</label>
           <select id="settingThemeSelect" onchange="handleThemeSelectChange(this.value)" class="w-full rounded-xl bg-slate-950 border border-slate-700 px-3.5 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none">
-            <option value="dark">🌙 Dark 화면 (기본 어두운 테마)</option>
+            <option value="dark">🌙 Dark 화면 (어두운 테마)</option>
             <option value="light">☀️ White 화면 (밝은 화이트 테마)</option>
           </select>
         </div>
 
+        <!-- Essential Flashcard Keyboard Shortcuts Summary -->
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1 text-xs text-slate-300">
+          <div class="font-bold text-amber-300 flex items-center gap-1.5">
+            <i data-lucide="keyboard" class="w-3.5 h-3.5"></i>
+            <span>플래시카드 핵심 단축키</span>
+          </div>
+          <p class="text-slate-300 leading-relaxed">
+            • <strong>S 키:</strong> 원어민 발음 듣기 (TTS) &nbsp;|&nbsp; <strong>B 키:</strong> 중요 별표 북마크 &nbsp;|&nbsp; <strong>← / →:</strong> 이전·다음 카드
+          </p>
+        </div>
+
         <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
-          <button onclick="saveApiSettings()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20">API 및 테마 설정 저장 (Firestore 동기화)</button>
+          <button onclick="saveApiSettings()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/20">설정 저장 (Firestore 동기화)</button>
         </div>
       </div>
 
-      <!-- Tab 2: Firestore Real-Time DB Status -->
+      <!-- Tab 2: Admin User Approval Manager (Integrated into Settings) -->
+      <div id="tabContentAdmin" class="flex-1 overflow-y-auto flex flex-col hidden">
+        <div class="p-4 bg-slate-950/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <span>승인(<code>approved</code>)된 계정만 앱에 입장하여 문장 DB와 롤플레잉을 이용할 수 있습니다.</span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="resetAllCloudUsersAndWorkspace()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-md shadow-rose-900/40 flex items-center gap-1 shrink-0">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>전체 계정·DB 초기화</span>
+            </button>
+            <button onclick="loadAdminUsersList()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center gap-1 shrink-0">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>새로고침</span>
+            </button>
+          </div>
+        </div>
+        <div id="adminUsersListContainer" class="flex-1 overflow-y-auto p-4 space-y-2 text-xs">
+          <!-- Dynamically rendered by loadAdminUsersList() -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Firestore Real-Time DB Status -->
       <div id="tabContentSync" class="p-5 overflow-y-auto space-y-4 text-xs md:text-sm hidden">
         <div class="bg-indigo-950/30 border border-indigo-500/40 rounded-xl p-4 space-y-3">
           <div class="flex items-center justify-between">
@@ -960,72 +933,6 @@
             🔄 승인 상태 다시 확인
           </button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MODAL 7: ADMIN USER APPROVAL MANAGER ==================== -->
-  <div id="adminApprovalModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="user-check" class="w-5 h-5 text-indigo-400"></i>
-          <span>회원 가입 승인 및 권한 관리 (Firestore Admin)</span>
-        </h3>
-        <button onclick="closeAdminApprovalModal()" class="p-1 text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-        <div class="p-4 bg-slate-950/50 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-        <span>승인(`approved`)된 계정만 앱에 입장하여 문장 DB와 롤플레잉을 이용할 수 있습니다.</span>
-        <div class="flex items-center gap-1.5">
-          <button onclick="resetAllCloudUsersAndWorkspace()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-md shadow-rose-900/40 flex items-center gap-1 shrink-0">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>전체 계정·DB 초기화</span>
-          </button>
-          <button onclick="loadAdminUsersList()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center gap-1 shrink-0">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            <span>새로고침</span>
-          </button>
-        </div>
-      </div>
-      <div id="adminUsersListContainer" class="flex-1 overflow-y-auto p-4 space-y-2 text-xs">
-        <!-- Dynamically rendered by loadAdminUsersList() -->
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MODAL 8: COMPACT HELP & SHORTCUTS POPUP ([?]) ==================== -->
-  <div id="helpGuideModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
-          <span>핵심 이용 가이드 & 단축키</span>
-        </h3>
-        <button onclick="closeHelpGuideModal()" class="p-1 text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="p-5 overflow-y-auto space-y-4 text-xs leading-relaxed text-slate-300">
-        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-          <p class="font-bold text-indigo-300">1. 실전 AI 롤플레잉 & 온디맨드 피드백</p>
-          <p>• 상단 <strong>[설정]</strong>에서 유료/무료 Gemini 또는 OpenAI API 키를 입력하면 시뮬레이션 모드가 해제되고 실시간 AI 파트너와 대화합니다.</p>
-          <p>• 대화 중에는 교정이 개입하지 않으며, 내 말풍선 아래의 <strong>[💬 피드백]</strong>을 누를 때만 코칭 댓글과 오답노트 저장 버튼이 열립니다.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-          <p class="font-bold text-amber-300">2. 플래시카드 단축키 (PC/모바일)</p>
-          <p>• <strong>화면 탭 / Space / Enter:</strong> 하단 영어 정답 확인 ➔ 다음 카드 이동</p>
-          <p>• <strong>← / → 방향키:</strong> 이전 카드 / 다음 카드</p>
-          <p>• <strong>S 키:</strong> 원어민 발음 듣기 (TTS) &nbsp;|&nbsp; <strong>B 키:</strong> 중요 별표 북마크</p>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
-          <p class="font-bold text-emerald-300">3. Cloud Firestore 전 기기 자동 동기화</p>
-          <p>• 모든 계정 승인 정보, 엑셀/CSV 업로드 문장 DB, 롤플레잉 대화 세션, API 키는 로컬 브라우저가 아닌 <strong>Cloud Firestore</strong>에 실시간 저장되어 어느 기기·브라우저에서 접속하든 동일하게 유지됩니다.</p>
-        </div>
-      </div>
-      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex justify-end">
-        <button onclick="closeHelpGuideModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">확인</button>
       </div>
     </div>
   </div>
@@ -1760,24 +1667,16 @@
 6. PLAIN SPOKEN TEXT ONLY: Output pure spoken English sentences only. Do NOT use Markdown formatting such as **bold**, *italics*, or bullet lists.`;
     }
 
-    function buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampledTargets) {
-      const targetLines = sampledTargets.length > 0
-        ? sampledTargets.map(s => `- [ID: ${s.id}] "${s.english}" (${s.korean})`).join('\n')
-        : 'None';
-
+    function buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg) {
       return `You are an expert Executive Business English Coach. Analyze the user's English response within the given business conversation context and return ONLY a valid JSON object.
 
 [CONTEXT]
 - Business Scenario: ${session.business_context}
 - Partner's Previous Message: "${prevPartnerMsg || '(Conversation start)'}"
 - User's English Message to Evaluate: "${userMsg}"
-- Registered Target Expressions for this Session:
-${targetLines}
 
 [OUTPUT JSON SCHEMA]
 {
-  "target_used": boolean,
-  "matched_sentence_id": "string or null (ID of the matched target expression from the list if target_used is true)",
   "evaluation": "한국어로 작성된 1~2문장의 핵심 피드백 (비즈니스 격식, 문법 정확성, 뉘앙스 적절성 평가)",
   "recommended_korean": "추천 영어 대안 문장에 정확히 대응하는 자연스러운 비즈니스 한국어 문장 (오답노트 플래시카드 상단 노출용)",
   "better_alternative": "Polished, natural, native-level business English sentence that best fits the user's intent in this context (오답노트 플래시카드 하단 노출용)",
@@ -2057,8 +1956,7 @@ ${targetLines}
     }
 
     async function callFeedbackCoachAI(session, prevPartnerMsg, userMsg) {
-      const sampled = getFilteredSentences(session?.target_filter || 'ALL').slice(0, 15);
-      const prompt = buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg, sampled);
+      const prompt = buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg);
       const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
       const provider = AppState.settings.provider || 'gemini';
@@ -2726,8 +2624,11 @@ ${prevQaText}
       document.getElementById('activePartnerName').textContent = `${sess.partner_name} · ${sess.partner_persona}`;
       document.getElementById('activeBusinessContext').textContent = `📋 상황: ${sess.business_context}`;
 
-      const targetPool = getFilteredSentences(sess.target_filter || 'ALL');
-      document.getElementById('hintTargetCountBadge').textContent = targetPool.length;
+      const hintBadgeEl = document.getElementById('hintTargetCountBadge');
+      if (hintBadgeEl) {
+        const targetPool = getFilteredSentences(sess.target_filter || 'ALL');
+        hintBadgeEl.textContent = targetPool.length;
+      }
     }
 
     function renderTargetHintDrawer() {
@@ -3142,7 +3043,7 @@ ${prevQaText}
       }
       const mainPart = str.slice(0, markerIdx).trim();
       const subPart = str.slice(markerIdx + 2).trim();
-      return `<span class="fc-main-text">${escapeHtml(mainPart)}</span><span class="fc-subnote-text block mt-3 font-semibold text-slate-300/90 leading-snug tracking-normal" style="font-size: clamp(20px, 0.58em, 30px);">&gt;&gt; ${escapeHtml(subPart)}</span>`;
+      return `<span class="fc-main-text">${escapeHtml(mainPart)}</span><span class="fc-subnote-text block mt-3 font-semibold text-white leading-snug tracking-normal" style="font-size: clamp(18px, 0.54em, 28px);">&gt;&gt; ${escapeHtml(subPart)}</span>`;
     }
 
     function renderCurrentFlashcard() {
@@ -3310,10 +3211,24 @@ ${prevQaText}
 
     function toggleFlashcardShuffle() {
       const fc = AppState.uiState.flashcard;
+      const currentItemId = getCurrentFlashcardItem()?.id || null;
+      const turningOff = fc.isShuffle === true;
+
       fc.isShuffle = !fc.isShuffle;
-      fc.currentIndex = 0;
       fc.isRevealed = false;
       buildFlashcardDeck();
+
+      if (turningOff && currentItemId) {
+        const keptIdx = fc.deckIds.indexOf(currentItemId);
+        fc.currentIndex = keptIdx !== -1 ? keptIdx : 0;
+        const keptItem = getCurrentFlashcardItem();
+        const keptNo = keptItem?.sentence_no || (fc.currentIndex + 1);
+        showToast(`🔢 셔플 OFF: 현재 #${keptNo}번 문장부터 순서대로 이어서 학습합니다.`, 'info');
+      } else {
+        fc.currentIndex = 0;
+        showToast('🔀 셔플 ON: 문장 순서가 무작위로 섞였습니다.', 'info');
+      }
+
       renderCurrentFlashcard();
     }
 
@@ -3466,7 +3381,7 @@ ${prevQaText}
         personaEl.value = sess.partner_persona;
         contextEl.value = sess.business_context;
         diffEl.value = sess.difficulty || 'Intermediate';
-        filterEl.value = sess.target_filter || 'ALL';
+        if (filterEl) filterEl.value = sess.target_filter || 'ALL';
       } else {
         document.getElementById('sessionModalTitle').innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-indigo-400"></i><span>새 롤플레잉 시나리오 세션 만들기</span>`;
         idInput.value = '';
@@ -3475,7 +3390,7 @@ ${prevQaText}
         personaEl.value = '';
         contextEl.value = '';
         diffEl.value = 'Intermediate';
-        filterEl.value = 'ALL';
+        if (filterEl) filterEl.value = 'ALL';
       }
 
       modal.classList.remove('hidden');
@@ -3515,7 +3430,7 @@ ${prevQaText}
       const persona = document.getElementById('inputPartnerPersona').value.trim() || '실무 비즈니스 파트너';
       const context = document.getElementById('inputBusinessContext').value.trim() || '실전 비즈니스 미팅 및 협상 진행';
       const difficulty = document.getElementById('inputSessionDifficulty').value || 'Intermediate';
-      const targetFilter = document.getElementById('inputSessionTargetFilter').value || 'ALL';
+      const targetFilter = document.getElementById('inputSessionTargetFilter')?.value || 'ALL';
 
       if (id) {
         const sess = AppState.sessionsDB.find(s => s.session_id === id);
@@ -3760,6 +3675,35 @@ ${prevQaText}
       }
       const themeSel = document.getElementById('settingThemeSelect');
       if (themeSel) themeSel.value = AppState.settings.theme || 'dark';
+
+      const userBadge = document.getElementById('settingsUserBadge');
+      const logoutBtn = document.getElementById('btnLogoutInSettings');
+      const adminTabBtn = document.getElementById('tabBtnAdmin');
+
+      if (currentAuthUser && currentAuthUser.status === 'approved') {
+        if (userBadge) {
+          userBadge.textContent = `${currentAuthUser.role === 'admin' ? '👑 ' : '👤 '}${currentAuthUser.displayId || extractDisplayId(currentAuthUser.email)}`;
+          userBadge.classList.remove('hidden');
+        }
+        if (logoutBtn) {
+          logoutBtn.classList.remove('hidden');
+          logoutBtn.classList.add('flex');
+        }
+        if (adminTabBtn) {
+          if (currentAuthUser.role === 'admin') {
+            adminTabBtn.classList.remove('hidden');
+            adminTabBtn.classList.add('flex');
+          } else {
+            adminTabBtn.classList.add('hidden');
+            adminTabBtn.classList.remove('flex');
+          }
+        }
+      } else {
+        userBadge?.classList.add('hidden');
+        logoutBtn?.classList.add('hidden');
+        adminTabBtn?.classList.add('hidden');
+      }
+
       switchSecurityModalTab(tab);
       updateSecurityBadges();
       document.getElementById('securityModal').classList.remove('hidden');
@@ -3772,19 +3716,36 @@ ${prevQaText}
 
     function switchSecurityModalTab(tab) {
       const isApi = tab === 'api';
+      const isAdmin = tab === 'admin';
+      const isSync = tab === 'sync';
+
       document.getElementById('tabContentApi')?.classList.toggle('hidden', !isApi);
-      document.getElementById('tabContentSync')?.classList.toggle('hidden', isApi);
+      document.getElementById('tabContentAdmin')?.classList.toggle('hidden', !isAdmin);
+      document.getElementById('tabContentSync')?.classList.toggle('hidden', !isSync);
+
       const btnApi = document.getElementById('tabBtnApi');
+      const btnAdmin = document.getElementById('tabBtnAdmin');
       const btnSync = document.getElementById('tabBtnSync');
+
       if (btnApi) {
         btnApi.className = isApi
-          ? 'pb-2.5 border-b-2 border-indigo-500 text-indigo-400'
-          : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200';
+          ? 'pb-2.5 border-b-2 border-indigo-500 text-indigo-400 shrink-0'
+          : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 shrink-0';
+      }
+      if (btnAdmin) {
+        const isHidden = btnAdmin.classList.contains('hidden');
+        btnAdmin.className = (isAdmin
+          ? 'pb-2.5 border-b-2 border-amber-500 text-amber-400 items-center gap-1.5 shrink-0 '
+          : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 items-center gap-1.5 shrink-0 ') + (isHidden ? 'hidden' : 'flex');
       }
       if (btnSync) {
-        btnSync.className = !isApi
-          ? 'pb-2.5 border-b-2 border-sky-500 text-sky-400'
-          : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200';
+        btnSync.className = isSync
+          ? 'pb-2.5 border-b-2 border-sky-500 text-sky-400 shrink-0'
+          : 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 shrink-0';
+      }
+
+      if (isAdmin) {
+        loadAdminUsersList();
       }
     }
 
@@ -4215,18 +4176,18 @@ ${prevQaText}
       document.getElementById('authGateModal')?.classList.add('hidden');
       const loginBtn = document.getElementById('btnLoginHeader');
       if (loginBtn) loginBtn.classList.add('hidden');
-      const logoutBtn = document.getElementById('btnLogoutHeader');
-      if (logoutBtn) logoutBtn.classList.remove('hidden');
 
-      const adminBtn = document.getElementById('btnAdminApprovalModal');
-      if (adminBtn) {
-        if (currentAuthUser.role === 'admin') {
-          adminBtn.classList.remove('hidden');
-          adminBtn.classList.add('flex');
-          watchPendingUsersCount();
-        } else {
-          adminBtn.classList.add('hidden');
-          adminBtn.classList.remove('flex');
+      const adminTabBtn = document.getElementById('tabBtnAdmin');
+      if (currentAuthUser.role === 'admin') {
+        if (adminTabBtn) {
+          adminTabBtn.classList.remove('hidden');
+          adminTabBtn.classList.add('flex');
+        }
+        watchPendingUsersCount();
+      } else {
+        if (adminTabBtn) {
+          adminTabBtn.classList.add('hidden');
+          adminTabBtn.classList.remove('flex');
         }
       }
 
@@ -4248,8 +4209,9 @@ ${prevQaText}
     }
 
     function watchPendingUsersCount() {
-      const badge = document.getElementById('gnbPendingUsersBadge');
-      if (!badge || !fbDb) return;
+      const gnbBadge = document.getElementById('gnbPendingUsersBadge');
+      const settingsBadge = document.getElementById('settingsPendingUsersBadge');
+      if (!fbDb) return;
 
       if (firestoreUsersBadgeUnsubscribe) firestoreUsersBadgeUnsubscribe();
       firestoreUsersBadgeUnsubscribe = fbDb.collection(FIRESTORE_USERS_COLLECTION).onSnapshot(snap => {
@@ -4257,19 +4219,23 @@ ${prevQaText}
         snap.forEach(doc => {
           if (doc.data()?.status === 'pending') pendingCount++;
         });
-        badge.textContent = pendingCount;
-        badge.classList.toggle('hidden', pendingCount === 0);
+        if (gnbBadge) {
+          gnbBadge.textContent = pendingCount;
+          gnbBadge.classList.toggle('hidden', pendingCount === 0);
+        }
+        if (settingsBadge) {
+          settingsBadge.textContent = pendingCount;
+          settingsBadge.classList.toggle('hidden', pendingCount === 0);
+        }
       }, () => {});
     }
 
     function openAdminApprovalModal() {
-      document.getElementById('adminApprovalModal')?.classList.remove('hidden');
-      loadAdminUsersList();
-      if (window.lucide) lucide.createIcons();
+      openSecurityModal('admin');
     }
 
     function closeAdminApprovalModal() {
-      document.getElementById('adminApprovalModal')?.classList.add('hidden');
+      closeSecurityModal();
     }
 
     async function loadAdminUsersList() {
