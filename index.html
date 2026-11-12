@@ -1110,12 +1110,57 @@
     let AppState = getInitialOnboardingData();
 
     /*************************************************************************
-     * 2. CLOUD FIRESTORE PERSISTENCE (ZERO LOCAL STORAGE DEPENDENCY)
+     * 2. CLOUD FIRESTORE & INSTANT LOCAL CACHE (STALE-WHILE-REVALIDATE)
      *************************************************************************/
+    const LOCAL_WORKSPACE_CACHE_KEY = 'biz_roleplay_cached_workspace_v1';
+
+    function writeLocalWorkspaceCache(data, nowTs) {
+      try {
+        if (!data) return;
+        const payload = {
+          state: {
+            sentencesDB: data.sentencesDB || [],
+            sessionsDB: data.sessionsDB || [],
+            activeSessionId: data.activeSessionId || '',
+            settings: data.settings || {},
+            uiState: {
+              ...(data.uiState || {}),
+              flashcard: { ...(data.uiState?.flashcard || {}), isOpen: false }
+            }
+          },
+          cached_at: nowTs || Date.now(),
+          updated_at: nowTs || lastLocalSaveTimestamp || Date.now()
+        };
+        localStorage.setItem(LOCAL_WORKSPACE_CACHE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.warn('Failed to write local workspace cache:', err);
+      }
+    }
+
+    function readLocalWorkspaceCache() {
+      try {
+        const raw = localStorage.getItem(LOCAL_WORKSPACE_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.state) return null;
+        return parsed;
+      } catch (err) {
+        console.warn('Failed to read local workspace cache:', err);
+        return null;
+      }
+    }
+
+    function clearLocalWorkspaceCache() {
+      try {
+        localStorage.removeItem(LOCAL_WORKSPACE_CACHE_KEY);
+      } catch (_) {}
+    }
+
     async function saveAppState(skipFirestorePush = false) {
       try {
         const nowTs = Date.now();
         lastLocalSaveTimestamp = nowTs;
+        writeLocalWorkspaceCache(AppState, nowTs);
         updateSecurityBadges();
         if (!skipFirestorePush && !isApplyingRemoteSnapshot) {
           await pushSharedWorkspaceToFirestore(nowTs);
@@ -1126,7 +1171,7 @@
     }
 
     async function loadAppStateOnStartup() {
-      // Wipe only legacy local/session storage remnants while preserving Firebase Auth persistence
+      // Wipe only legacy storage remnants while preserving new instant cache and Firebase Auth
       try {
         ['biz_roleplay_english_v1_state', 'biz_roleplay_english_v1_firebase_config', 'biz_roleplay_english_v1_local_accounts', 'biz_roleplay_english_v1_local_session', 'biz_roleplay_english_v1_unlocked'].forEach(k => {
           localStorage.removeItem(k);
@@ -1134,7 +1179,16 @@
         });
       } catch (_) {}
 
-      AppState = getInitialOnboardingData();
+      const cached = readLocalWorkspaceCache();
+      if (cached && cached.state) {
+        AppState = mergeWithDefaultState(cached.state);
+        lastLocalSaveTimestamp = Number(cached.updated_at) || 0;
+        sortSentencesDBBySourceAndNo();
+        migrateFeedbackSentenceMetadata();
+      } else {
+        AppState = getInitialOnboardingData();
+      }
+
       renderAll();
       initAuthAndFirestoreGateOnStartup();
     }
@@ -5407,6 +5461,9 @@ ${prevQaText}
         await fbAuth.signOut();
       }
       currentAuthUser = null;
+      clearLocalWorkspaceCache();
+      AppState = getInitialOnboardingData();
+      renderAll();
       const pwInput = document.getElementById('authPwInput');
       if (pwInput) pwInput.value = '';
       showAuthGateLoginView();
@@ -5638,6 +5695,7 @@ ${prevQaText}
           AppState = mergeWithDefaultState(remote);
           didAutoMigrateSentences = sortSentencesDBBySourceAndNo();
           if (migrateFeedbackSentenceMetadata()) didAutoMigrateSentences = true;
+          writeLocalWorkspaceCache(AppState, lastLocalSaveTimestamp);
           applyTheme(AppState.settings?.theme || 'dark');
           renderAll();
         } finally {

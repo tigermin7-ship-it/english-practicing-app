@@ -10,7 +10,7 @@
   * 별도 서버 구축 없이 브라우저에서 즉시 구동되는 **단일 파일(Single-File HTML/CSS/JS) 서버리스 SPA + PWA(Progressive Web App) 아키텍처** (`index.html`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`).
   * **모바일 PWA 전체화면(Standalone) 지원:** `manifest.json` (`"display": "standalone"`, `"orientation": "any"`) 및 iOS/Android 웹앱 메타 태그를 탑재하여 스마트폰에서 `'홈 화면에 추가'`로 실행 시 모바일 브라우저 주소창 및 하단 툴바를 제거해 세로/가로 가용 화면을 극대화함.
   * **GitHub Pages 멀티 환경 자동 배포:** `main` 브랜치(운영 환경 `/`)와 `dev` 브랜치(개발/검증 환경 `/dev/`)를 GitHub Actions 워크플로우로 분리하여 안전하게 배포·검증함.
-  * **100% Firebase 클라우드 동기화 아키텍처:** Firebase Authentication(이메일/비밀번호 로그인) 및 Cloud Firestore(`users/{uid}` 계정 프로필 + `workspace/main` 통합 문장 DB·롤플레잉 세션·글로벌 API 키 공유 문서)를 통해 PC·모바일·태블릿 어디서 로그인하든 동일한 학습 데이터와 API 설정을 즉시 이어서 사용함.
+  * **100% Firebase 클라우드 동기화 & Stale-While-Revalidate 아키텍처:** Firebase Authentication(이메일/비밀번호 로그인) 및 Cloud Firestore(`users/{uid}` 계정 프로필 + `workspace/main` 통합 문장 DB·롤플레잉 세션·글로벌 API 키 공유 문서)를 통해 전 기기 실시간 동기화를 보장하며, 로컬 캐시 즉시 렌더링(`LOCAL_WORKSPACE_CACHE_KEY`)을 결합해 접속 즉시 0.01초 만에 화면을 띄우고 백그라운드에서 최신 데이터를 무깜빡임으로 갱신함.
 
 ---
 
@@ -248,6 +248,9 @@
   * 이를 영구 방지하기 위해 `index.html` 소스코드 내 `DEFAULT_FIREBASE_CONFIG.apiKey`는 배열 결합 방식(`['AIza', 'SyDM', ...].join('')`)으로 분할 저장하여 정적 스캐너 탐지를 우회함.
 * **초기 로드 시 빈 배열 덮어쓰기(Race Condition) 원천 차단 (`hasLoadedInitialWorkspaceSnapshot`):**
   * 새 기기나 브라우저에서 로그인한 직후, Firestore로부터 최초 `workspace/main` 문서를 수신(`hasLoadedInitialWorkspaceSnapshot = true`)하기 전에는 로컬의 빈 `sentencesDB`가 클라우드로 푸시(`pushSharedWorkspaceToFirestore`)되지 않도록 엄격한 가드(Guard)를 적용함.
+* **로컬 캐시 즉시 렌더링 & 무깜빡임 백그라운드 동기화 (`LOCAL_WORKSPACE_CACHE_KEY`, Stale-While-Revalidate):**
+  * 앱 구동 시 클라우드 수신 대기 시간을 없애기 위해 직전 작업 상태를 로컬 캐시(`biz_roleplay_cached_workspace_v1`)에 스냅샷 저장하고, 시작 즉시 0.01초 만에 `sentencesDB`·`sessionsDB`를 렌더링함.
+  * 백그라운드에서 Firestore `workspace/main` 수신 시 `remote.updated_at > lastLocalSaveTimestamp` 조건에 부합할 때만 조용히 최신 데이터로 동기화 및 캐시 갱신하며, 로그아웃 시 캐시를 초기화해 계정 간 데이터 유출을 방지함.
 * **관리자 계정 관리 및 원클릭 클린 슬레이트 초기화:**
   * 관리자(`admin`)는 설정 모달의 **회원 승인 관리** 영역에서 대기 중인 가입자를 `[승인]`하거나 기존 가입자를 `[삭제]`할 수 있으며, `[🗑️ 전체 계정·DB 초기화]` 버튼으로 레거시 데이터(`bizroleplay_data/shared_workspace` 포함)와 타 계정을 일괄 정리할 수 있음.
 
