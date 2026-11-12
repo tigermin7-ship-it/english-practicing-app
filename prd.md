@@ -125,6 +125,9 @@
     * **로그인 폼 `<form>` 격리 & Chrome 비밀번호 관리자 오탐 방지:** 로그인 영역(`#authLoginFormView`)만 `<form autocomplete="on">` 으로 분리하고, API Key 입력창(`#settingApiKeyInput`)은 `type="password"` 대신 CSS `-webkit-text-security: disc` 마스킹(`autocomplete="off"`)을 적용해 코치 추가 질문창·채팅창에서 저장된 비밀번호 목록이 뜬금없이 노출되지 않도록 처리함.
     * iOS Safari/Chrome WebKit/Standalone PWA 호환성을 위해 **ID 기반 클릭 핸들러(`speakSessionMessage`, `speakFeedbackAlternative`, `speakFollowUpSuggestion`)**로 교체하고, iOS에서는 **`utterance.voice` 미지정(`lang = 'en-US'`만 지정) + 터치 동기 호출**을 적용함.
     * WebSpeech 시도 중 무음 팝업 노이즈('뚜뚝')와 영구 먹통 고착을 방지하기 위해 **1차 WebSpeech 시도 전 `<audio>` 선점 호출을 제거**하고 **`1500ms` 워치독(`onstart` 미수신·무음 조기 종료·`onerror` 감지)** 후 Gemini Native Audio TTS(`gemini-2.5-flash-preview-tts` / `gemini-3.1-flash-tts-preview`) 24kHz PCM→WAV 오디오 폴백(세션 캐싱 포함)으로 전환함. 또한 무음 언락 버퍼를 **16-bit Signed Zero PCM(`0x0000`)**으로 생성해 클릭 노이즈를 제거하고, 폴백 API/네트워크 실패 시에는 `preferAudioFallbackOnIOS` 고착을 자동 해제해 후속 스피커 버튼 클릭 시에도 정상 복구되도록 함 (`NotAllowedError` 시에만 캐시된 WAV를 다음 터치에서 즉시 동기 재생하도록 유지).
+    * **첫 터치 즉시 사전 예열(Warm-up) & 비동기 음성 로딩 큐잉 (`warmUpAudioEngineOnFirstInteraction`, `pendingTtsRequest`):**
+      * 사용자가 앱 진입 후 화면 어디든 처음 터치(스크롤·버튼 등)하는 순간 HTML5 Audio 및 WebSpeech `resume()`과 음성 목록 호출을 1회 사전 실행해 브라우저 오디오 락을 즉각 해제함.
+      * 앱 접속 직후 브라우저의 `getVoices()` 비동기 로딩이 완료되기 전 스피커 버튼을 누르더라도 무음으로 누락되지 않고, 큐잉(`pendingTtsRequest`)을 통해 음성 엔진 준비 완료 즉시(0.1~0.4초 이내) 자동으로 발음이 이어서 재생되도록 처리함.
 
 ---
 

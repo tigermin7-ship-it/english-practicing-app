@@ -4231,6 +4231,25 @@ ${prevQaText}
       }
     }
 
+    let pendingTtsRequest = null;
+    let pendingTtsTimer = null;
+    let hasGlobalAudioWarmedUp = false;
+
+    function warmUpAudioEngineOnFirstInteraction() {
+      if (hasGlobalAudioWarmedUp) return;
+      hasGlobalAudioWarmedUp = true;
+      unlockTtsAudioOnGesture(true);
+      if ('speechSynthesis' in window) {
+        try {
+          if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+          window.speechSynthesis.getVoices();
+        } catch (_) {}
+      }
+    }
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, warmUpAudioEngineOnFirstInteraction, { capture: true, once: true });
+    });
+
     function initTtsVoices() {
       if (!('speechSynthesis' in window)) return;
       const voices = window.speechSynthesis.getVoices();
@@ -4242,6 +4261,18 @@ ${prevQaText}
       const defaultEnVoice = usableEn.find(v => v.lang.startsWith('en-US')) || usableEn[0] || voices.find(v => v.lang.startsWith('en'));
 
       cachedTtsVoice = localEnVoice || highQualityVoice || defaultEnVoice || null;
+
+      if (pendingTtsRequest) {
+        const req = pendingTtsRequest;
+        pendingTtsRequest = null;
+        if (pendingTtsTimer) {
+          clearTimeout(pendingTtsTimer);
+          pendingTtsTimer = null;
+        }
+        if (Date.now() - req.ts < 2500) {
+          speakEnglishText(req.text);
+        }
+      }
     }
 
     if ('speechSynthesis' in window) {
@@ -4269,6 +4300,25 @@ ${prevQaText}
 
       const isIOS = isIOSDevice();
       const useFallbackDirectly = !('speechSynthesis' in window) || (isIOS && preferAudioFallbackOnIOS);
+
+      // WebSpeech voice queue: if engine is still asynchronously loading voices, queue briefly instead of silent failure
+      if (!useFallbackDirectly && 'speechSynthesis' in window && !cachedTtsVoice && !isIOS) {
+        initTtsVoices();
+        if (!cachedTtsVoice) {
+          const rawVoices = window.speechSynthesis.getVoices();
+          if (!rawVoices || rawVoices.length === 0) {
+            pendingTtsRequest = { text: rawClean, ts: Date.now() };
+            if (pendingTtsTimer) clearTimeout(pendingTtsTimer);
+            pendingTtsTimer = setTimeout(() => {
+              if (pendingTtsRequest && pendingTtsRequest.text === rawClean) {
+                pendingTtsRequest = null;
+                speakWithGeminiAudioFallback(rawClean, myToken);
+              }
+            }, 450);
+            return;
+          }
+        }
+      }
 
       if (useFallbackDirectly) {
         if ('speechSynthesis' in window) {
