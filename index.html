@@ -158,6 +158,7 @@
     body.theme-light .bg-indigo-600,
     body.theme-light .bg-indigo-600 .text-white,
     body.theme-light .bg-emerald-600,
+    body.theme-light .bg-amber-600,
     body.theme-light .bg-rose-600,
     body.theme-light .bg-sky-600,
     body.theme-light #activePartnerAvatar,
@@ -653,7 +654,7 @@
               <span id="fcMemorizedBtnText">암기완료</span>
             </button>
 
-            <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1 transition">
+            <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition" title="중요 별표 북마크 (단축키: B)">
               <i data-lucide="star" class="w-4 h-4"></i>
               <span>별표 (B)</span>
             </button>
@@ -3564,10 +3565,23 @@ ${prevQaText}
         jumpInputEl.value = currentNo;
       }
 
-      const starColorClass = item.is_starred
-        ? 'p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 transition'
-        : 'p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition';
-      document.getElementById('btnFcStar').className = starColorClass;
+      const topStarBtn = document.getElementById('btnFcStar');
+      if (topStarBtn) {
+        topStarBtn.className = item.is_starred
+          ? 'p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 transition'
+          : 'p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition';
+        topStarBtn.innerHTML = `<i data-lucide="star" class="w-4 h-4 ${item.is_starred ? 'fill-current' : ''}"></i>`;
+      }
+
+      const bottomStarBtn = document.getElementById('btnFcBottomStar');
+      if (bottomStarBtn) {
+        bottomStarBtn.className = item.is_starred
+          ? 'px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 border border-amber-400 text-white font-bold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-amber-600/25 transition'
+          : 'px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition';
+        bottomStarBtn.innerHTML = item.is_starred
+          ? `<i data-lucide="star" class="w-4 h-4 fill-current"></i><span>별표 ✓ (B)</span>`
+          : `<i data-lucide="star" class="w-4 h-4"></i><span>별표 (B)</span>`;
+      }
 
       const isKrToEn = fc.direction === 'KR_TO_EN';
       document.getElementById('fcTopPromptText').innerHTML = formatFlashcardTextWithSubnote(isKrToEn ? item.korean : item.english);
@@ -3790,9 +3804,10 @@ ${prevQaText}
       const item = getCurrentFlashcardItem();
       if (!item) return;
       item.is_starred = !item.is_starred;
-      await saveAppState();
       renderCurrentFlashcard();
+      renderFilterSelectDropdowns();
       showToast(item.is_starred ? '★ 중요 문장으로 북마크되었습니다.' : '별표 북마크가 해제되었습니다.', 'info');
+      await saveAppState();
     }
 
     async function toggleCurrentFlashcardMemorized() {
