@@ -79,16 +79,19 @@
   * **`셔플 OFF` 전환 시 현재 문장번호 위치 유지 (`toggleFlashcardShuffle`):**
     * `셔플 ON` 상태에서 임의의 카드(예: `#245`번 문장)를 학습하다가 **`셔플 OFF` 버튼을 누르면 `#1`번 카드로 초기화하지 않고 방금 보고 있던 `#245`번 문장 위치를 그대로 유지**함.
     * 이를 통해 사용자가 셔플로 임의의 번호를 뽑은 뒤 `셔플 OFF`를 눌러 그 다음 문장(`#246 ➔ #247 ➔ #248`)부터 순서대로 이어서 공부할 수 있음.
-  * 방향 전환(`한 ➔ 영` 기본 / `영 ➔ 한`), 탭하여 정답 확인/다음 이동, 원어민 발음 듣기(`S`), 이전/다음 카드, 순서 섞기(Shuffle), 암기 완료(`+1`) 및 중요 별표(`B`) 북마크 지원.
+  * 방향 전환(`한 ➔ 영` 기본 / `영 ➔ 한`), 탭하여 정답 확인/다음 이동, 원어민 발음 듣기(`S`), 이전/다음 카드, 순서 섞기(Shuffle), **`암기완료` ON/OFF 토글(`is_memorized`, 단축키 `M`)** 및 중요 별표(`B`) 북마크 지원. 기존 불필요한 `연습 N회` 누적 카운터 배지·버튼 UI는 제거하고 **`✅ 암기완료` 상태 배지**로 단순화함.
+  * **`암기제외` 자동 건너뛰기 및 `✅ 암기완료 문장` 분리 필터 (`skipMemorized`, `MEMORIZED_ONLY`, `UNPRACTICED_ONLY`):**
+    * 상단 `[암기제외 ON/OFF]` 옵션(데스크톱 헤더 및 모바일 `[⋯]` 팝오버)을 기본 `ON`으로 두며, `이전`/`다음` 순차 학습·셔플 시 `is_memorized === true` 문장을 자동으로 건너뜀 (`# 번호 이동`으로 직접 점프한 경우는 해당 문장 확인 가능).
+    * 범위 드롭다운에 **`🔥 미암기 집중`**(`!is_memorized`)과 **`✅ 암기완료 문장`**(`MEMORIZED_ONLY`, `is_memorized === true`) 필터를 별도 제공하여 암기한 문장만 모아 복습 가능 (`MEMORIZED_ONLY` 필터에서는 건너뛰기 미적용).
   * **모바일(`lg` 미만) 세로/가로 반응형 헤더 컴팩트화 & 가로 눕힘 잘림 방지:**
     * 세로 모드 겹침 방지를 위해 불필요한 `Flashcard` 로고 텍스트를 제거하고, 범위 선택 박스(`#fcFilterSelect`)를 앞 5~6글자 축약 폭(`w-[88px] sm:w-[132px] lg:w-[200px] truncate`)으로 최소화함 (클릭 시 드롭다운에서 전체 제목 온전히 선택 가능).
-    * `1024px` 미만 모바일·태블릿(세로 및 가로 눕힘 모두)에서는 자주 쓰지 않는 `[방향 전환 · 셔플 · 재생속도 · Exit]` 버튼을 우측 `[⋯]` 하위 팝오버 메뉴(`#fcHeaderMenuPopover`)로 일원화하여 상단에 **[범위 선택] + [진행률] + [# 이동] + [⋯]** 만 겹침 없이 배치함 (데스크톱 `lg:` 이상은 기존 1클릭 버튼 유지).
+    * `1024px` 미만 모바일·태블릿(세로 및 가로 눕힘 모두)에서는 자주 쓰지 않는 `[방향 전환 · 셔플 · 암기제외 · 재생속도 · Exit]` 버튼을 우측 `[⋯]` 하위 팝오버 메뉴(`#fcHeaderMenuPopover`)로 일원화하여 상단에 **[범위 선택] + [진행률] + [# 이동] + [⋯]** 만 겹침 없이 배치함 (데스크톱 `lg:` 이상은 기존 1클릭 버튼 유지).
     * 모바일 가로 눕힘 등 낮은 뷰포트 높이(`max-height: 520px`)에서는 헤더/하단바 높이 및 카드 패딩 축소 + `clamp` 유동 폰트와 내부 스크롤(`flex-1 min-h-0 overflow-y-auto`)로 상·하단 본문 문장이 수직 잘리지 않도록 보정함.
     * **모바일 문장 선택·복사 지원 (`select-text`):** `<body>` 전역 및 플래시카드 본문의 `select-none` 차단을 해제하여 모바일에서도 롤플레잉 대화·코칭 피드백·플래시카드 문장을 길게 눌러 복사할 수 있으며, 텍스트 선택 상태(`window.getSelection()`)에서는 `handleFlashcardAreaClick()` 카드 넘김이 오작동하지 않도록 가드 처리함.
 * **통합 문장 DB 관리 모달 (`renderDBManagerModal`):**
-  * 각 문장 카드 상단에 녹색 출처 배지(`📄 900_1.xlsx · #1`)와 영어 문장 앞 `[#1]` 번호 프리픽스를 명시하여 원본 엑셀 파일의 몇 번째 문장인지 즉각 대조 가능.
+  * 각 문장 카드 상단에 녹색 출처 배지(`📄 900_1.xlsx · #1`)와 영어 문장 앞 `[#1]` 번호 프리픽스를 명시하고, 카드 우측 액션 버튼에 **암기완료 토글(`toggleMemorizedInDBModal`)** 및 `✅ 암기완료` 상태 배지를 제공함 (`인출 연습 N회` UI 미표시).
   * 검색창에서 `#15`, `900_1 #15`, `900_1.xlsx 15` 등 **파일명 + 문장번호 검색**으로 특정 번호의 문장을 1초 만에 필터링 가능.
-  * 전체/카테고리별 엑셀(`.xlsx`) 내보내기 시 `문장번호 | 출처파일 | 카테고리 | 영어문장 | 한글문장 | 중요별표 | 암기여부 | 연습횟수` 컬럼을 온전히 포함하여 출력함.
+  * 전체/카테고리별 엑셀(`.xlsx`) 내보내기 시 `영어문장(Title) | 한글문장(해석) | 문장번호 | 파일명(출처) | 카테고리 | 메모 | 암기여부 | 중요별표` 컬럼을 온전히 포함하여 출력함.
 
 ---
 
@@ -115,7 +118,7 @@
     * 마이크 버튼(`SpeechRecognition` / `webkitSpeechRecognition`)은 **`continuous: true` + `interimResults: true` + 최대 20초 무음 대기·자동 재연결**을 지원해 말을 천천히 하거나 중간에 쉬어도 마이크가 끊기지 않으며, 말하기 도중 입력창을 직접 수정해도 기준 텍스트(`sttBaseText`)와 결과 오프셋(`sttSessionResultOffset`)을 갱신해 기존 수정을 덮어쓰지 않음 (마이크 재클릭 또는 `[전송]` 시 깔끔히 종료).
     * **로그인 폼 `<form>` 격리 & Chrome 비밀번호 관리자 오탐 방지:** 로그인 영역(`#authLoginFormView`)만 `<form autocomplete="on">` 으로 분리하고, API Key 입력창(`#settingApiKeyInput`)은 `type="password"` 대신 CSS `-webkit-text-security: disc` 마스킹(`autocomplete="off"`)을 적용해 코치 추가 질문창·채팅창에서 저장된 비밀번호 목록이 뜬금없이 노출되지 않도록 처리함.
     * iOS Safari/Chrome WebKit/Standalone PWA 호환성을 위해 **ID 기반 클릭 핸들러(`speakSessionMessage`, `speakFeedbackAlternative`, `speakFollowUpSuggestion`)**로 교체하고, iOS에서는 **`utterance.voice` 미지정(`lang = 'en-US'`만 지정) + 터치 동기 호출**을 적용함.
-    * 동시에 탭 시점에 `<audio id="ttsFallbackAudio" playsinline>` 요소를 동기 언락(Unlock)하고 `500ms` 워치독(`onstart` 미수신·무음 조기 종료·`onerror` 감지)을 감시해 **iOS WebKit TTS가 무반응일 경우 자동으로 Gemini Native Audio TTS(`gemini-2.5-flash-preview-tts` / `gemini-3.1-flash-tts-preview`) 24kHz PCM→WAV 오디오 폴백 재생(세션 캐싱 포함)**을 수행함.
+    * WebSpeech 시도 중 무음 팝업 노이즈('뚜뚝')와 영구 먹통 고착을 방지하기 위해 **1차 WebSpeech 시도 전 `<audio>` 선점 호출을 제거**하고 **`1500ms` 워치독(`onstart` 미수신·무음 조기 종료·`onerror` 감지)** 후 Gemini Native Audio TTS(`gemini-2.5-flash-preview-tts` / `gemini-3.1-flash-tts-preview`) 24kHz PCM→WAV 오디오 폴백(세션 캐싱 포함)으로 전환함. 또한 무음 언락 버퍼를 **16-bit Signed Zero PCM(`0x0000`)**으로 생성해 클릭 노이즈를 제거하고, 폴백 API/네트워크 실패 시에는 `preferAudioFallbackOnIOS` 고착을 자동 해제해 후속 스피커 버튼 클릭 시에도 정상 복구되도록 함 (`NotAllowedError` 시에만 캐시된 WAV를 다음 터치에서 즉시 동기 재생하도록 유지).
 
 ---
 

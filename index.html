@@ -527,6 +527,11 @@
             <span id="fcShuffleText">셔플 OFF</span>
           </button>
 
+          <button id="btnFcSkipMemorized" onclick="toggleFlashcardSkipMemorized()" class="px-2 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 flex items-center gap-1 transition" title="암기완료 문장 자동 건너뛰기 ON/OFF">
+            <i data-lucide="skip-forward" class="w-3.5 h-3.5"></i>
+            <span id="fcSkipMemorizedText">암기제외 ON</span>
+          </button>
+
           <!-- TTS Speed Selector -->
           <select id="fcTtsSpeedSelect" onchange="updateTtsSpeed(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none">
             <option value="0.85">🔊 0.85x</option>
@@ -556,6 +561,11 @@
             <button id="btnFcShuffleMobile" onclick="toggleFlashcardShuffle()" class="w-full px-2.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-between transition">
               <span class="flex items-center gap-1.5"><i data-lucide="shuffle" class="w-3.5 h-3.5"></i><span>순서</span></span>
               <span id="fcShuffleTextMobile">셔플 OFF</span>
+            </button>
+
+            <button id="btnFcSkipMemorizedMobile" onclick="toggleFlashcardSkipMemorized()" class="w-full px-2.5 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-xs font-semibold text-emerald-300 flex items-center justify-between transition">
+              <span class="flex items-center gap-1.5"><i data-lucide="skip-forward" class="w-3.5 h-3.5"></i><span>암기제외</span></span>
+              <span id="fcSkipMemorizedTextMobile">ON</span>
             </button>
 
             <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200">
@@ -595,7 +605,7 @@
             <span id="fcTopSourceBadge" onclick="focusFlashcardJumpInput()" class="px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold cursor-pointer transition" title="클릭하여 특정 문장번호로 이동">#1</span>
           </div>
           <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
-            <span id="fcPracticeCountBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">0회</span>
+            <span id="fcMemorizedBadge" class="hidden px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold">✅ 암기완료</span>
             <button id="btnFcStar" onclick="toggleCurrentFlashcardStar()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 transition" title="중요 별표 북마크 (단축키: B)">
               <i data-lucide="star" class="w-4 h-4"></i>
             </button>
@@ -638,9 +648,9 @@
               <span>발음 (S)</span>
             </button>
 
-            <button onclick="markCurrentFlashcardPracticed()" class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition">
+            <button id="btnFcMemorized" onclick="toggleCurrentFlashcardMemorized()" class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition" title="암기 완료 ON/OFF 토글 (단축키: M)">
               <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-              <span>암기완료 (+1)</span>
+              <span id="fcMemorizedBtnText">암기완료</span>
             </button>
 
             <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1 transition">
@@ -1089,6 +1099,7 @@
             currentIndex: 0,
             isRevealed: false,
             isShuffle: false,
+            skipMemorized: true,
             direction: 'KR_TO_EN', // 'KR_TO_EN' | 'EN_TO_KR'
             deckIds: []
           }
@@ -1431,7 +1442,7 @@
             korean: kor,
             english: eng,
             notes: (raw.notes || '').trim(),
-            practice_count: 0,
+            is_memorized: false,
             is_starred: false,
             created_at: Date.now() + idx
           };
@@ -1680,7 +1691,7 @@
         '파일명(출처)': s.source_file,
         '카테고리': s.category,
         '메모': s.notes || '',
-        '연습횟수': s.practice_count || 0,
+        '암기여부': s.is_memorized ? 'Y' : 'N',
         '중요별표': s.is_starred ? 'Y' : 'N'
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1714,7 +1725,10 @@
         return all.filter(s => s.is_starred);
       }
       if (filterValue === 'UNPRACTICED_ONLY') {
-        return all.filter(s => (s.practice_count || 0) === 0);
+        return all.filter(s => !s.is_memorized);
+      }
+      if (filterValue === 'MEMORIZED_ONLY') {
+        return all.filter(s => Boolean(s.is_memorized));
       }
       return all.filter(s => s.source_file === filterValue || s.category === filterValue);
     }
@@ -1723,7 +1737,8 @@
       const all = AppState.sentencesDB || [];
       const feedbackCount = all.filter(s => s.category === '대화피드백' || s.source_file === 'chat_feedback').length;
       const starredCount = all.filter(s => s.is_starred).length;
-      const unpracticedCount = all.filter(s => (s.practice_count || 0) === 0).length;
+      const unmemorizedCount = all.filter(s => !s.is_memorized).length;
+      const memorizedCount = all.filter(s => Boolean(s.is_memorized)).length;
 
       const sourceMap = new Map();
       all.forEach(s => {
@@ -1736,7 +1751,8 @@
         { value: 'ALL', label: `전체 문장 (${all.length})` },
         { value: 'FEEDBACK_ONLY', label: `⭐ 대화피드백 오답노트 (${feedbackCount})` },
         { value: 'STARRED_ONLY', label: `★ 중요 별표 문장 (${starredCount})` },
-        { value: 'UNPRACTICED_ONLY', label: `🔥 미암기 집중 (${unpracticedCount})` }
+        { value: 'UNPRACTICED_ONLY', label: `🔥 미암기 집중 (${unmemorizedCount})` },
+        { value: 'MEMORIZED_ONLY', label: `✅ 암기완료 문장 (${memorizedCount})` }
       ];
 
       sourceMap.forEach((count, src) => {
@@ -1750,10 +1766,10 @@
     function sampleTargetSentencesForSession(session, maxCount = 8) {
       let pool = getFilteredSentences(session?.target_filter || 'ALL');
       if (pool.length === 0) pool = AppState.sentencesDB || [];
-      // Sort by starred first, then lowest practice_count, then slight randomness
+      // Sort by starred first, then unmemorized first, then slight randomness
       const scored = pool.map(item => ({
         item,
-        score: (item.is_starred ? -100 : 0) + (item.practice_count || 0) * 10 + Math.random() * 4
+        score: (item.is_starred ? -100 : 0) + (item.is_memorized ? 50 : 0) + Math.random() * 4
       }));
       scored.sort((a, b) => a.score - b.score);
       return scored.slice(0, maxCount).map(x => x.item);
@@ -2596,14 +2612,6 @@ ${prevQaText}
           qa_threads: existingQaThreads
         };
 
-        // Increment practice_count if a registered target expression was used
-        if (result.target_used && result.matched_sentence_id) {
-          const matchedSent = AppState.sentencesDB.find(s => s.id === result.matched_sentence_id);
-          if (matchedSent) {
-            matchedSent.practice_count = (matchedSent.practice_count || 0) + 1;
-          }
-        }
-
         await saveAppState();
         renderChatMessages(false);
         renderSidebarDBSummary();
@@ -3069,7 +3077,7 @@ ${prevQaText}
             <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
               <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold">${escapeHtml(item.source_file || '세트')} #${escapeHtml(item.sentence_no ?? (idx + 1))}</span>
               <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${escapeHtml(item.category)}</span>
-              <span class="text-[10px] text-emerald-400">연습 ${item.practice_count || 0}회</span>
+              ${item.is_memorized ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold">✅ 암기완료</span>` : ''}
             </div>
             <p class="text-xs font-semibold text-amber-200 leading-snug">${escapeHtml(item.korean)}</p>
             ${showEng ? `<p class="text-xs text-slate-300 mt-1 font-medium">${escapeHtml(item.english)}</p>` : `<p class="text-[11px] text-slate-500 mt-1 italic">(영어 문장 숨김 상태)</p>`}
@@ -3386,6 +3394,7 @@ ${prevQaText}
       AppState.uiState.flashcard.isRevealed = false;
 
       buildFlashcardDeck();
+      snapFlashcardToPlayableIndex(true);
       document.getElementById('flashcardModal').classList.remove('hidden');
       renderFilterSelectDropdowns();
       renderCurrentFlashcard();
@@ -3489,12 +3498,39 @@ ${prevQaText}
             : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
         }`;
       }
+
+      const skipOn = fc.skipMemorized !== false;
+      const skipDesktopText = document.getElementById('fcSkipMemorizedText');
+      if (skipDesktopText) skipDesktopText.textContent = skipOn ? '암기제외 ON' : '암기제외 OFF';
+      const skipMobileText = document.getElementById('fcSkipMemorizedTextMobile');
+      if (skipMobileText) skipMobileText.textContent = skipOn ? 'ON' : 'OFF';
+
+      const btnSkipDesktop = document.getElementById('btnFcSkipMemorized');
+      if (btnSkipDesktop) {
+        btnSkipDesktop.className = `px-2 py-1 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
+          skipOn
+            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+            : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+        }`;
+      }
+      const btnSkipMobile = document.getElementById('btnFcSkipMemorizedMobile');
+      if (btnSkipMobile) {
+        btnSkipMobile.className = `w-full px-2.5 py-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition ${
+          skipOn
+            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+            : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+        }`;
+      }
       syncFlashcardTtsSpeedSelects();
 
       if (!item || total === 0) {
         document.getElementById('fcProgressBadge').textContent = '0 / 0';
         document.getElementById('fcProgressBar').style.width = '0%';
-        document.getElementById('fcTopPromptText').textContent = '등록된 학습 문장이 없습니다. 먼저 문장 세트를 추가해 주세요.';
+        const emptyBadge = document.getElementById('fcMemorizedBadge');
+        if (emptyBadge) emptyBadge.classList.add('hidden');
+        document.getElementById('fcTopPromptText').textContent = fc.filter === 'MEMORIZED_ONLY'
+          ? '암기 완료로 체크된 문장이 아직 없습니다.'
+          : '등록된 학습 문장이 없습니다. 먼저 문장 세트를 추가해 주세요.';
         document.getElementById('fcBottomHiddenState').classList.remove('hidden');
         document.getElementById('fcBottomRevealedState').classList.add('hidden');
         return;
@@ -3509,7 +3545,19 @@ ${prevQaText}
       const currentNo = item.sentence_no || (fc.currentIndex + 1);
       document.getElementById('fcTopCategoryBadge').textContent = cleanCategoryName === '대화피드백' ? '⭐ 대화피드백' : `📁 ${cleanCategoryName}`;
       document.getElementById('fcTopSourceBadge').textContent = `#${currentNo}`;
-      document.getElementById('fcPracticeCountBadge').textContent = `${item.practice_count || 0}회`;
+      const memBadge = document.getElementById('fcMemorizedBadge');
+      if (memBadge) memBadge.classList.toggle('hidden', !item.is_memorized);
+
+      const btnFcMemorized = document.getElementById('btnFcMemorized');
+      const fcMemorizedBtnText = document.getElementById('fcMemorizedBtnText');
+      if (btnFcMemorized) {
+        btnFcMemorized.className = item.is_memorized
+          ? 'px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white font-bold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 transition'
+          : 'px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition';
+      }
+      if (fcMemorizedBtnText) {
+        fcMemorizedBtnText.textContent = item.is_memorized ? '암기완료 ✓' : '암기완료';
+      }
 
       const jumpInputEl = document.getElementById('fcJumpInput');
       if (jumpInputEl && document.activeElement !== jumpInputEl) {
@@ -3562,10 +3610,53 @@ ${prevQaText}
       }
     }
 
+    function shouldSkipMemorizedInFlashcard() {
+      const fc = AppState.uiState.flashcard;
+      return fc.skipMemorized !== false && fc.filter !== 'MEMORIZED_ONLY';
+    }
+
+    function findUnmemorizedDeckIndex(startIndex, step = 1, inclusive = false) {
+      const fc = AppState.uiState.flashcard;
+      const len = fc.deckIds.length;
+      if (len === 0) return { index: 0, allMemorized: true };
+      const byId = new Map((AppState.sentencesDB || []).map(s => [s.id, s]));
+      for (let offset = inclusive ? 0 : 1; offset <= len; offset++) {
+        const candidateIdx = ((startIndex + step * offset) % len + len) % len;
+        const item = byId.get(fc.deckIds[candidateIdx]);
+        if (item && !item.is_memorized) {
+          return { index: candidateIdx, allMemorized: false };
+        }
+      }
+      return { index: ((startIndex % len) + len) % len, allMemorized: true };
+    }
+
+    function snapFlashcardToPlayableIndex(inclusive = true) {
+      const fc = AppState.uiState.flashcard;
+      if (!shouldSkipMemorizedInFlashcard() || fc.deckIds.length === 0) return false;
+      const { index, allMemorized } = findUnmemorizedDeckIndex(fc.currentIndex, 1, inclusive);
+      if (allMemorized) {
+        showToast('🎉 현재 세트의 모든 문장을 암기 완료했습니다! (상단 [암기제외] 해제 또는 [✅ 암기완료 문장] 필터로 복습)', 'info');
+        return true;
+      }
+      fc.currentIndex = index;
+      return false;
+    }
+
     function nextFlashcard() {
       const fc = AppState.uiState.flashcard;
       if (fc.deckIds.length === 0) return;
-      fc.currentIndex = (fc.currentIndex + 1) % fc.deckIds.length;
+      if (shouldSkipMemorizedInFlashcard()) {
+        const { index, allMemorized } = findUnmemorizedDeckIndex(fc.currentIndex, 1, false);
+        if (allMemorized) {
+          showToast('🎉 현재 세트의 모든 문장을 암기 완료했습니다! ([✅ 암기완료 문장] 필터로 복습 가능)', 'info');
+          fc.isRevealed = false;
+          renderCurrentFlashcard();
+          return;
+        }
+        fc.currentIndex = index;
+      } else {
+        fc.currentIndex = (fc.currentIndex + 1) % fc.deckIds.length;
+      }
       fc.isRevealed = false;
       renderCurrentFlashcard();
     }
@@ -3573,7 +3664,18 @@ ${prevQaText}
     function prevFlashcard() {
       const fc = AppState.uiState.flashcard;
       if (fc.deckIds.length === 0) return;
-      fc.currentIndex = (fc.currentIndex - 1 + fc.deckIds.length) % fc.deckIds.length;
+      if (shouldSkipMemorizedInFlashcard()) {
+        const { index, allMemorized } = findUnmemorizedDeckIndex(fc.currentIndex, -1, false);
+        if (allMemorized) {
+          showToast('🎉 현재 세트의 모든 문장을 암기 완료했습니다! ([✅ 암기완료 문장] 필터로 복습 가능)', 'info');
+          fc.isRevealed = false;
+          renderCurrentFlashcard();
+          return;
+        }
+        fc.currentIndex = index;
+      } else {
+        fc.currentIndex = (fc.currentIndex - 1 + fc.deckIds.length) % fc.deckIds.length;
+      }
       fc.isRevealed = false;
       renderCurrentFlashcard();
     }
@@ -3635,6 +3737,21 @@ ${prevQaText}
       AppState.uiState.flashcard.currentIndex = 0;
       AppState.uiState.flashcard.isRevealed = false;
       buildFlashcardDeck();
+      snapFlashcardToPlayableIndex(true);
+      renderCurrentFlashcard();
+    }
+
+    function toggleFlashcardSkipMemorized() {
+      const fc = AppState.uiState.flashcard;
+      fc.skipMemorized = fc.skipMemorized === false;
+      if (fc.skipMemorized && shouldSkipMemorizedInFlashcard()) {
+        snapFlashcardToPlayableIndex(true);
+        showToast('⏭️ 암기제외 ON: 암기완료 문장은 순서에서 자동으로 건너뜁니다.', 'info');
+      } else if (fc.skipMemorized) {
+        showToast('⏭️ 암기제외 ON: 일반 세트에서 암기완료 문장을 건너뜁니다.', 'info');
+      } else {
+        showToast('🔁 암기제외 OFF: 암기완료 문장도 모두 순서대로 표시합니다.', 'info');
+      }
       renderCurrentFlashcard();
     }
 
@@ -3662,6 +3779,7 @@ ${prevQaText}
         showToast(`🔢 셔플 OFF: 현재 #${keptNo}번 문장부터 순서대로 이어서 학습합니다.`, 'info');
       } else {
         fc.currentIndex = 0;
+        snapFlashcardToPlayableIndex(true);
         showToast('🔀 셔플 ON: 문장 순서가 무작위로 섞였습니다.', 'info');
       }
 
@@ -3677,13 +3795,25 @@ ${prevQaText}
       showToast(item.is_starred ? '★ 중요 문장으로 북마크되었습니다.' : '별표 북마크가 해제되었습니다.', 'info');
     }
 
-    async function markCurrentFlashcardPracticed() {
+    async function toggleCurrentFlashcardMemorized() {
       const item = getCurrentFlashcardItem();
       if (!item) return;
-      item.practice_count = (item.practice_count || 0) + 1;
+      item.is_memorized = !item.is_memorized;
       await saveAppState();
-      showToast(`✅ 인출 연습 완료! (누적 ${item.practice_count}회)`, 'success');
-      nextFlashcard();
+      renderFilterSelectDropdowns();
+
+      if (item.is_memorized) {
+        if (shouldSkipMemorizedInFlashcard()) {
+          showToast('✅ 암기완료! 이후 순차 학습 시 자동으로 건너뜁니다.', 'success');
+          nextFlashcard();
+        } else {
+          showToast('✅ 암기완료로 표시되었습니다.', 'success');
+          renderCurrentFlashcard();
+        }
+      } else {
+        showToast('↩️ 암기완료가 해제되어 다시 학습 대상에 포함됩니다.', 'info');
+        renderCurrentFlashcard();
+      }
     }
 
     function speakCurrentFlashcard() {
@@ -3774,16 +3904,17 @@ ${prevQaText}
       return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
     }
 
-    function unlockTtsAudioOnGesture() {
+    function unlockTtsAudioOnGesture(forceReprime = false) {
       const audioEl = document.getElementById('ttsFallbackAudio');
       if (!audioEl) return;
       try {
         audioEl.pause();
       } catch (_) {}
-      if (ttsFallbackAudioUnlocked) return;
+      if (ttsFallbackAudioUnlocked && !forceReprime) return;
       try {
         if (!silentWavBlobUrl) {
-          silentWavBlobUrl = pcmBytesToWavBlobUrl(new Uint8Array(800), 8000, 1, 8);
+          // 16-bit signed zero PCM (0x0000 = digital silence; 8-bit 0x00 causes a DC click/pop)
+          silentWavBlobUrl = pcmBytesToWavBlobUrl(new Uint8Array(1600), 8000, 1, 16);
         }
         audioEl.src = silentWavBlobUrl;
         audioEl.muted = false;
@@ -3798,7 +3929,7 @@ ${prevQaText}
 
     async function speakWithGeminiAudioFallback(text, token) {
       const audioEl = document.getElementById('ttsFallbackAudio');
-      if (!audioEl) return;
+      if (!audioEl) return false;
 
       try {
         let blobUrl = ttsAudioBlobCache.get(text);
@@ -3816,7 +3947,7 @@ ${prevQaText}
           };
 
           for (const ttsModel of ttsModels) {
-            if (token !== ttsPlayToken) return;
+            if (token !== ttsPlayToken) return false;
             try {
               const res = await fetchGeminiWithAuth(`models/${encodeURIComponent(ttsModel)}:generateContent`, apiKey, 'POST', reqBody, 10000);
               if (!res.ok) continue;
@@ -3832,17 +3963,28 @@ ${prevQaText}
           }
         }
 
-        if (token !== ttsPlayToken) return;
+        if (token !== ttsPlayToken) return false;
         if (!blobUrl) {
+          preferAudioFallbackOnIOS = false;
           showToast('모바일 음성 재생을 시작할 수 없습니다. 무음 모드 해제 및 API 키 설정을 확인하세요.', 'error');
-          return;
+          return false;
         }
 
         audioEl.src = blobUrl;
         audioEl.playbackRate = Number(AppState.settings.ttsSpeed || 1.0);
         await audioEl.play();
+        return true;
       } catch (err) {
         console.warn('Gemini audio fallback playback failed:', err);
+        if (err && err.name === 'NotAllowedError') {
+          ttsFallbackAudioUnlocked = false;
+          if (isIOSDevice()) preferAudioFallbackOnIOS = true;
+          showToast('모바일 브라우저 정책으로 스피커 버튼을 한 번 더 눌러주세요.', 'info');
+        } else {
+          preferAudioFallbackOnIOS = false;
+          showToast('음성 재생에 실패했습니다. 다시 눌러 시도해 주세요.', 'error');
+        }
+        return false;
       }
     }
 
@@ -3882,13 +4024,15 @@ ${prevQaText}
         ttsWatchdogTimer = null;
       }
 
-      // Unlock <audio> element synchronously inside user tap so mobile iOS WebKit allows async WAV playback if needed
-      unlockTtsAudioOnGesture();
-
       const isIOS = isIOSDevice();
-      if (!('speechSynthesis' in window) || (isIOS && preferAudioFallbackOnIOS)) {
+      const useFallbackDirectly = !('speechSynthesis' in window) || (isIOS && preferAudioFallbackOnIOS);
+
+      if (useFallbackDirectly) {
         if ('speechSynthesis' in window) {
           try { window.speechSynthesis.cancel(); } catch (_) {}
+        }
+        if (!ttsAudioBlobCache.has(rawClean)) {
+          unlockTtsAudioOnGesture(true);
         }
         speakWithGeminiAudioFallback(rawClean, myToken);
         return;
@@ -3909,9 +4053,12 @@ ${prevQaText}
           clearTimeout(ttsWatchdogTimer);
           ttsWatchdogTimer = null;
         }
-        if (isIOS) preferAudioFallbackOnIOS = true;
         try { synth.cancel(); } catch (_) {}
-        speakWithGeminiAudioFallback(rawClean, myToken);
+        speakWithGeminiAudioFallback(rawClean, myToken).then((played) => {
+          if (isIOS && myToken === ttsPlayToken) {
+            preferAudioFallbackOnIOS = Boolean(played);
+          }
+        });
       };
 
       const startSpeak = () => {
@@ -3961,13 +4108,13 @@ ${prevQaText}
 
           synth.speak(utterance);
 
-          // Watchdog: if iOS WebKit silently ignores speak() without firing onstart within 500ms, switch to Gemini Audio WAV
+          // Watchdog: give mobile OS (especially iOS AVSpeechSynthesizer cold start) 1500ms before switching to Gemini Audio WAV
           ttsWatchdogTimer = setTimeout(() => {
             if (!didStart && myToken === ttsPlayToken) {
-              console.warn('WebSpeech did not start within 500ms; switching to Gemini Audio TTS fallback');
+              console.warn('WebSpeech did not start within 1500ms; switching to Gemini Audio TTS fallback');
               triggerFallback();
             }
-          }, 500);
+          }, 1500);
         } catch (err) {
           console.warn('TTS speak execution failed:', err);
           triggerFallback();
@@ -4453,7 +4600,7 @@ ${prevQaText}
             <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
               <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold">📄 ${escapeHtml(item.source_file)} · #${escapeHtml(dispNo)}</span>
               <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">${escapeHtml(item.category)}</span>
-              <span class="text-emerald-400 font-medium">인출 연습 ${item.practice_count || 0}회</span>
+              ${item.is_memorized ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold">✅ 암기완료</span>` : ''}
             </div>
             <p class="text-xs md:text-sm font-semibold text-white"><span class="text-slate-400 font-mono mr-1.5">[#${escapeHtml(dispNo)}]</span>${escapeHtml(item.english)}</p>
             <p class="text-xs md:text-sm font-bold text-amber-200">${escapeHtml(item.korean)}</p>
@@ -4462,6 +4609,11 @@ ${prevQaText}
           <div class="flex items-center gap-1.5 shrink-0 self-end md:self-center">
             <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300" title="발음 듣기">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleMemorizedInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg border ${
+              item.is_memorized ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-400'
+            }" title="암기완료 토글">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
             </button>
             <button onclick="toggleStarInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg border ${
               item.is_starred ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'bg-slate-900 border-slate-700 text-slate-400'
@@ -4480,6 +4632,15 @@ ${prevQaText}
       }).join('');
 
       if (window.lucide) lucide.createIcons();
+    }
+
+    async function toggleMemorizedInDBModal(sentId) {
+      const item = AppState.sentencesDB.find(s => s.id === sentId);
+      if (!item) return;
+      item.is_memorized = !item.is_memorized;
+      await saveAppState();
+      renderDBManagerTable();
+      renderSidebarDBSummary();
     }
 
     async function toggleStarInDBModal(sentId) {
@@ -5413,6 +5574,9 @@ ${prevQaText}
       } else if (event.key.toLowerCase() === 'b') {
         event.preventDefault();
         toggleCurrentFlashcardStar();
+      } else if (event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        toggleCurrentFlashcardMemorized();
       }
     });
 
