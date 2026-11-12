@@ -1735,11 +1735,183 @@
       return sess;
     }
 
+    function isFeedbackSentence(item) {
+      return Boolean(item && (item.category === '대화피드백' || item.source_file === 'chat_feedback'));
+    }
+
+    function formatLocalDateKey(ts) {
+      if (!ts && ts !== 0) return '';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function getFeedbackSessionMeta(item) {
+      const liveSess = item?.source_session_id
+        ? (AppState.sessionsDB || []).find(sess => sess.session_id === item.source_session_id)
+        : null;
+      const sessionKey = item?.source_session_id
+        || (item?.source_session_title ? `title:${item.source_session_title}` : '__LEGACY__');
+      const sessionTitle = liveSess?.title || item?.source_session_title || '기존 오답노트 (미분류)';
+      const practiceDate = item?.practice_date || formatLocalDateKey(item?.created_at);
+      const isLegacy = sessionKey === '__LEGACY__';
+      return { sessionKey, sessionTitle, practiceDate, isLegacy };
+    }
+
+    function parseFeedbackFilterValue(filterValue) {
+      if (typeof filterValue !== 'string') return null;
+      if (filterValue.startsWith('FEEDBACK_SESSION_DATE::')) {
+        const rest = filterValue.slice('FEEDBACK_SESSION_DATE::'.length);
+        const lastSep = rest.lastIndexOf('::');
+        if (lastSep > 0) {
+          return {
+            type: 'session_date',
+            sessionKey: rest.slice(0, lastSep),
+            practiceDate: rest.slice(lastSep + 2)
+          };
+        }
+      }
+      if (filterValue.startsWith('FEEDBACK_SESSION::')) {
+        return {
+          type: 'session',
+          sessionKey: filterValue.slice('FEEDBACK_SESSION::'.length)
+        };
+      }
+      return null;
+    }
+
+    function getFeedbackSessionGroups() {
+      const all = (AppState.sentencesDB || []).filter(isFeedbackSentence);
+      const groupMap = new Map();
+
+      all.forEach(item => {
+        const meta = getFeedbackSessionMeta(item);
+        if (!groupMap.has(meta.sessionKey)) {
+          groupMap.set(meta.sessionKey, {
+            sessionKey: meta.sessionKey,
+            sessionTitle: meta.sessionTitle,
+            isLegacy: meta.isLegacy,
+            items: [],
+            dateMap: new Map(),
+            latestTs: 0
+          });
+        }
+        const g = groupMap.get(meta.sessionKey);
+        g.items.push(item);
+        const itemTs = Number(item.created_at) || 0;
+        if (itemTs > g.latestTs) g.latestTs = itemTs;
+
+        if (meta.practiceDate) {
+          if (!g.dateMap.has(meta.practiceDate)) {
+            g.dateMap.set(meta.practiceDate, []);
+          }
+          g.dateMap.get(meta.practiceDate).push(item);
+        }
+      });
+
+      const groups = Array.from(groupMap.values()).map(g => {
+        const dates = Array.from(g.dateMap.entries())
+          .sort((a, b) => b[0].localeCompare(a[0]))
+          .map(([date, items]) => ({ date, count: items.length }));
+        return { ...g, dates };
+      });
+
+      groups.sort((a, b) => {
+        if (a.isLegacy !== b.isLegacy) return a.isLegacy ? 1 : -1;
+        if (b.latestTs !== a.latestTs) return b.latestTs - a.latestTs;
+        return a.sessionTitle.localeCompare(b.sessionTitle, 'ko');
+      });
+
+      return groups;
+    }
+
+    function migrateFeedbackSentenceMetadata() {
+      if (!Array.isArray(AppState.sentencesDB) || AppState.sentencesDB.length === 0) return false;
+      const sessions = Array.isArray(AppState.sessionsDB) ? AppState.sessionsDB : [];
+
+      const engMatchMap = new Map();
+      sessions.forEach(sess => {
+        (sess.messages || []).forEach(msg => {
+          const fb = msg?.feedback;
+          if (!fb) return;
+          if (fb.better_alternative) {
+            const key = normalizeEnglishForDedup(fb.better_alternative);
+            if (key) {
+              engMatchMap.set(key, {
+                sessionId: sess.session_id,
+                sessionTitle: sess.title,
+                practiceDate: formatLocalDateKey(msg.timestamp)
+              });
+            }
+          }
+          if (Array.isArray(fb.qa_threads)) {
+            fb.qa_threads.forEach(qa => {
+              if (!qa?.suggested_english) return;
+              const qKey = normalizeEnglishForDedup(qa.suggested_english);
+              if (qKey) {
+                engMatchMap.set(qKey, {
+                  sessionId: sess.session_id,
+                  sessionTitle: sess.title,
+                  practiceDate: formatLocalDateKey(qa.timestamp || msg.timestamp)
+                });
+              }
+            });
+          }
+        });
+      });
+
+      let changed = false;
+      AppState.sentencesDB.forEach(item => {
+        if (!isFeedbackSentence(item)) return;
+        const key = normalizeEnglishForDedup(item.english);
+        const matched = key ? engMatchMap.get(key) : null;
+
+        if (!item.source_session_id && matched?.sessionId) {
+          item.source_session_id = matched.sessionId;
+          changed = true;
+        }
+        const liveSess = item.source_session_id
+          ? sessions.find(s => s.session_id === item.source_session_id)
+          : null;
+        const targetTitle = liveSess?.title || matched?.sessionTitle || '';
+        if (targetTitle && item.source_session_title !== targetTitle) {
+          item.source_session_title = targetTitle;
+          changed = true;
+        }
+        if (!item.practice_date) {
+          const fallbackDate = matched?.practiceDate || formatLocalDateKey(item.created_at);
+          if (fallbackDate) {
+            item.practice_date = fallbackDate;
+            changed = true;
+          }
+        }
+      });
+
+      return changed;
+    }
+
     function getFilteredSentences(filterValue) {
       const all = AppState.sentencesDB || [];
       if (!filterValue || filterValue === 'ALL') return all;
       if (filterValue === 'FEEDBACK_ONLY') {
-        return all.filter(s => s.category === '대화피드백' || s.source_file === 'chat_feedback');
+        return all.filter(isFeedbackSentence);
+      }
+      const parsedFb = parseFeedbackFilterValue(filterValue);
+      if (parsedFb) {
+        return all.filter(s => {
+          if (!isFeedbackSentence(s)) return false;
+          const meta = getFeedbackSessionMeta(s);
+          if (parsedFb.type === 'session') {
+            return meta.sessionKey === parsedFb.sessionKey;
+          }
+          if (parsedFb.type === 'session_date') {
+            return meta.sessionKey === parsedFb.sessionKey && meta.practiceDate === parsedFb.practiceDate;
+          }
+          return false;
+        });
       }
       if (filterValue === 'STARRED_ONLY') {
         return all.filter(s => s.is_starred);
@@ -1755,7 +1927,7 @@
 
     function getAvailableFilterOptions() {
       const all = AppState.sentencesDB || [];
-      const feedbackCount = all.filter(s => s.category === '대화피드백' || s.source_file === 'chat_feedback').length;
+      const feedbackCount = all.filter(isFeedbackSentence).length;
       const starredCount = all.filter(s => s.is_starred).length;
       const unmemorizedCount = all.filter(s => !s.is_memorized).length;
       const memorizedCount = all.filter(s => Boolean(s.is_memorized)).length;
@@ -1769,11 +1941,29 @@
 
       const options = [
         { value: 'ALL', label: `전체 문장 (${all.length})` },
-        { value: 'FEEDBACK_ONLY', label: `⭐ 대화피드백 오답노트 (${feedbackCount})` },
+        { value: 'FEEDBACK_ONLY', label: `⭐ 대화피드백 오답노트 (전체 ${feedbackCount})` }
+      ];
+
+      getFeedbackSessionGroups().forEach(g => {
+        options.push({
+          value: `FEEDBACK_SESSION::${g.sessionKey}`,
+          label: `↳ 💬 ${g.sessionTitle} (${g.items.length})`,
+          isFeedbackSub: true
+        });
+        g.dates.forEach(d => {
+          options.push({
+            value: `FEEDBACK_SESSION_DATE::${g.sessionKey}::${d.date}`,
+            label: `　└ 📅 ${d.date} (${d.count})`,
+            isFeedbackSub: true
+          });
+        });
+      });
+
+      options.push(
         { value: 'STARRED_ONLY', label: `★ 중요 별표 문장 (${starredCount})` },
         { value: 'UNPRACTICED_ONLY', label: `🔥 미암기 집중 (${unmemorizedCount})` },
         { value: 'MEMORIZED_ONLY', label: `✅ 암기완료 문장 (${memorizedCount})` }
-      ];
+      );
 
       sourceMap.forEach((count, src) => {
         options.push({ value: src, label: `📁 ${src} (${count})` });
@@ -2595,7 +2785,7 @@ ${prevQaText}
       renderChatMessages(false);
     }
 
-    function upsertFeedbackSentenceToDB(korean, english, notes) {
+    function upsertFeedbackSentenceToDB(korean, english, notes, meta = {}) {
       mergeSentencesIntoDB(
         [{ korean, english, notes, category: '대화피드백' }],
         'chat_feedback',
@@ -2607,6 +2797,9 @@ ${prevQaText}
         found.is_starred = true;
         found.source_file = 'chat_feedback';
         found.category = '대화피드백';
+        if (meta.sessionId) found.source_session_id = meta.sessionId;
+        if (meta.sessionTitle) found.source_session_title = meta.sessionTitle;
+        if (meta.practiceDate) found.practice_date = meta.practiceDate;
       }
     }
 
@@ -2655,7 +2848,11 @@ ${prevQaText}
       }
 
       const notes = `[원래 내 문장] ${msg.text}${msg.feedback.nuance_tip ? ' | 💡 ' + msg.feedback.nuance_tip : ''}`;
-      upsertFeedbackSentenceToDB(kor, eng, notes);
+      upsertFeedbackSentenceToDB(kor, eng, notes, {
+        sessionId: session.session_id,
+        sessionTitle: session.title,
+        practiceDate: formatLocalDateKey(msg.timestamp || Date.now())
+      });
 
       msg.feedback.saved_to_db = true;
       renderAll();
@@ -2737,7 +2934,11 @@ ${prevQaText}
       }
 
       const notes = `[피드백 추가질문: ${qaItem.question}] ${qaItem.answer}`;
-      upsertFeedbackSentenceToDB(qaItem.suggested_korean, qaItem.suggested_english, notes);
+      upsertFeedbackSentenceToDB(qaItem.suggested_korean, qaItem.suggested_english, notes, {
+        sessionId: session.session_id,
+        sessionTitle: session.title,
+        practiceDate: formatLocalDateKey(qaItem.timestamp || msg.timestamp || Date.now())
+      });
 
       qaItem.saved_to_db = true;
       renderAll();
@@ -2896,6 +3097,17 @@ ${prevQaText}
       if (window.lucide) lucide.createIcons();
     }
 
+    const expandedFeedbackSidebarKeys = new Set();
+
+    function toggleFeedbackSidebarDates(sessionKey) {
+      if (expandedFeedbackSidebarKeys.has(sessionKey)) {
+        expandedFeedbackSidebarKeys.delete(sessionKey);
+      } else {
+        expandedFeedbackSidebarKeys.add(sessionKey);
+      }
+      renderSidebarDBSummary();
+    }
+
     function renderSidebarDBSummary() {
       const all = AppState.sentencesDB || [];
       document.getElementById('sidebarTotalSentences').textContent = all.length;
@@ -2907,23 +3119,75 @@ ${prevQaText}
       const container = document.getElementById('sidebarFilterTagsContainer');
       if (!container) return;
 
-      container.innerHTML = options.map(opt => {
-        const isSelected = currentTarget === opt.value;
+      const toOnclickArg = (val) => JSON.stringify(String(val)).replace(/"/g, '&quot;');
+      const feedbackGroups = getFeedbackSessionGroups();
+
+      const renderTagRow = (value, labelHtml, extraClass = '', actionButtonsHtml = '') => {
+        const isSelected = currentTarget === value;
         return `
-          <div class="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${
+          <div class="flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-lg border transition cursor-pointer ${extraClass} ${
             isSelected
               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200 font-semibold'
               : 'bg-slate-950/50 hover:bg-slate-800/70 border-slate-800/80 text-slate-300'
-          }" onclick="handleQuickTargetFilterChange('${escapeHtml(opt.value)}')">
-            <span class="truncate text-xs">${escapeHtml(opt.label)}</span>
+          }" onclick="handleQuickTargetFilterChange(${toOnclickArg(value)})">
+            <span class="truncate text-xs min-w-0">${labelHtml}</span>
             <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-              <button onclick="openFlashcardModal('${escapeHtml(opt.value)}')" class="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold" title="이 세트만 플래시카드 암기">
+              ${actionButtonsHtml}
+              <button onclick="openFlashcardModal(${toOnclickArg(value)})" class="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold" title="이 세트만 플래시카드 암기">
                 🎴 암기
               </button>
             </div>
           </div>
         `;
-      }).join('');
+      };
+
+      const rowsHtml = [];
+      options.filter(opt => !opt.isFeedbackSub).forEach(opt => {
+        rowsHtml.push(renderTagRow(opt.value, escapeHtml(opt.label)));
+
+        if (opt.value === 'FEEDBACK_ONLY' && feedbackGroups.length > 0) {
+          const subRows = feedbackGroups.map(g => {
+            const sessVal = `FEEDBACK_SESSION::${g.sessionKey}`;
+            const isExpanded = expandedFeedbackSidebarKeys.has(g.sessionKey)
+              || currentTarget.startsWith(`FEEDBACK_SESSION_DATE::${g.sessionKey}::`);
+            const dateBtnHtml = g.dates.length > 0
+              ? `<button onclick="toggleFeedbackSidebarDates(${toOnclickArg(g.sessionKey)})" class="px-1.5 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 text-[10px] font-medium" title="연습 날짜별 필터 ${isExpanded ? '접기' : '펼치기'}">📅${g.dates.length > 1 ? g.dates.length : ''}${isExpanded ? '▴' : '▾'}</button>`
+              : '';
+            const viewBtnHtml = `<button onclick="openDBManagerModal(${toOnclickArg(sessVal)})" class="px-1.5 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold" title="이 대화창 오답 목록 보기">📋</button>`;
+
+            const sessRow = renderTagRow(
+              sessVal,
+              `💬 ${escapeHtml(g.sessionTitle)} (${g.items.length})`,
+              '',
+              `${dateBtnHtml}${viewBtnHtml}`
+            );
+
+            let datesHtml = '';
+            if (isExpanded && g.dates.length > 0) {
+              datesHtml = `
+                <div class="ml-3 pl-2 border-l border-slate-700/80 space-y-1 mt-1">
+                  ${g.dates.map(d => {
+                    const dateVal = `FEEDBACK_SESSION_DATE::${g.sessionKey}::${d.date}`;
+                    const dViewBtn = `<button onclick="openDBManagerModal(${toOnclickArg(dateVal)})" class="px-1.5 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold" title="이 날짜 오답 목록 보기">📋</button>`;
+                    return renderTagRow(
+                      dateVal,
+                      `📅 ${escapeHtml(d.date)} (${d.count})`,
+                      'py-1',
+                      dViewBtn
+                    );
+                  }).join('')}
+                </div>
+              `;
+            }
+
+            return `<div>${sessRow}${datesHtml}</div>`;
+          }).join('');
+
+          rowsHtml.push(`<div class="ml-2.5 pl-2 border-l-2 border-amber-500/30 space-y-1">${subRows}</div>`);
+        }
+      });
+
+      container.innerHTML = rowsHtml.join('');
     }
 
     function renderActiveSessionHeader() {
@@ -3449,7 +3713,12 @@ ${prevQaText}
 
       const cleanCategoryName = (item.category || item.source_file || '비즈니스').replace(/\.(xlsx|xls|csv)$/i, '');
       const currentNo = item.sentence_no || (fc.currentIndex + 1);
-      document.getElementById('fcTopCategoryBadge').textContent = cleanCategoryName === '대화피드백' ? '⭐ 대화피드백' : `📁 ${cleanCategoryName}`;
+      if (isFeedbackSentence(item)) {
+        const fbMeta = getFeedbackSessionMeta(item);
+        document.getElementById('fcTopCategoryBadge').textContent = `⭐ ${fbMeta.sessionTitle}${fbMeta.practiceDate ? ' · ' + fbMeta.practiceDate : ''}`;
+      } else {
+        document.getElementById('fcTopCategoryBadge').textContent = `📁 ${cleanCategoryName}`;
+      }
       document.getElementById('fcTopSourceBadge').textContent = `#${currentNo}`;
       const memBadge = document.getElementById('fcMemorizedBadge');
       if (memBadge) memBadge.classList.toggle('hidden', !item.is_memorized);
@@ -4385,6 +4654,11 @@ ${prevQaText}
           sess.difficulty = difficulty;
           sess.target_filter = targetFilter;
           sess.updated_at = Date.now();
+          (AppState.sentencesDB || []).forEach(item => {
+            if (item.source_session_id === id) {
+              item.source_session_title = title;
+            }
+          });
         }
       } else {
         const newSess = {
@@ -4447,8 +4721,13 @@ ${prevQaText}
       document.getElementById('bulkAddModal').classList.add('hidden');
     }
 
-    function openDBManagerModal() {
+    function openDBManagerModal(initialFilter = null) {
       renderFilterSelectDropdowns();
+      const dbSelect = document.getElementById('dbModalFilterSelect');
+      if (dbSelect && typeof initialFilter === 'string' && initialFilter) {
+        dbSelect.value = initialFilter;
+        if (!dbSelect.value) dbSelect.value = 'ALL';
+      }
       renderDBManagerTable();
       document.getElementById('dbManagerModal').classList.remove('hidden');
     }
@@ -4485,12 +4764,15 @@ ${prevQaText}
           const combinedRef = `${sourceStr} #${sentNoStr} ${sourceStr} ${sentNoStr}`;
           if (isPureNumberSearch && sentNoStr === cleanNoQuery) return true;
           if (query.startsWith('#') && sentNoStr === cleanNoQuery) return true;
+          const fbMeta = isFeedbackSentence(s) ? getFeedbackSessionMeta(s) : null;
           return (
             combinedRef.includes(query) ||
             (s.korean || '').toLowerCase().includes(query) ||
             (s.english || '').toLowerCase().includes(query) ||
             (s.notes || '').toLowerCase().includes(query) ||
-            (s.category || '').toLowerCase().includes(query)
+            (s.category || '').toLowerCase().includes(query) ||
+            (fbMeta?.sessionTitle || '').toLowerCase().includes(query) ||
+            (fbMeta?.practiceDate || '').toLowerCase().includes(query)
           );
         });
 
@@ -4514,12 +4796,19 @@ ${prevQaText}
 
       container.innerHTML = list.map((item, idx) => {
         const dispNo = item.sentence_no ?? (idx + 1);
+        const fbMeta = isFeedbackSentence(item) ? getFeedbackSessionMeta(item) : null;
+        const primaryBadge = fbMeta
+          ? `⭐ ${escapeHtml(fbMeta.sessionTitle)} · #${escapeHtml(dispNo)}`
+          : `📄 ${escapeHtml(item.source_file)} · #${escapeHtml(dispNo)}`;
+        const secondaryBadge = fbMeta
+          ? (fbMeta.practiceDate ? `📅 ${escapeHtml(fbMeta.practiceDate)}` : escapeHtml(item.category))
+          : escapeHtml(item.category);
         return `
         <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div class="flex-1 min-w-0 space-y-1">
             <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold">📄 ${escapeHtml(item.source_file)} · #${escapeHtml(dispNo)}</span>
-              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">${escapeHtml(item.category)}</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold">${primaryBadge}</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">${secondaryBadge}</span>
               ${item.is_memorized ? `<span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold">✅ 암기완료</span>` : ''}
             </div>
             <p class="text-xs md:text-sm font-semibold text-white"><span class="text-slate-400 font-mono mr-1.5">[#${escapeHtml(dispNo)}]</span>${escapeHtml(item.english)}</p>
@@ -5348,6 +5637,7 @@ ${prevQaText}
           lastLocalSaveTimestamp = remote.updated_at || Date.now();
           AppState = mergeWithDefaultState(remote);
           didAutoMigrateSentences = sortSentencesDBBySourceAndNo();
+          if (migrateFeedbackSentenceMetadata()) didAutoMigrateSentences = true;
           applyTheme(AppState.settings?.theme || 'dark');
           renderAll();
         } finally {
