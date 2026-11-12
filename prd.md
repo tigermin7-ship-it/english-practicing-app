@@ -8,7 +8,7 @@
 * **타깃 사용자:** 실제 업무 미팅, 이메일, 협상, 발표, 해외 출장/쇼핑 등 실전 상황에서 쓸 비즈니스 영어 표현을 체화하고자 하는 실무자 및 학습자.
 * **플랫폼 환경:**
   * 별도 서버 구축 없이 브라우저에서 즉시 구동되는 **단일 파일(Single-File HTML/CSS/JS) 서버리스 SPA + PWA(Progressive Web App) 아키텍처** (`index.html`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`).
-  * **모바일 PWA 전체화면(Standalone) 지원:** `manifest.json` (`"display": "standalone"`) 및 iOS/Android 웹앱 메타 태그를 탑재하여 스마트폰에서 `'홈 화면에 추가'`로 실행 시 모바일 브라우저 주소창 및 하단 툴바를 제거해 세로 가용 화면(`100px+`)을 극대화함.
+  * **모바일 PWA 전체화면(Standalone) 지원:** `manifest.json` (`"display": "standalone"`, `"orientation": "any"`) 및 iOS/Android 웹앱 메타 태그를 탑재하여 스마트폰에서 `'홈 화면에 추가'`로 실행 시 모바일 브라우저 주소창 및 하단 툴바를 제거해 세로/가로 가용 화면을 극대화함.
   * **GitHub Pages 멀티 환경 자동 배포:** `main` 브랜치(운영 환경 `/`)와 `dev` 브랜치(개발/검증 환경 `/dev/`)를 GitHub Actions 워크플로우로 분리하여 안전하게 배포·검증함.
   * **100% Firebase 클라우드 동기화 아키텍처:** Firebase Authentication(이메일/비밀번호 로그인) 및 Cloud Firestore(`users/{uid}` 계정 프로필 + `workspace/main` 통합 문장 DB·롤플레잉 세션·글로벌 API 키 공유 문서)를 통해 PC·모바일·태블릿 어디서 로그인하든 동일한 학습 데이터와 API 설정을 즉시 이어서 사용함.
 
@@ -41,17 +41,16 @@
 #### 1) 문장 데이터 스키마 (`sentencesDB` 아이템 구조)
 ```javascript
 {
-  id: "s_1794145000000_1",          // 고유 식별자
-  en: "It's my first time",          // 영어 문장 (필수)
-  kr: "이번이 처음이야",             // 한글 해석 (필수)
+  id: "sent_1794145000000_ab12_0",   // 고유 식별자
+  english: "It's my first time",     // 영어 문장 (필수)
+  korean: "이번이 처음이야",           // 한글 해석 (필수)
   category: "900_1",                 // 카테고리 탭 분류명 (업로드 파일명에서 확장자 제거 또는 '대화피드백')
-  source_file: "900_1.xlsx",         // 업로드된 원본 파일명 (수동 입력 시 '직접입력', 오답노트 저장 시 '대화피드백')
+  source_file: "900_1.xlsx",         // 업로드된 원본 파일명 (수동 입력 시 '수기입력_세트', 오답노트 저장 시 'chat_feedback')
   sentence_no: 1,                    // 해당 source_file 내 1-based 순번 (#1 ~ #N)
-  starred: false,                    // 중요 별표(★) 여부
-  memorized: false,                  // 암기 완료(✅) 여부
-  practice_count: 0,                 // 플래시카드 인출 연습 횟수
-  source_session_id: null,           // 대화피드백 오답노트 저장 시 출처 세션 ID
-  created_at: "2026-11-08T14:00:00Z" // 생성 시각
+  notes: "",                         // 부연 설명 및 코칭 메모
+  is_starred: false,                 // 중요 별표(★) 여부
+  is_memorized: false,               // 암기 완료(✅) 여부
+  created_at: 1794145000000          // 생성 타임스탬프 (ms)
 }
 ```
 
@@ -79,7 +78,7 @@
   * **`셔플 OFF` 전환 시 현재 문장번호 위치 유지 (`toggleFlashcardShuffle`):**
     * `셔플 ON` 상태에서 임의의 카드(예: `#245`번 문장)를 학습하다가 **`셔플 OFF` 버튼을 누르면 `#1`번 카드로 초기화하지 않고 방금 보고 있던 `#245`번 문장 위치를 그대로 유지**함.
     * 이를 통해 사용자가 셔플로 임의의 번호를 뽑은 뒤 `셔플 OFF`를 눌러 그 다음 문장(`#246 ➔ #247 ➔ #248`)부터 순서대로 이어서 공부할 수 있음.
-  * 방향 전환(`한 ➔ 영` 기본 / `영 ➔ 한`), 탭하여 정답 확인/다음 이동, 원어민 발음 듣기(`S`), 이전/다음 카드, 순서 섞기(Shuffle), **`암기완료` ON/OFF 토글(`is_memorized`, 단축키 `M`)** 및 중요 별표(`B`) 북마크 지원. 기존 불필요한 `연습 N회` 누적 카운터 배지·버튼 UI는 제거하고 **`✅ 암기완료` 상태 배지**로 단순화함.
+  * 방향 전환(`한 ➔ 영` 기본 / `영 ➔ 한`), 탭하여 정답 확인/다음 이동, 원어민 발음 듣기(`S`), 이전/다음 카드, 순서 섞기(Shuffle), **`암기완료` ON/OFF 토글(`is_memorized`, 단축키 `M`)** 및 **`별표 ✓` ON/OFF 토글(`is_starred`, 단축키 `B`)** 지원. 별표 활성화 시 `암기완료 ✓`와 동일한 톤의 고대비 앰버(`bg-amber-600`) + 흰 텍스트(`별표 ✓`) + 채워진 별(`fill-current`)로 즉시 상태가 구분되며, 모바일(`< md`)에서는 불필요한 `(S)`/`(B)` 단축키 표기를 숨김. 기존 불필요한 `연습 N회` 누적 카운터 배지·버튼 UI는 제거하고 **`✅ 암기완료` 상태 배지**로 단순화함.
   * **`암기제외` 자동 건너뛰기 및 `✅ 암기완료 문장` 분리 필터 (`skipMemorized`, `MEMORIZED_ONLY`, `UNPRACTICED_ONLY`):**
     * 상단 `[암기제외 ON/OFF]` 옵션(데스크톱 헤더 및 모바일 `[⋯]` 팝오버)을 기본 `ON`으로 두며, `이전`/`다음` 순차 학습·셔플 시 `is_memorized === true` 문장을 자동으로 건너뜀 (`# 번호 이동`으로 직접 점프한 경우는 해당 문장 확인 가능).
     * 범위 드롭다운에 **`🔥 미암기 집중`**(`!is_memorized`)과 **`✅ 암기완료 문장`**(`MEMORIZED_ONLY`, `is_memorized === true`) 필터를 별도 제공하여 암기한 문장만 모아 복습 가능 (`MEMORIZED_ONLY` 필터에서는 건너뛰기 미적용).
@@ -91,7 +90,7 @@
 * **통합 문장 DB 관리 모달 (`renderDBManagerModal`):**
   * 각 문장 카드 상단에 녹색 출처 배지(`📄 900_1.xlsx · #1`)와 영어 문장 앞 `[#1]` 번호 프리픽스를 명시하고, 카드 우측 액션 버튼에 **암기완료 토글(`toggleMemorizedInDBModal`)** 및 `✅ 암기완료` 상태 배지를 제공함 (`인출 연습 N회` UI 미표시).
   * 검색창에서 `#15`, `900_1 #15`, `900_1.xlsx 15` 등 **파일명 + 문장번호 검색**으로 특정 번호의 문장을 1초 만에 필터링 가능.
-  * 전체/카테고리별 엑셀(`.xlsx`) 내보내기 시 `영어문장(Title) | 한글문장(해석) | 문장번호 | 파일명(출처) | 카테고리 | 메모 | 암기여부 | 중요별표` 컬럼을 온전히 포함하여 출력함.
+  * 전체/카테고리별 엑셀(`.xlsx`) 내보내기 시 `영어문장(Title) | 한글문장(해석) | 문장번호 | 파일명(출처) | 카테고리 | 메모 | 암기여부 | 중요별표` 컬럼을 온전히 출력하며, 내보낸 파일을 다시 엑셀 업로드할 때도 **`암기여부`·`중요별표` 컬럼을 자동 인식해 상태를 복원(왕복 호환)**함.
 
 ---
 
@@ -106,8 +105,8 @@
     * 우측에는 **`[🤖 AI질문]`, `[🎴 보유문장수]`, `[⚙️]` 3개 핵심 컨트롤**만 배치함 (데스크톱 `lg:` 이상에서는 전체 브랜드 로고, 세션명, 2단 시나리오 바 및 `[문장 DB]` 버튼을 그대로 유지함).
   * **우상단 GNB 메뉴 3버튼 경량화 및 `[⚙️ 설정]` 모달 통합:**
     * 데스크톱 GNB 우측에는 **`[플래시카드]`, `[문장 DB]`, `[⚙️ 설정]` 딱 3개의 핵심 버튼**만 배치함.
-    * 기존 최상단에 흩어져 있던 **`Dark/White` 화면 테마 전환, 관리자 `회원 승인 관리` 탭(대기 인원 배지 연동), `플래시카드 핵심 단축키`(`S: 원어민 발음 듣기 (TTS) | B: 중요 별표 북마크 | ←/→: 이전·다음 카드`), `로그아웃` 버튼**은 모두 `[⚙️ 설정]` 모달(`#securityModal`) 하부로 일원화함.
-    * 불필요한 `'핵심 이용 가이드 & 단축키'` 단독 모달과 AI의 부자연스러운 발언을 유발하던 `'타깃'` 드롭다운/힌트 드로어 UI를 전면 제거하여 화면 공간과 대화 자연스러움을 동시에 확보함.
+    * 기존 최상단에 흩어져 있던 **`Dark/White` 화면 테마 전환, 관리자 `회원 승인 관리` 탭(대기 인원 배지 연동), `플래시카드 핵심 단축키`(`S: 원어민 발음 듣기 (TTS) | M: 암기완료 ON/OFF | B: 중요 별표 북마크 | ←/→: 이전·다음 카드`), `로그아웃` 버튼**은 모두 `[⚙️ 설정]` 모달(`#securityModal`) 하부로 일원화함.
+    * 불필요한 `'핵심 이용 가이드 & 단축키'` 단독 모달, `'타깃'` 힌트 드로어, 오프라인 시뮬레이션 폴백 등 미사용 레거시 코드를 전면 제거해 화면과 코드베이스를 깔끔하게 유지함.
   * **모바일 대화창 폰트 확대, 말풍선 볼드 처리 & 발음 아이콘 인라인 배치:**
     * 스마트폰 환경에서의 시인성을 높이기 위해 **AI 파트너·사용자 대화 말풍선 본문을 `15.5px~16px` 굵은 볼드체(`font-bold`)**로 강화하고, 코칭 피드백의 추천 원어민 문장(`16px~17px font-bold`), 평가/뉘앙스 팁/추가 질문 본문(`14px`), 입력창(`16px` 모바일 자동 확대 방지)을 일괄 확대함.
     * AI 상대방 메시지의 발음 듣기 버튼(`[🔊]`)을 하단 별도 줄에서 제거하고 **상단 이름·시각 메타 라인(`Jane 오후 10:57 [🔊]`) 바로 옆에 인라인 배치**하여 대화창 세로 공간을 절약함.
@@ -126,10 +125,9 @@
 
 #### 1) 기본 코칭 피드백 (`msg.feedback`)
 * 내 영어 말풍선 우측 하단 `[💬 피드백]` 버튼 클릭 시 해당 시점까지의 대화 맥락과 내 발언을 분석하여 아코디언 카드를 렌더링함:
-  * **품질 배지 (`quality`):** `good`(✨ 자연스러운 비즈니스 표현), `minor_fix`(💡 추천 비즈니스 대안 제시), `needs_correction`(🔧 문법·비즈니스 톤 교정 필요)
-  * **평가 (`evaluation_kr`):** 문법 정확성, 비즈니스 격식(Politeness/Clarity), 상대방 질문 의도 부합 여부 총평
-  * **뉘앙스 팁 (`nuance_tip_kr`):** 원어민들이 실제 미팅에서 선호하는 어휘/관용구/화법 팁
-  * **원어민 추천 문장 (`intended_kr` + `recommended_en`):** 사용자의 원래 의도를 살린 가장 자연스러운 비즈니스 영어 문장(`16px~17px font-bold`) 제시 + 모바일 2줄 줄바꿈을 없앤 **1줄 3아이콘 컴팩트 버튼(`[🔊]`, `[✏️]`, `[⭐]`)** 제공. `[⭐]` 버튼은 **오답노트 저장/해제 원터치 토글**로 동작함 (`chat_feedback` 항목만 선택적 추가·제거하며 기존 엑셀 문장은 보존). 추가 질문 Q&A 카드 역시 `[🔊]`, `[⭐]`(토글) 아이콘 버튼으로 경량화함.
+  * **평가 (`evaluation`):** 문법 정확성, 비즈니스 격식(Politeness/Clarity), 상대방 질문 의도 부합 여부 총평
+  * **뉘앙스 팁 (`nuance_tip`):** 원어민들이 실제 미팅에서 선호하는 어휘/관용구/화법 팁
+  * **원어민 추천 문장 (`recommended_korean` + `better_alternative`):** 사용자의 원래 의도를 살린 가장 자연스러운 비즈니스 영어 문장(`16px~17px font-bold`) 제시 + 모바일 2줄 줄바꿈을 없앤 **1줄 3아이콘 컴팩트 버튼(`[🔊]`, `[✏️]`, `[⭐]`)** 제공. `[⭐]` 버튼은 **오답노트 저장/해제 원터치 토글**로 동작함 (`chat_feedback` 항목만 선택적 추가·제거하며 기존 엑셀 문장은 보존). 추가 질문 Q&A 카드 역시 `[🔊]`, `[⭐]`(토글) 아이콘 버튼으로 경량화함.
 
 #### 2) 피드백 카드 내 인라인 추가 질문 (`msg.feedback.qa_threads` — Task 2 핵심 기능)
 * **도입 배경:** 코칭 피드백을 확인한 직후 *"상대방이 쓴 관용구 표현을 다른 상황에서는 어떻게 응용하나요?"*, *"좀 더 정중한 표현이나 캐주얼한 대안은 없나요?"* 같은 후속 의문이 생겨도 기존에는 물어볼 창구가 없었음.
@@ -137,21 +135,21 @@
   ```javascript
   qa_threads: [
     {
-      id: "qa_1794148000000",
+      qa_id: "qa_1794148000000_abc",
       question: "여기서 상대방이 쓴 'What's your poison?' 대신 제가 음료를 권할 때 쓸 수 있는 표현도 알려주세요.",
-      answer_kr: "'What's your poison?'은 친근한 술자리/모임 표현이므로, 비즈니스 미팅이나 격식 있는 자리에서 상대방에게 마실 것을 권할 때는 아래와 같이 표현하는 것이 훨씬 자연스럽습니다.",
-      suggested_en: "Can I get you something to drink before we get started?",
-      suggested_kr: "시작하기 전에 마실 것 좀 드릴까요?",
+      answer: "'What's your poison?'은 친근한 술자리/모임 표현이므로, 비즈니스 미팅이나 격식 있는 자리에서 상대방에게 마실 것을 권할 때는 아래와 같이 표현하는 것이 훨씬 자연스럽습니다.",
+      suggested_english: "Can I get you something to drink before we get started?",
+      suggested_korean: "시작하기 전에 마실 것 좀 드릴까요?",
       saved_to_db: false,
-      created_at: "2026-11-08T14:15:00Z"
+      timestamp: 1794148100000
     }
   ]
   ```
-* **인라인 Q&A 스레드 UI & 인터랙션 (`renderChatMessages` 내 `feedbackCardHtml`):**
+* **인라인 Q&A 스레드 UI & 인터랙션 (`renderChatMessages` 내 피드백 영역):**
   * 피드백 카드 하단에 `💬 코치에게 추가 질문하기` 섹션이 상시 표시됨.
-  * 사용자가 입력창(`#feedback-qa-input-{msg.id}`)에 한글 또는 영어로 궁금한 점을 입력하고 `[질문하기]` 버튼(또는 `Enter`)을 누르면 `askFeedbackFollowUpQuestion(msgId)`가 실행됨.
-  * AI 코치는 **1) 시나리오 배경, 2) 직전 대화 맥락, 3) 사용자의 원래 발언과 1차 코칭 피드백, 4) 이전 추가 질문/답변 내역(`qa_threads`)**을 모두 참조하여 한국어 해설(`answer_kr`)과 핵심 추천 영어/한글 문장(`suggested_en`, `suggested_kr`)을 JSON으로 반환함.
-  * 답변에 추천 영어 문장(`suggested_en`)이 포함된 경우 미니 박스와 함께 `[🔊 발음 듣기]` 및 **`[⭐ 오답노트 저장]` (`saveFollowUpExpressionToDB(msgId, qaId)`)** 버튼이 렌더링되어, 추가 질문으로 얻은 표현까지 즉시 통합 문장 DB(`대화피드백`)에 저장하고 Firestore에 동기화함.
+  * 사용자가 입력창(`#fbQaInput_{msg.msg_id}`)에 한글 또는 영어로 궁금한 점을 입력하고 `[질문하기]` 버튼(또는 `Enter`)을 누르면 `askFeedbackFollowUpQuestion(msgId)`가 실행됨.
+  * AI 코치는 **1) 시나리오 배경, 2) 직전 대화 맥락, 3) 사용자의 원래 발언과 1차 코칭 피드백, 4) 이전 추가 질문/답변 내역(`qa_threads`)**을 모두 참조하여 한국어 해설(`answer`)과 핵심 추천 영어/한글 문장(`suggested_english`, `suggested_korean`)을 JSON으로 반환함.
+  * 답변에 추천 영어 문장(`suggested_english`)이 포함된 경우 미니 박스와 함께 `[🔊 발음 듣기]` 및 **`[⭐ 오답노트 저장]` (`saveFollowUpExpressionToDB(msgId, qaId)`)** 버튼이 렌더링되어, 추가 질문으로 얻은 표현까지 즉시 통합 문장 DB(`대화피드백`)에 저장하고 Firestore에 동기화함.
 
 ---
 
@@ -169,27 +167,26 @@
   * Gemini `generateContent` API는 `contents[]` 배열의 첫 번째 요소가 반드시 `role: 'user'`여야 하며, 동일 `role`이 연속되면 `400 Bad Request`를 반환함.
   * 따라서 사용자가 `[AI가 먼저 질문 던지기]`를 눌렀을 때(빈 채팅방이거나 이미 AI/사용자 대화가 오간 상태 모두 포함), 히스토리 첫 메시지가 `model`이면 앞에 가상 user 시작 트리거를 자동 보강하고, 연속된 동일 role 메시지는 병합한 뒤, 마지막이 `model`로 끝나면 시스템 트리거 프롬프트(`role: 'user'`)를 자동 추가하여 어떤 상태에서도 100% 정상 응답하도록 보장함.
 
-### Engine 2: 온디맨드 코칭 피드백 엔진 (`callCoachingFeedbackAI`)
-* **역할:** 사용자가 특정 말풍선의 `[💬 피드백]` 버튼을 눌렀을 때만 호출되는 1타 비즈니스 영어 코치.
+### Engine 2: 온디맨드 코칭 피드백 엔진 (`callFeedbackCoachAI` & `buildFeedbackSystemPrompt`)
+* **역할:** 사용자가 특정 말풍선의 `[💬 피드백]` 버튼을 눌렀을 때만 호출되는 1타 비즈니스 영어 코치 (`maxOutputTokens: 1024`, 다중 `parts` 병합 파싱 적용).
 * **출력 포맷 (`responseMimeType: "application/json"`):**
   ```json
   {
-    "quality": "good | minor_fix | needs_correction",
-    "evaluation_kr": "문법, 어휘, 비즈니스 매너 측면의 구체적인 한국어 총평",
-    "nuance_tip_kr": "원어민 비즈니스 화법 팁 및 대안 표현 해설",
-    "intended_kr": "사용자가 원래 전달하고자 했던 자연스러운 한국어 의미",
-    "recommended_en": "가장 자연스럽고 세련된 원어민 비즈니스 영어 추천 문장 1개"
+    "evaluation": "한국어로 작성된 1~2문장의 핵심 피드백 (비즈니스 격식, 문법 정확성, 뉘앙스 적절성 평가)",
+    "recommended_korean": "추천 영어 대안 문장에 정확히 대응하는 자연스러운 비즈니스 한국어 문장",
+    "better_alternative": "가장 자연스럽고 세련된 원어민 비즈니스 영어 추천 문장 1개",
+    "nuance_tip": "왜 이 대안 표현이 비즈니스 상황에서 더 효과적인지 설명하는 짧은 팁 (한국어)"
   }
   ```
 
-### Engine 3: 피드백 인라인 추가 질문 코치 엔진 (`callFeedbackFollowUpAI`)
-* **역할:** 피드백 카드 내부에서 사용자가 입력한 후속 질문(`questionText`)에 대해 직전 문맥과 1차 피드백 내용을 바탕으로 즉시 답변하는 Q&A 전담 코치.
+### Engine 3: 피드백 인라인 추가 질문 코치 엔진 (`callFeedbackFollowUpAI` & `buildFeedbackFollowUpPrompt`)
+* **역할:** 피드백 카드 내부에서 사용자가 입력한 후속 질문(`questionText`)에 대해 직전 문맥과 1차 피드백 내용을 바탕으로 즉시 답변하는 Q&A 전담 코치 (`maxOutputTokens: 1024`).
 * **출력 포맷 (`responseMimeType: "application/json"`):**
   ```json
   {
-    "answer_kr": "사용자의 추가 질문에 대한 친절하고 명확한 한국어 설명 (어감 차이, 문법 설명, 상황별 활용법 등)",
-    "suggested_en": "질문과 관련하여 가장 추천하는 대표 비즈니스 영어 문장 1개 (없으면 빈 문자열)",
-    "suggested_kr": "suggested_en에 대응하는 자연스러운 한국어 뜻 (없으면 빈 문자열)"
+    "answer": "사용자의 추가 질문에 대해 친절하고 명확한 한국어 설명 (어감 차이, 문법 설명, 상황별 활용법 등)",
+    "suggested_korean": "추천 영어 문장에 대응하는 자연스러운 한국어 뜻 (없으면 빈 문자열)",
+    "suggested_english": "질문과 관련하여 가장 추천하는 대표 비즈니스 영어 문장 1개 (없으면 빈 문자열)"
   }
   ```
 
@@ -211,16 +208,16 @@
      * 4순위: `gemini-3-flash-preview` (평균 2.08초)
      * 5순위: `gemini-3.5-flash` (평균 3.29초)
   2. **레거시 설정 자동 마이그레이션 (`mergeWithDefaultState`):**
-     * 사용자의 브라우저나 Firestore에 과거 모델(`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-flash-latest` 등)이 저장되어 있더라도 로드 즉시 `gemini-flash-lite-latest`로 자동 마이그레이션하여 404 에러를 원천 방지함.
-  3. **런타임 `ListModels` 동적 탐색 및 무중단 폴백:**
-     * 만약 선택된 모델이 404를 반환하면 즉시 `GET https://generativelanguage.googleapis.com/v1beta/models`를 호출해 해당 API 키로 접근 가능한 실제 모델 목록을 조회하고, `gemini-flash-lite-latest` 등 작동하는 모델로 자동 전환하여 재시도 및 설정 저장까지 무중단으로 처리함.
-  4. **15초 타임아웃(`AbortController`) 및 토큰 한도(`maxOutputTokens: 1024`) 보장:**
-     * 특정 모델 엔드포인트가 응답 없이 지연될 경우 15초 내 자동으로 연결을 끊고 다음 빠른 모델로 폴백하며, JSON 응답이 중간에 잘리지 않도록 `maxOutputTokens: 1024`를 부여함.
+     * 사용자의 브라우저나 Firestore에 과거 모델(`gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-flash-latest` 등)이 저장되어 있더라도 로드 즉시 **`auto`(자동 고속 탐색 기본값)**로 자동 마이그레이션하여 404 에러 및 지연을 원천 방지함.
+  3. **런타임 `ListModels` 지연 동적 탐색 및 무중단 폴백:**
+     * 검증된 빠른 후보 모델 목록(`buildGeminiCandidateList`)을 우선 호출하고, 모두 실패한 경우에만 `GET https://generativelanguage.googleapis.com/v1beta/models`를 호출해 접근 가능한 모델을 동적 탐색·전환함.
+  4. **지연 제한(`AbortController`) 및 토큰 한도 보장:**
+     * 일반 요청 `10초`(`options.timeoutMs`), 스트리밍 첫 토큰(TTFB) `7초` 내 무응답 시 자동으로 연결을 끊고 다음 모델로 폴백하며, JSON 피드백·Q&A 응답이 중간에 잘리지 않도록 `maxOutputTokens: 1024`(롤플레잉 대화는 `384`)를 부여함.
 
 ### 5.2. API 키 인증 방식 (`AIzaSy...` 및 `AQ....` 모두 호환)
-* Google AI Studio의 표준 API 키(`AIzaSy...`)와 Google Cloud Console의 최신 키 포맷(`AQ.Ab8RN6J...`) 모두 브라우저 CORS 프리플라이트 지연 없이 즉시 통과하는 **`?key={API_KEY}` 쿼리 파라미터 방식**을 1순위로 호출하며, 인증 오류 시 `x-goog-api-key` 헤더 방식으로 자동 재시도함 (`fetchGeminiWithAuth`).
+* Google AI Studio의 표준 API 키(`AIzaSy...`)와 Google Cloud Console의 최신 키 포맷(`AQ.Ab8RN6J...`) 모두 브라우저 CORS 프리플라이트 지연 없이 즉시 통과하는 **`?key={API_KEY}` 쿼리 파라미터 방식**을 1순위로 호출하며, `AIza` 외 키가 `401` 반환 시 **`Authorization: Bearer` 헤더** 방식으로 자동 재시도함 (`fetchGeminiWithAuth`).
 * **Google Cloud Console에서 API 키 제한 시 필수 주의사항 (Troubleshooting Guide):**
-  * Firebase가 자동 생성한 브라우저 키(`Browser key (auto created by Firebase)`)는 기본적으로 25개 Firebase 관련 API만 허용되어 있고 **`Generative Language API` (Gemini API)** 권한이 빠져 있는 경우가 많음.
+  * Firebase가 자동 생성한 브라우저 키(`Browser key (auto created by Firebase)`)는 기본적으로 25개 Firebase 관련 API만 허용되어 있고 **`Generative Language API` (Gemini API)** 권한이 빠져 있는 경우가 많음 (사용자 API 키 미입력 상태에서 오류 발생 시 `[설정]`에서 Gemini API 키 입력 안내 표시).
   * 따라서 Gemini 호출용 API 키는 **Google AI Studio (`aistudio.google.com/app/apikey`)**에서 발급받거나, Google Cloud Console에서 API 제한사항에 **`Generative Language API`를 반드시 포함(또는 API 제한 없음)**해야 함.
 
 ---
@@ -229,14 +226,14 @@
 
 ### 6.1. Firestore 컬렉션 구조 (Clean Slate Architecture)
 * **`users/{uid}` (계정 프로필 컬렉션):**
-  * `uid`, `email`, `displayName`, `role` (`'admin'` | `'user'`), `approved` (`true` | `false`), `createdAt`, `approvedAt`, `lastLoginAt`
-  * 최초 관리자 이메일(`tigermin7@gmail.com`)은 가입/로그인 즉시 `role: 'admin', approved: true` 권한을 자동 부여받음.
+  * `uid`, `email`, `displayId`, `role` (`'admin'` | `'user'`), `status` (`'approved'` | `'pending'`), `created_at`
+  * 최초 관리자 계정 또는 `tigermin7@gmail.com`은 가입/로그인 즉시 `role: 'admin', status: 'approved'` 권한을 부여받음.
 * **`workspace/main` (전 기기 실시간 공유 워크스페이스 문서):**
-  * `sentencesDB`: 통합 문장 DB 배열 (`900_1.xlsx` 등)
-  * `roleplaySessions`: 롤플레잉 시나리오 세션 및 대화/피드백/추가질문 히스토리 배열
-  * `sharedGeminiApiKey`: 관리자가 한 번 입력해 두면 모든 로그인 기기에서 별도 입력 없이 즉시 공유되는 글로벌 Gemini API 키
-  * `sharedGeminiModel`: 글로벌 기본 모델 (`gemini-flash-lite-latest`)
-  * `cleanSlateTimestamp`: 데이터 클린 슬레이트 기준 타임스탬프 (`1794132000000`)
+  * `sentencesDB`: 통합 문장 DB 배열 (`900_1.xlsx`, `chat_feedback` 등)
+  * `sessionsDB`: 롤플레잉 시나리오 세션 및 대화/피드백/추가질문 히스토리 배열
+  * `activeSessionId`: 현재 선택된 활성 세션 ID
+  * `settings`: 공유 설정 객체 (`provider`, `model` 기본 `'auto'`, `apiKey`, `ttsSpeed`, `theme`)
+  * `updated_at`, `updated_by`: 최종 동기화 타임스탬프 및 수정자 ID (`CLEAN_SLATE_TIMESTAMP = 1794130700000`은 코드 상수로 관리)
 
 ### 6.2. GitHub Secret Scanning 키 폐기 방지 및 초기 스냅샷 Race Condition 방어
 * **Firebase 웹 API 키 분할 난독화 (`DEFAULT_FIREBASE_CONFIG`):**

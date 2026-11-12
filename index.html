@@ -646,7 +646,7 @@
           <div class="flex flex-wrap items-center justify-center gap-2 pt-1 shrink-0" onclick="event.stopPropagation()">
             <button onclick="speakCurrentFlashcard()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
-              <span>발음 (S)</span>
+              <span>발음<span class="hidden md:inline"> (S)</span></span>
             </button>
 
             <button id="btnFcMemorized" onclick="toggleCurrentFlashcardMemorized()" class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs md:text-sm flex items-center gap-1.5 transition" title="암기 완료 ON/OFF 토글 (단축키: M)">
@@ -656,7 +656,7 @@
 
             <button onclick="toggleCurrentFlashcardStar()" id="btnFcBottomStar" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition" title="중요 별표 북마크 (단축키: B)">
               <i data-lucide="star" class="w-4 h-4"></i>
-              <span>별표 (B)</span>
+              <span>별표<span class="hidden md:inline"> (B)</span></span>
             </button>
           </div>
         </div>
@@ -938,7 +938,7 @@
             <span>플래시카드 핵심 단축키</span>
           </div>
           <p class="text-slate-300 leading-relaxed">
-            • <strong>S 키:</strong> 원어민 발음 듣기 (TTS) &nbsp;|&nbsp; <strong>B 키:</strong> 중요 별표 북마크 &nbsp;|&nbsp; <strong>← / →:</strong> 이전·다음 카드
+            • <strong>S 키:</strong> 원어민 발음 듣기 (TTS) &nbsp;|&nbsp; <strong>M 키:</strong> 암기완료 ON/OFF &nbsp;|&nbsp; <strong>B 키:</strong> 중요 별표 북마크 &nbsp;|&nbsp; <strong>← / →:</strong> 이전·다음 카드
           </p>
         </div>
 
@@ -1091,7 +1091,6 @@
           theme: 'dark'
         },
         uiState: {
-          hintDrawerOpen: false,
           draftInputs: {},
           savedScrollTop: 0,
           flashcard: {
@@ -1431,6 +1430,8 @@
           existing.source_file = targetSource;
           if (raw.notes) existing.notes = raw.notes.trim();
           if (raw.category) existing.category = raw.category.trim();
+          if (typeof raw.is_memorized === 'boolean') existing.is_memorized = raw.is_memorized;
+          if (typeof raw.is_starred === 'boolean') existing.is_starred = raw.is_starred;
           existingBySourceAndEng.set(`${targetSource}::${engKey}`, existing);
           existingBySourceAndNo.set(`${targetSource}::#${sentNo}`, existing);
           updatedCount++;
@@ -1443,8 +1444,8 @@
             korean: kor,
             english: eng,
             notes: (raw.notes || '').trim(),
-            is_memorized: false,
-            is_starred: false,
+            is_memorized: typeof raw.is_memorized === 'boolean' ? raw.is_memorized : false,
+            is_starred: typeof raw.is_starred === 'boolean' ? raw.is_starred : false,
             created_at: Date.now() + idx
           };
           AppState.sentencesDB.push(newEntry);
@@ -1566,7 +1567,14 @@
       let korCol = -1;
       let noteCol = -1;
       let catCol = -1;
+      let memCol = -1;
+      let starCol = -1;
       let startRowIdx = 0;
+
+      const parseExcelFlag = (val) => {
+        const v = String(val ?? '').trim().toLowerCase();
+        return ['y', 'yes', 'true', '1', 'o', '✓', '✔', '✅', '★', '⭐'].includes(v);
+      };
 
       const headerRow = nonEmptyRows[0].map(c => String(c).trim().toLowerCase());
       // Check 2-column or 3-column #0 header row (e.g. ["Title", "해석"], ["영어문장", "한글문장"])
@@ -1593,6 +1601,10 @@
             if (noteCol === -1) noteCol = idx;
           } else if (['카테고리', '분류', '주제', 'category', 'tag'].some(k => h.includes(k))) {
             if (catCol === -1) catCol = idx;
+          } else if (['암기여부', '암기완료', '암기', 'is_memorized', 'memorized'].some(k => h === k || h.includes(k))) {
+            if (memCol === -1) memCol = idx;
+          } else if (['중요별표', '별표', '북마크', 'is_starred', 'starred'].some(k => h === k || h.includes(k))) {
+            if (starCol === -1) starCol = idx;
           }
         });
       }
@@ -1667,13 +1679,20 @@
 
         const sentence_no = normalizeSentenceNo(rawNo, items.length + 1);
 
-        items.push({
+        const itemObj = {
           sentence_no,
           korean: korText,
           english: engText,
           notes: noteCol !== -1 ? String(r[noteCol] ?? '').trim() : '',
           category: catCol !== -1 && String(r[catCol] ?? '').trim() ? String(r[catCol]).trim() : defaultCat
-        });
+        };
+        if (memCol !== -1 && String(r[memCol] ?? '').trim() !== '') {
+          itemObj.is_memorized = parseExcelFlag(r[memCol]);
+        }
+        if (starCol !== -1 && String(r[starCol] ?? '').trim() !== '') {
+          itemObj.is_starred = parseExcelFlag(r[starCol]);
+        }
+        items.push(itemObj);
       });
 
       return { totalCandidateRows: dataRows.length, items };
@@ -1761,19 +1780,6 @@
       });
 
       return options;
-    }
-
-    // Smart Context Sampling (selects 5~10 high-priority sentences for prompt injection)
-    function sampleTargetSentencesForSession(session, maxCount = 8) {
-      let pool = getFilteredSentences(session?.target_filter || 'ALL');
-      if (pool.length === 0) pool = AppState.sentencesDB || [];
-      // Sort by starred first, then unmemorized first, then slight randomness
-      const scored = pool.map(item => ({
-        item,
-        score: (item.is_starred ? -100 : 0) + (item.is_memorized ? 50 : 0) + Math.random() * 4
-      }));
-      scored.sort((a, b) => a.score - b.score);
-      return scored.slice(0, maxCount).map(x => x.item);
     }
 
     function buildRoleplaySystemPrompt(session) {
@@ -2037,7 +2043,9 @@
         if (fallbackResult && typeof fallbackResult === 'object') return fallbackResult;
       }
 
-      throw new Error(`Gemini API 오류 (${lastRes ? lastRes.status : 'Error'}): ${(lastErrText || '사용 가능한 모델을 찾을 수 없습니다.').slice(0, 140)}`);
+      const noCustomKey = !(AppState.settings.apiKey || '').trim();
+      const customKeyHint = noCustomKey ? ' (⚙️ [설정]에서 Gemini API 키를 입력·저장해 주세요.)' : '';
+      throw new Error(`Gemini API 오류 (${lastRes ? lastRes.status : 'Error'}): ${(lastErrText || '사용 가능한 모델을 찾을 수 없습니다.').slice(0, 140)}${customKeyHint}`);
     }
 
     async function streamGeminiWithAutoModelDiscovery(apiKey, preferredModel, requestBody, onDelta) {
@@ -2253,10 +2261,12 @@
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.3,
+            maxOutputTokens: 1024,
             responseMimeType: 'application/json'
           }
         });
-        const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const parts = data?.candidates?.[0]?.content?.parts || [];
+        const rawJson = parts.map(p => p.text || '').join('') || '{}';
         const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
         return JSON.parse(cleaned);
       } else {
@@ -2351,52 +2361,6 @@ ${prevQaText}
         const rawJson = data?.choices?.[0]?.message?.content || '{}';
         return JSON.parse(rawJson);
       }
-    }
-
-    // Smart Offline Simulation Fallback (when user hasn't entered an API key yet)
-    function generateSimulatedPartnerReply(session, sampledTargets, isFirstTrigger) {
-      const target = sampledTargets[Math.floor(Math.random() * sampledTargets.length)];
-      if (isFirstTrigger || (session.messages || []).length === 0) {
-        if (target) {
-          return `Hi, thanks for making time today. Regarding our current agenda (${session.title}), we really need a concrete solution from your team. What is your proposal on this—especially regarding "${target.korean}"?`;
-        }
-        return `Hello! Thanks for joining the call. Given our situation (${session.business_context}), what is your team's current position and how can we move forward today?`;
-      }
-      const partnerReplies = [
-        `I understand your point, but from our leadership's perspective, we still need stronger assurances. If we move forward with your suggestion, what specific terms or timeline can you commit to?`,
-        `That sounds like a reasonable starting point. However, how would that impact our overall Q4 schedule and budget constraints? Can you share a bit more detail?`,
-        `Fair enough. Let's look at the practical side—if we agree to adjust our condition here, what kind of counter-benefit or guarantee can your side offer us?`
-      ];
-      return partnerReplies[(session.messages?.length || 0) % partnerReplies.length];
-    }
-
-    function generateSimulatedFeedback(session, userMsg, sampledTargets) {
-      const lowerUser = userMsg.toLowerCase();
-      let matched = null;
-      for (const item of sampledTargets) {
-        const words = item.english.toLowerCase().split(/\s+/).filter(w => w.length > 4);
-        const hitCount = words.filter(w => lowerUser.includes(w.replace(/[^a-z]/g, ''))).length;
-        if (hitCount >= 2) {
-          matched = item;
-          break;
-        }
-      }
-      const fallbackTarget = matched || sampledTargets[0] || {
-        id: null,
-        korean: '제안해 주신 조건을 내부적으로 면밀히 검토한 후 금주 내로 회신드리겠습니다.',
-        english: 'We will carefully review your proposed terms internally and get back to you by the end of this week.'
-      };
-
-      return {
-        target_used: Boolean(matched),
-        matched_sentence_id: matched ? matched.id : null,
-        evaluation: matched
-          ? '목표 비즈니스 표현의 핵심 구조를 잘 활용하여 의도를 명확히 전달하셨습니다. 어조를 조금 더 정중한 임원급 표현으로 다듬으면 완벽합니다.'
-          : '전달하려는 핵심 의도는 파악되나, 구어체 표현 대신 등록된 타깃 비즈니스 구문을 활용하면 훨씬 격식 있고 설득력 있는 협상이 됩니다.',
-        recommended_korean: fallbackTarget.korean,
-        better_alternative: fallbackTarget.english,
-        nuance_tip: '단순 직역투 동사 대신 비즈니스 관용구(consider, propose, ensure 등)를 결합하면 프로페셔널한 인상을 줄 수 있습니다. (※ 현재 시뮬레이션 모드 응답이며 API 키 입력 시 실시간 정밀 AI 교정이 제공됩니다.)'
-      };
     }
 
     /*************************************************************************
@@ -2616,7 +2580,6 @@ ${prevQaText}
         await saveAppState();
         renderChatMessages(false);
         renderSidebarDBSummary();
-        renderTargetHintDrawer();
       } catch (err) {
         delete msg.feedback;
         renderChatMessages(false);
@@ -2832,7 +2795,6 @@ ${prevQaText}
       renderSessionList();
       renderSidebarDBSummary();
       renderActiveSessionHeader();
-      renderTargetHintDrawer();
       renderChatMessages(false);
       updateSecurityBadges();
 
@@ -3051,63 +3013,6 @@ ${prevQaText}
     }
     document.addEventListener('click', handleMobilePopoverOutsideDismiss);
     document.addEventListener('touchstart', handleMobilePopoverOutsideDismiss, { passive: true });
-
-    function renderTargetHintDrawer() {
-      const drawer = document.getElementById('targetHintDrawer');
-      if (!drawer) return;
-      if (AppState.uiState.hintDrawerOpen) {
-        drawer.classList.remove('hidden');
-      } else {
-        drawer.classList.add('hidden');
-      }
-
-      const sess = getActiveSession();
-      const targetPool = getFilteredSentences(sess?.target_filter || 'ALL');
-      const showEng = document.getElementById('chkShowHintEnglish')?.checked ?? true;
-      const listEl = document.getElementById('targetHintList');
-      if (!listEl) return;
-
-      if (targetPool.length === 0) {
-        listEl.innerHTML = `<div class="col-span-2 text-xs text-slate-400 py-2">선택된 범위에 문장이 없습니다. 좌측에서 문장 세트를 추가하거나 필터를 '전체 문장'으로 변경하세요.</div>`;
-        return;
-      }
-
-      listEl.innerHTML = targetPool.map((item, idx) => `
-        <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-start justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
-              <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold">${escapeHtml(item.source_file || '세트')} #${escapeHtml(item.sentence_no ?? (idx + 1))}</span>
-              <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${escapeHtml(item.category)}</span>
-              ${item.is_memorized ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold">✅ 암기완료</span>` : ''}
-            </div>
-            <p class="text-xs font-semibold text-amber-200 leading-snug">${escapeHtml(item.korean)}</p>
-            ${showEng ? `<p class="text-xs text-slate-300 mt-1 font-medium">${escapeHtml(item.english)}</p>` : `<p class="text-[11px] text-slate-500 mt-1 italic">(영어 문장 숨김 상태)</p>`}
-          </div>
-          <div class="flex flex-col gap-1 shrink-0">
-            <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300" title="원어민 발음 듣기">
-              <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
-            </button>
-            <button onclick="insertHintToInput(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white" title="채팅 입력창으로 가져오기">
-              <i data-lucide="corner-down-left" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function insertHintToInput(engText) {
-      const input = document.getElementById('chatInputTextarea');
-      input.value = (input.value ? input.value.trim() + ' ' : '') + engText;
-      input.focus();
-      handleChatInputSaveDraft(input.value);
-    }
-
-    function toggleHintDrawer() {
-      AppState.uiState.hintDrawerOpen = !AppState.uiState.hintDrawerOpen;
-      renderTargetHintDrawer();
-    }
 
     function renderChatMessages(scrollToBottom = false) {
       const container = document.getElementById('chatMessagesContainer');
@@ -3579,8 +3484,8 @@ ${prevQaText}
           ? 'px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 border border-amber-400 text-white font-bold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-amber-600/25 transition'
           : 'px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-medium text-xs md:text-sm flex items-center gap-1.5 transition';
         bottomStarBtn.innerHTML = item.is_starred
-          ? `<i data-lucide="star" class="w-4 h-4 fill-current"></i><span>별표 ✓ (B)</span>`
-          : `<i data-lucide="star" class="w-4 h-4"></i><span>별표 (B)</span>`;
+          ? `<i data-lucide="star" class="w-4 h-4 fill-current"></i><span>별표 ✓<span class="hidden md:inline"> (B)</span></span>`
+          : `<i data-lucide="star" class="w-4 h-4"></i><span>별표<span class="hidden md:inline"> (B)</span></span>`;
       }
 
       const isKrToEn = fc.direction === 'KR_TO_EN';
@@ -5495,15 +5400,6 @@ ${prevQaText}
       }
       await pushSharedWorkspaceToFirestore(Date.now());
       showToast('☁️ Firestore 공통 DB에 현재 문장 DB·세션·API 설정이 즉시 동기화되었습니다!', 'success');
-    }
-
-    function openHelpGuideModal() {
-      document.getElementById('helpGuideModal')?.classList.remove('hidden');
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function closeHelpGuideModal() {
-      document.getElementById('helpGuideModal')?.classList.add('hidden');
     }
 
     function toggleMobileSidebar() {
