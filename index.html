@@ -208,7 +208,7 @@
     }
   </style>
 </head>
-<body class="h-full flex flex-col bg-slate-950 text-slate-100 select-none md:select-auto">
+<body class="h-full flex flex-col bg-slate-950 text-slate-100">
 
   <!-- ==================== TOP NAVIGATION BAR (GNB) ==================== -->
   <header class="h-12 lg:h-14 shrink-0 bg-slate-900/95 border-b border-slate-800 px-2.5 lg:px-5 flex items-center justify-between gap-2 z-30">
@@ -584,7 +584,7 @@
     </div>
 
     <!-- 50:50 Vertical Split Container -->
-    <div class="flex-1 flex flex-col min-h-0 select-none">
+    <div class="flex-1 flex flex-col min-h-0">
 
       <!-- TOP 50%: KOREAN PROMPT AREA (De-cluttered for mobile) -->
       <div onclick="handleFlashcardAreaClick()" class="fc-split-half h-1/2 border-b-2 border-slate-800 bg-gradient-to-b from-slate-900/90 to-slate-950 p-3 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative group min-h-0">
@@ -605,7 +605,7 @@
         <!-- Center Korean Sentence (160% Enlarged for Mobile & Desktop; scrolls cleanly on short landscape) -->
         <div class="flex-1 min-h-0 w-full max-w-4xl px-3 py-1 overflow-y-auto flex flex-col items-center">
           <div id="fcTopLabel" class="hidden"></div>
-          <h1 id="fcTopPromptText" class="fc-prompt-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight break-keep">
+          <h1 id="fcTopPromptText" class="fc-prompt-text select-text cursor-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight break-keep">
             문장을 불러오는 중입니다...
           </h1>
         </div>
@@ -615,7 +615,7 @@
       <div onclick="handleFlashcardAreaClick()" class="fc-split-half h-1/2 bg-slate-950 p-3 md:p-8 flex flex-col justify-center items-center text-center cursor-pointer relative overflow-hidden min-h-0">
         
         <!-- Stage 1: Minimal Hidden Cover State -->
-        <div id="fcBottomHiddenState" class="flex flex-col items-center justify-center gap-2 py-2">
+        <div id="fcBottomHiddenState" class="select-none flex flex-col items-center justify-center gap-2 py-2">
           <div class="px-4 py-2 rounded-full bg-slate-900 border border-slate-800 flex items-center gap-2 text-amber-400 text-xs md:text-sm font-bold shadow-inner">
             <i data-lucide="eye" class="w-4 h-4"></i>
             <span>탭하여 정답 확인</span>
@@ -625,10 +625,10 @@
         <!-- Stage 2: Revealed Answer State -->
         <div id="fcBottomRevealedState" class="hidden w-full max-w-4xl flex flex-col items-center justify-between h-full min-h-0">
           <div class="w-full flex-1 min-h-0 py-1 px-3 overflow-y-auto flex flex-col items-center">
-            <h2 id="fcBottomAnswerText" class="fc-prompt-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-emerald-300 leading-tight tracking-tight break-keep">
+            <h2 id="fcBottomAnswerText" class="fc-prompt-text select-text cursor-text my-auto text-[2rem] sm:text-[2.5rem] md:text-[3.25rem] font-extrabold text-emerald-300 leading-tight tracking-tight break-keep">
               English sentence goes here.
             </h2>
-            <p id="fcBottomNotesText" class="mt-2 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl shrink-0"></p>
+            <p id="fcBottomNotesText" class="select-text cursor-text mt-2 text-xs md:text-sm text-slate-400 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 inline-block max-w-2xl shrink-0"></p>
           </div>
 
           <!-- Action Buttons inside Revealed State -->
@@ -659,7 +659,7 @@
         <span>이전</span>
       </button>
 
-      <button onclick="handleFlashcardAreaClick()" id="btnFcMainStep" class="flex-1 max-w-md py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs md:text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/15 transition">
+      <button onclick="handleFlashcardAreaClick(true)" id="btnFcMainStep" class="flex-1 max-w-md py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs md:text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/15 transition">
         <span>정답 확인</span>
       </button>
 
@@ -3546,7 +3546,11 @@ ${prevQaText}
       if (window.lucide) lucide.createIcons();
     }
 
-    function handleFlashcardAreaClick() {
+    function handleFlashcardAreaClick(forceAdvance = false) {
+      if (!forceAdvance) {
+        const selected = window.getSelection ? String(window.getSelection().toString() || '').trim() : '';
+        if (selected) return;
+      }
       const fc = AppState.uiState.flashcard;
       if (fc.deckIds.length === 0) return;
 
