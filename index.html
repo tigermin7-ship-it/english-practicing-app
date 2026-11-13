@@ -2027,20 +2027,29 @@
     }
 
     function buildRoleplaySystemPrompt(session) {
-      return `You are strictly roleplaying as a real-world business partner in a live 1:1 messenger/meeting conversation.
+      let prompt = `You are strictly roleplaying as a real-world business partner in a live 1:1 messenger/meeting conversation.
 
 [PARTNER PROFILE & SCENARIO]
 - Your Name & Role: ${session.partner_name} (${session.partner_persona})
 - Business Situation & User's Goal (Context): ${session.business_context}
-- Difficulty & Tone Level: ${session.difficulty} (Beginner: supportive & clear / Intermediate: realistic professional / Advanced: demanding, sharp, high-stakes negotiation)
+- Difficulty & Tone Level: ${session.difficulty} (Beginner: supportive & clear / Intermediate: realistic professional / Advanced: demanding, sharp, high-stakes negotiation)`;
 
-[ABSOLUTE RULES - VIOLATION WILL BREAK THE APP]
+      if (session.compact_summary && session.compact_summary.summary_kr) {
+        prompt += `\n\n[PREVIOUS COMPACTED CONVERSATION SUMMARY & AGREED CONTEXT]:
+- Summary of Progress so far: ${session.compact_summary.summary_kr}
+- Next Agenda / Focus: ${session.compact_summary.next_steps || 'Continue the meeting naturally based on the summary above.'}
+Note: Earlier turns have been compacted into this summary. Maintain seamless continuity with this progress without repeating already agreed points.`;
+      }
+
+      prompt += `\n\n[ABSOLUTE RULES - VIOLATION WILL BREAK THE APP]
 1. STAY IN CHARACTER 100%: Never act as an AI assistant, English teacher, or coach.
 2. ZERO CORRECTIONS OR EXPLANATIONS: Never correct the user's grammar, never praise their English, and never explain the situation from a third-person perspective.
 3. 100% SCENARIO FOCUS: Focus strictly and exclusively on the core business agenda, goals, and realistic issues described in [Business Situation & User's Goal]. Never bring up random, off-topic small talk (such as asking about favorite drinks or unrelated personal questions) unless the scenario explicitly calls for it.
 4. PROACTIVE & NATURAL DIALOGUE: Respond naturally in 1 to 3 concise business English sentences, then ALWAYS end with a realistic, context-driven follow-up question, proposal, or business inquiry that directly advances the agenda in [Business Situation & User's Goal].
 5. IF STARTING THE CONVERSATION: Greet the user briefly in character and immediately open the core business discussion or ask a sharp, relevant question directly addressing the main agenda in [Business Situation & User's Goal].
 6. PLAIN SPOKEN TEXT ONLY: Output pure spoken English sentences only. Do NOT use Markdown formatting such as **bold**, *italics*, or bullet lists.`;
+
+      return prompt;
     }
 
     function buildFeedbackSystemPrompt(session, prevPartnerMsg, userMsg) {
@@ -2405,7 +2414,13 @@
       const systemPrompt = buildRoleplaySystemPrompt(session);
       const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
 
-      const historyMessages = (session.messages || []).slice(-10);
+      let historyMessages;
+      if (session.compact_summary && session.compact_summary.compacted_at) {
+        const afterCompacted = (session.messages || []).filter(m => (m.timestamp || 0) > session.compact_summary.compacted_at);
+        historyMessages = afterCompacted.length > 0 ? afterCompacted.slice(-8) : (session.messages || []).slice(-4);
+      } else {
+        historyMessages = (session.messages || []).slice(-10);
+      }
       const provider = AppState.settings.provider || 'gemini';
       const model = AppState.settings.model || 'auto';
 
@@ -2601,6 +2616,77 @@ ${prevQaText}
           })
         });
         if (!res.ok) throw new Error(`OpenAI 추가 질문 API 오류 (${res.status})`);
+        const data = await res.json();
+        const rawJson = data?.choices?.[0]?.message?.content || '{}';
+        return JSON.parse(rawJson);
+      }
+    }
+
+    function buildConversationCompactPrompt(session) {
+      const dialogueText = (session.messages || []).map((m, idx) => {
+        const speaker = m.role === 'partner' ? (session.partner_name || 'Partner') : 'User (Me)';
+        const fbAlternative = m.feedback?.better_alternative ? ` [Coach Better Alternative: "${m.feedback.better_alternative}"]` : '';
+        return `[#${idx + 1} ${speaker}]: ${m.text}${fbAlternative}`;
+      }).join('\n');
+
+      return `You are an expert executive business meeting summarizer and English learning coach.
+Analyze the following English roleplay dialogue, create a concise Korean summary of the progress and agreed points, extract 3 to 5 key polished business English expressions used or recommended, and outline the next agenda. Return ONLY a valid JSON object without markdown code fences.
+
+[BUSINESS ROLEPLAY SCENARIO]
+- Title: ${session?.title || 'Business Roleplay'}
+- Partner: ${session?.partner_name || 'Business Partner'} (${session?.partner_persona || 'Executive'})
+- Business Context & Goal: ${session?.business_context || 'Business Meeting'}
+
+[FULL CONVERSATION DIALOGUE]
+${dialogueText}
+
+[OUTPUT JSON SCHEMA]
+{
+  "summary_kr": "지금까지의 비즈니스 미팅 진행 상황과 합의된 사항을 명확하고 읽기 쉽게 정리한 한국어 요약 (개조식 3~4줄)",
+  "key_expressions": [
+    {
+      "english": "Polished business English expression from the dialogue or coach feedback",
+      "korean": "자연스러운 한국어 뜻"
+    }
+  ],
+  "next_steps": "앞으로 이어갈 논의 주제 또는 다음 발언 과제 (한국어 1~2줄)"
+}`;
+    }
+
+    async function callCompactConversationAI(session) {
+      const prompt = buildConversationCompactPrompt(session);
+      const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
+      const provider = AppState.settings.provider || 'gemini';
+      const model = AppState.settings.model || 'auto';
+
+      if (provider === 'gemini') {
+        const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.25,
+            maxOutputTokens: 1200,
+            responseMimeType: 'application/json'
+          }
+        });
+        const parts = data?.candidates?.[0]?.content?.parts || [];
+        const rawJson = parts.map(p => p.text || '').join('') || '{}';
+        const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        return JSON.parse(cleaned);
+      } else {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model.startsWith('gpt') ? model : 'gpt-4o-mini',
+            messages: [{ role: 'system', content: prompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.25
+          })
+        });
+        if (!res.ok) throw new Error(`OpenAI 대화 압축 API 오류 (${res.status})`);
         const data = await res.json();
         const rawJson = data?.choices?.[0]?.message?.content || '{}';
         return JSON.parse(rawJson);
@@ -2808,6 +2894,78 @@ ${prevQaText}
       if (!msg || !msg.feedback) return;
       msg.feedback.is_details_open = !msg.feedback.is_details_open;
       renderChatMessages(false);
+    }
+
+    let isCompactingActiveSession = false;
+
+    async function compactActiveSessionConversation() {
+      const sess = getActiveSession();
+      if (!sess) return;
+      const count = (sess.messages || []).length;
+      if (count < 4) {
+        showToast('대화가 최소 4개 이상 누적되었을 때 압축할 수 있습니다.', 'info');
+        return;
+      }
+      if (isCompactingActiveSession) return;
+
+      isCompactingActiveSession = true;
+      renderChatMessages(false);
+      showToast('📦 대화를 압축하고 핵심 표현을 추출하는 중입니다...', 'info');
+
+      try {
+        const result = await callCompactConversationAI(sess);
+        sess.compact_summary = {
+          summary_kr: result.summary_kr || '대화 요약이 완료되었습니다.',
+          key_expressions: Array.isArray(result.key_expressions) ? result.key_expressions : [],
+          next_steps: result.next_steps || '',
+          compacted_at: Date.now(),
+          compacted_msg_count: count
+        };
+        sess.is_history_expanded = false;
+        sess.updated_at = Date.now();
+        await saveAppState();
+        renderChatMessages(false);
+        showToast(`대화 ${count}개가 핵심 요약 및 주요 표현으로 압축되었습니다!`, 'success');
+      } catch (err) {
+        console.error('대화 압축 실패:', err);
+        showToast(`대화 압축 실패: ${err.message}`, 'error');
+      } finally {
+        isCompactingActiveSession = false;
+        renderChatMessages(false);
+      }
+    }
+
+    function toggleSessionHistoryExpanded() {
+      const sess = getActiveSession();
+      if (!sess || !sess.compact_summary) return;
+      sess.is_history_expanded = !sess.is_history_expanded;
+      renderChatMessages(false);
+    }
+
+    async function resetSessionCompactSummary() {
+      const sess = getActiveSession();
+      if (!sess || !sess.compact_summary) return;
+      if (!confirm('대화 압축 요약을 해제하고 이전 전체 대화 보기로 돌아가시겠습니까?')) return;
+      delete sess.compact_summary;
+      sess.is_history_expanded = true;
+      sess.updated_at = Date.now();
+      await saveAppState();
+      renderChatMessages(false);
+      showToast('대화 압축이 해제되었습니다.', 'info');
+    }
+
+    async function saveCompactExpressionToDB(eng, kor) {
+      const sess = getActiveSession();
+      if (!eng || !kor) return;
+      const notes = `[/compact 대화 요약 핵심 표현] ${sess?.title || '비즈니스 롤플레잉'}`;
+      upsertFeedbackSentenceToDB(kor, eng, notes, {
+        sessionId: sess?.session_id,
+        sessionTitle: sess?.title,
+        practiceDate: formatLocalDateKey(Date.now())
+      });
+      await saveAppState();
+      renderAll();
+      showToast(`⭐ "${eng}" 표현이 [대화피드백 오답노트]에 저장되었습니다!`, 'success');
     }
 
     async function toggleOrRequestFeedback(msgId, forceRefresh = false) {
@@ -3401,8 +3559,116 @@ ${prevQaText}
         return;
       }
 
+      const cs = sess?.compact_summary;
+      let summaryHeaderHtml = '';
+
+      if (isCompactingActiveSession) {
+        summaryHeaderHtml = `
+          <div class="mb-4 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/50 flex items-center justify-center gap-3 text-xs text-indigo-200 shadow-lg">
+            <div class="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+            <span>AI 엔진이 전체 대화를 분석하여 비즈니스 미팅 요약 및 핵심 표현을 추출하는 중입니다...</span>
+          </div>
+        `;
+      } else if (cs) {
+        const isExpanded = Boolean(sess.is_history_expanded);
+        const expressionsHtml = Array.isArray(cs.key_expressions) && cs.key_expressions.length > 0
+          ? `
+            <div class="space-y-1.5 pt-1">
+              <span class="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                핵심 비즈니스 표현 (알짜 표현 노트)
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                ${cs.key_expressions.map(exp => `
+                  <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/80 flex items-center justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs sm:text-sm font-bold text-emerald-300 truncate">"${escapeHtml(exp.english)}"</p>
+                      <p class="text-[11px] text-amber-200/90 truncate">${escapeHtml(exp.korean)}</p>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button onclick="speakEnglishText(${JSON.stringify(exp.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800" title="발음 듣기">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button onclick="saveCompactExpressionToDB(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, ${JSON.stringify(exp.korean).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800" title="오답노트에 저장">
+                        <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `
+          : '';
+
+        summaryHeaderHtml = `
+          <div class="mb-4 rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-4 shadow-xl space-y-3 text-left">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold flex items-center gap-1">
+                  <i data-lucide="package" class="w-3.5 h-3.5"></i>
+                  비즈니스 대화 압축 요약 (/compact)
+                </span>
+                <span class="text-[11px] text-slate-400 font-mono font-semibold">대화 ${cs.compacted_msg_count || messages.length}개 압축됨</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="toggleSessionHistoryExpanded()" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition">
+                  <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5"></i>
+                  <span>${isExpanded ? '이전 대화 접기' : '이전 대화 보기'}</span>
+                </button>
+                <button onclick="resetSessionCompactSummary()" class="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition" title="대화 압축 해제">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <span class="text-xs font-bold text-indigo-300 flex items-center gap-1">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                미팅 진행 상황 및 합의 내용
+              </span>
+              <div class="text-xs md:text-sm text-slate-200 leading-relaxed bg-slate-950/80 rounded-xl p-3 border border-slate-800 whitespace-pre-line">
+                ${escapeHtml(cs.summary_kr)}
+              </div>
+            </div>
+
+            ${expressionsHtml}
+
+            ${cs.next_steps ? `
+              <div class="pt-1 text-xs text-slate-300 flex items-start gap-1.5">
+                <strong class="text-amber-300 shrink-0">🎯 다음 단계:</strong>
+                <span>${escapeHtml(cs.next_steps)}</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else if (messages.length >= 4) {
+        summaryHeaderHtml = `
+          <div class="flex items-center justify-between gap-2 p-2.5 mb-3 rounded-xl bg-slate-900/60 border border-indigo-500/20 text-xs">
+            <span class="text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-indigo-400"></i>
+              대화가 ${messages.length}개 누적되었습니다.
+            </span>
+            <button onclick="compactActiveSessionConversation()" class="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-200 font-bold text-xs flex items-center gap-1.5 transition active:scale-95">
+              <i data-lucide="package" class="w-3.5 h-3.5"></i>
+              <span>대화 압축 (/compact)</span>
+            </button>
+          </div>
+        `;
+      }
+
+      let visibleMessages = messages;
+      let dividerHtml = '';
+      if (cs && !sess.is_history_expanded) {
+        visibleMessages = messages.filter(m => (m.timestamp || 0) > cs.compacted_at);
+        if (visibleMessages.length === 0) {
+          dividerHtml = `<div class="text-center py-6 text-xs text-slate-400 font-medium bg-slate-900/30 rounded-2xl border border-slate-800/50 my-2">💡 이전 대화가 위 요약 카드에 안전하게 압축되었습니다. 새로운 질문이나 답변을 아래에 입력하여 자연스럽게 이어가세요.</div>`;
+        }
+      } else if (cs && sess.is_history_expanded) {
+        dividerHtml = `<div class="text-center my-3 text-[11px] text-slate-500 font-medium">▼ 이전 전체 대화 기록 (${messages.length}개) ▼</div>`;
+      }
+
       const initials = getAvatarInitials(sess.partner_name);
-      container.innerHTML = messages.map(msg => {
+      const messagesHtml = visibleMessages.map(msg => {
         const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
         if (msg.role === 'partner') {
@@ -3659,6 +3925,8 @@ ${prevQaText}
           `;
         }
       }).join('');
+
+      container.innerHTML = summaryHeaderHtml + dividerHtml + messagesHtml;
 
       if (window.lucide) lucide.createIcons();
       if (scrollToBottom) {
