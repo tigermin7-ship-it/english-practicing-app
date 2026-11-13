@@ -2771,6 +2771,45 @@ ${prevQaText}
       }
     }
 
+    async function deleteChatMessage(msgId) {
+      const sess = getActiveSession();
+      if (!sess || !Array.isArray(sess.messages)) return;
+      const target = sess.messages.find(m => m.msg_id === msgId);
+      if (!target) return;
+      if (!confirm('이 말풍선을 삭제하시겠습니까? (오답노트에 저장된 문장은 유지됩니다)')) return;
+      sess.messages = sess.messages.filter(m => m.msg_id !== msgId);
+      sess.updated_at = Date.now();
+      await saveAppState();
+      renderChatMessages(false);
+      showToast('말풍선이 삭제되었습니다.', 'info');
+    }
+
+    async function rollbackChatFromMessage(msgId) {
+      const sess = getActiveSession();
+      if (!sess || !Array.isArray(sess.messages)) return;
+      const idx = sess.messages.findIndex(m => m.msg_id === msgId);
+      if (idx === -1) return;
+      const count = sess.messages.length - (idx + 1);
+      if (count <= 0) {
+        showToast('이 메시지 이후의 대화 내역이 없습니다.', 'info');
+        return;
+      }
+      if (!confirm(`이 메시지 이후의 대화 ${count}개를 모두 삭제하고 이 시점부터 다시 대화를 전개하시겠습니까?`)) return;
+      sess.messages = sess.messages.slice(0, idx + 1);
+      sess.updated_at = Date.now();
+      await saveAppState();
+      renderChatMessages(true);
+      showToast(`이후 대화 ${count}개가 삭제되었습니다. 새로운 방향으로 대화해 보세요.`, 'success');
+    }
+
+    function toggleFeedbackDetails(msgId) {
+      const sess = getActiveSession();
+      const msg = sess?.messages?.find(m => m.msg_id === msgId);
+      if (!msg || !msg.feedback) return;
+      msg.feedback.is_details_open = !msg.feedback.is_details_open;
+      renderChatMessages(false);
+    }
+
     async function toggleOrRequestFeedback(msgId, forceRefresh = false) {
       const session = getActiveSession();
       if (!session) return;
@@ -3373,11 +3412,17 @@ ${prevQaText}
                 ${escapeHtml(initials)}
               </div>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
+                <div class="flex items-center gap-1.5 mb-1">
                   <span class="text-xs font-bold text-slate-300">${escapeHtml(sess.partner_name)}</span>
                   <span class="text-[10px] text-slate-500">${timeStr}</span>
-                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="p-1.5 min-w-[32px] min-h-[32px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
-                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 이후 대화 모두 삭제하고 여기서부터 다시 대화" aria-label="이후 대화 삭제">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="deleteChatMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 삭제" aria-label="메시지 삭제">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
                 <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm">
@@ -3427,11 +3472,6 @@ ${prevQaText}
                     </button>
                   </div>
 
-                  <div class="space-y-2 text-sm">
-                    <p class="text-slate-200 leading-relaxed"><strong class="text-indigo-300">• 평가:</strong> ${escapeHtml(fb.evaluation)}</p>
-                    ${fb.nuance_tip ? `<p class="text-slate-400 leading-relaxed"><strong class="text-amber-300">• 뉘앙스 팁:</strong> ${escapeHtml(fb.nuance_tip)}</p>` : ''}
-                  </div>
-
                   <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2">
                     ${
                       fb.is_editing
@@ -3474,6 +3514,27 @@ ${prevQaText}
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  <!-- Collapsible Korean Coaching Details (Nuance Tip & Evaluation) -->
+                  <div class="space-y-1.5">
+                    <button onclick="toggleFeedbackDetails('${escapeHtml(msg.msg_id)}')" class="w-full py-1.5 px-3 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 text-[11px] font-medium text-slate-400 hover:text-slate-200 flex items-center justify-between transition" title="한글 해설 접기/펼치기">
+                      <span class="flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>코칭 한글 해설 (상세 평가·뉘앙스 팁)</span>
+                      </span>
+                      <span class="text-slate-500 text-[10px]">${fb.is_details_open ? '접기 ▲' : '펼치기 ▼'}</span>
+                    </button>
+                    ${
+                      fb.is_details_open
+                        ? `
+                          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2 text-xs md:text-sm text-slate-300 transition-all">
+                            <p class="leading-relaxed"><strong class="text-indigo-300">• 평가:</strong> ${escapeHtml(fb.evaluation)}</p>
+                            ${fb.nuance_tip ? `<p class="leading-relaxed"><strong class="text-amber-300">• 뉘앙스 팁:</strong> ${escapeHtml(fb.nuance_tip)}</p>` : ''}
+                          </div>
+                        `
+                        : ''
+                    }
                   </div>
 
                   <!-- Follow-up Q&A Section Inside Coaching Feedback -->
@@ -3573,8 +3634,8 @@ ${prevQaText}
                 <div class="inline-block text-left rounded-2xl rounded-tr-xs bg-indigo-600 text-white px-4 py-3 text-[15.5px] md:text-base font-bold leading-relaxed shadow-md">
                   ${escapeHtml(msg.text)}
                 </div>
-                <div class="mt-1.5 flex items-center justify-end gap-2">
-                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-900">
+                <div class="mt-1.5 flex items-center justify-end gap-1.5">
+                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-900 transition">
                     <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                     <span>내 문장 듣기</span>
                   </button>
@@ -3584,6 +3645,12 @@ ${prevQaText}
                       : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
                   }">
                     ${fbBtnLabel}
+                  </button>
+                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 발언 이후 대화 모두 삭제하고 여기서부터 다시 대화" aria-label="이후 대화 삭제">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="deleteChatMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 삭제" aria-label="메시지 삭제">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
               </div>
