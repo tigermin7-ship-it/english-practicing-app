@@ -2622,6 +2622,74 @@ ${prevQaText}
       }
     }
 
+    function buildPartnerExpressionCoachPrompt(session, partnerMsg, selectedPhrase, userQuestion) {
+      return `You are an expert Executive Business & Practical English Coach.
+The user is studying native English expressions used by their AI business roleplay partner (${session?.partner_name || 'Partner'}).
+The user has singled out a specific phrase or sentence from the partner's dialogue and has a question about its nuance, formality, usage, or alternative expressions.
+
+[CONVERSATION CONTEXT]
+- Scenario: ${session?.title || 'Business Roleplay'}
+- Partner Persona: ${session?.partner_name || 'Partner'} (${session?.partner_persona || 'Executive'})
+- Business Goal / Context: ${session?.business_context || 'Business Meeting'}
+- Full Partner Statement: "${partnerMsg}"
+- Target Phrase / Expression User Selected: "${selectedPhrase || partnerMsg}"
+- User's Question: "${userQuestion}"
+
+[COACHING GOALS]
+1. Clearly explain the meaning, business nuance, and level of formality of the selected expression in Korean.
+2. Provide a practical polished alternative or situational usage tip in business contexts.
+3. Return ONLY a valid JSON object matching the schema below without markdown code fences.
+
+[OUTPUT JSON SCHEMA]
+{
+  "target_phrase": "선택된 핵심 어구 또는 문장",
+  "korean_meaning": "선택된 어구/문장의 정확하고 자연스러운 한국어 비즈니스 해석 (오답노트/표현노트에 저장될 1줄 뜻)",
+  "answer": "사용자의 질문에 대해 원어민 시각에서 명쾌하고 친절하게 설명하는 코칭 해설 (한국어, 2~4문장)",
+  "recommended_alternative_en": "비즈니스 실무에서 함께 쓰거나 대안으로 활용하기 좋은 세련된 추천 영어 문장/표현 (필요 시, 없으면 빈 문자열 \"\")",
+  "recommended_alternative_kr": "추천 영어 문장의 자연스러운 한국어 해석 (없으면 빈 문자열 \"\")"
+}`;
+    }
+
+    async function callPartnerExpressionCoachAI(session, partnerMsg, selectedPhrase, userQuestion) {
+      const prompt = buildPartnerExpressionCoachPrompt(session, partnerMsg, selectedPhrase, userQuestion);
+      const apiKey = (AppState.settings.apiKey || '').trim() || DEFAULT_FIREBASE_CONFIG.apiKey;
+      const provider = AppState.settings.provider || 'gemini';
+      const model = AppState.settings.model || 'auto';
+
+      if (provider === 'gemini') {
+        const data = await callGeminiWithAutoModelDiscovery(apiKey, model, {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1024,
+            responseMimeType: 'application/json'
+          }
+        });
+        const parts = data?.candidates?.[0]?.content?.parts || [];
+        const rawJson = parts.map(p => p.text || '').join('') || '{}';
+        const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+        return JSON.parse(cleaned);
+      } else {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model.startsWith('gpt') ? model : 'gpt-4o-mini',
+            messages: [{ role: 'system', content: prompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.4
+          })
+        });
+        if (!res.ok) throw new Error(`OpenAI 코칭 질문 API 오류 (${res.status})`);
+        const data = await res.json();
+        const rawJson = data?.choices?.[0]?.message?.content || '{}';
+        return JSON.parse(rawJson);
+      }
+    }
+
     function buildConversationCompactPrompt(session) {
       const dialogueText = (session.messages || []).map((m, idx) => {
         const speaker = m.role === 'partner' ? (session.partner_name || 'Partner') : 'User (Me)';
@@ -3197,6 +3265,259 @@ ${dialogueText}
       showToast('⭐ 추가 질문에서 추천된 표현이 [대화피드백 오답노트]에 저장되었습니다!', 'success');
     }
 
+    function togglePartnerCoachPanel(msgId) {
+      const sess = getActiveSession();
+      const msg = sess?.messages?.find(m => m.msg_id === msgId);
+      if (!msg) return;
+
+      const sel = window.getSelection ? window.getSelection().toString().trim() : '';
+      if (sel && sel.length < 200) {
+        msg.coach_selected_phrase = sel;
+      }
+      msg.coach_open = !msg.coach_open;
+      renderChatMessages(false);
+    }
+
+    async function savePartnerSelectedPhraseToDB(msgId) {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      if (!msg) return;
+
+      const phraseInput = document.getElementById(`partnerPhraseInput_${msgId}`);
+      let phrase = (phraseInput?.value || msg.coach_selected_phrase || '').trim();
+      if (!phrase) {
+        const sel = window.getSelection ? window.getSelection().toString().trim() : '';
+        if (sel && sel.length < 200) {
+          phrase = sel;
+        } else {
+          phrase = msg.text.trim();
+        }
+      }
+
+      if (msg.saved_to_db && !phraseInput?.value) {
+        removeFeedbackSentenceFromDB(phrase);
+        msg.saved_to_db = false;
+        renderAll();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
+        showToast('☆ [대화피드백 오답노트]에서 저장 해제되었습니다.', 'info');
+        return;
+      }
+
+      const lastQa = Array.isArray(msg.coach_qa_threads) && msg.coach_qa_threads.length > 0
+        ? msg.coach_qa_threads[msg.coach_qa_threads.length - 1]
+        : null;
+      const kor = lastQa?.suggested_korean || `AI 파트너(${session.partner_name || 'Partner'}) 원어민 표현`;
+      const notes = `[파트너 발언] ${msg.text}${lastQa ? ' | 💡 ' + lastQa.answer : ''}`;
+
+      upsertFeedbackSentenceToDB(kor, phrase, notes, {
+        sessionId: session.session_id,
+        sessionTitle: session.title,
+        practiceDate: formatLocalDateKey(msg.timestamp || Date.now())
+      });
+
+      msg.saved_to_db = true;
+      renderAll();
+      saveAppState().catch(err => console.warn('Background save failed:', err));
+      showToast(`⭐ "${phrase.slice(0, 30)}${phrase.length > 30 ? '...' : ''}" 표현이 오답노트에 저장되었습니다!`, 'success');
+    }
+
+    async function savePartnerQaExpressionToDB(msgId, qaId) {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      const qa = msg?.coach_qa_threads?.find(q => q.qa_id === qaId);
+      if (!qa || !qa.suggested_english) return;
+
+      if (qa.saved_to_db) {
+        removeFeedbackSentenceFromDB(qa.suggested_english);
+        qa.saved_to_db = false;
+        renderAll();
+        saveAppState().catch(err => console.warn('Background save failed:', err));
+        showToast('☆ 코치 추천 표현이 오답노트에서 해제되었습니다.', 'info');
+        return;
+      }
+
+      const notes = `[파트너 표현 코칭: ${qa.question}] ${qa.answer}`;
+      upsertFeedbackSentenceToDB(qa.suggested_korean || '코치 추천 비즈니스 표현', qa.suggested_english, notes, {
+        sessionId: session.session_id,
+        sessionTitle: session.title,
+        practiceDate: formatLocalDateKey(qa.timestamp || msg.timestamp || Date.now())
+      });
+
+      qa.saved_to_db = true;
+      renderAll();
+      saveAppState().catch(err => console.warn('Background save failed:', err));
+      showToast('⭐ 코치 추천 표현이 [대화피드백 오답노트]에 저장되었습니다!', 'success');
+    }
+
+    function askPartnerCoachQuick(msgId, type) {
+      const phraseInput = document.getElementById(`partnerPhraseInput_${msgId}`);
+      const sess = getActiveSession();
+      const msg = sess?.messages?.find(m => m.msg_id === msgId);
+      const phrase = (phraseInput?.value || msg?.coach_selected_phrase || '').trim();
+      const targetLabel = phrase ? `선택한 표현 "${phrase}"` : '이 문장';
+
+      let q = '';
+      if (type === 'nuance') {
+        q = `${targetLabel}의 정확한 비즈니스 뉘앙스와 자연스러운 한국어 해석을 설명해줘.`;
+      } else if (type === 'formality') {
+        q = `${targetLabel}은 비즈니스 미팅에서 얼마나 격식(Formal) 있는 표현인지, 실무 이메일이나 대화에서 써도 되는지 알려줘.`;
+      } else if (type === 'alternative') {
+        q = `${targetLabel} 대신 쓸 수 있는 더 세련되거나 상황별 다른 추천 대안 표현을 알려줘.`;
+      }
+
+      const qInput = document.getElementById(`partnerCoachQInput_${msgId}`);
+      if (qInput) qInput.value = q;
+      submitPartnerCoachQuestion(msgId, q);
+    }
+
+    function handlePartnerCoachKeydown(event, msgId) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        submitPartnerCoachQuestion(msgId);
+      }
+    }
+
+    async function submitPartnerCoachQuestion(msgId, explicitQ = '') {
+      const session = getActiveSession();
+      const msg = session?.messages?.find(m => m.msg_id === msgId);
+      if (!msg || msg.coach_loading) return;
+
+      const phraseInput = document.getElementById(`partnerPhraseInput_${msgId}`);
+      const qInput = document.getElementById(`partnerCoachQInput_${msgId}`);
+      const selectedPhrase = (phraseInput?.value || msg.coach_selected_phrase || '').trim();
+      const questionText = explicitQ || (qInput?.value || '').trim();
+
+      if (!questionText) {
+        showToast('코치에게 물어볼 질문 내용을 입력하거나 퀵 질문 버튼을 눌러주세요.', 'error');
+        return;
+      }
+
+      if (!Array.isArray(msg.coach_qa_threads)) {
+        msg.coach_qa_threads = [];
+      }
+      msg.coach_loading = true;
+      renderChatMessages(false);
+
+      try {
+        const res = await callPartnerExpressionCoachAI(session, msg.text, selectedPhrase, questionText);
+        msg.coach_qa_threads.push({
+          qa_id: 'pqa_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+          question: questionText,
+          target_phrase: res.target_phrase || selectedPhrase,
+          answer: (res.answer || '').trim() || '표현에 대한 코칭 설명입니다.',
+          suggested_korean: (res.recommended_alternative_kr || res.korean_meaning || '').trim(),
+          suggested_english: (res.recommended_alternative_en || '').trim(),
+          saved_to_db: false,
+          timestamp: Date.now()
+        });
+        msg.coach_loading = false;
+        await saveAppState();
+        renderChatMessages(false);
+      } catch (err) {
+        msg.coach_loading = false;
+        renderChatMessages(false);
+        showToast('코치 질문 답변 생성 실패: ' + err.message, 'error');
+      }
+    }
+
+    function renderPartnerCoachCardHtml(msg) {
+      if (!msg.coach_open) return '';
+
+      const qaThreads = Array.isArray(msg.coach_qa_threads) ? msg.coach_qa_threads : [];
+      const selectedPhrase = msg.coach_selected_phrase || '';
+
+      return `
+        <div class="mt-2.5 max-w-2xl rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-4 shadow-xl space-y-3 text-left">
+          <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
+            <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+              AI 파트너 표현 코칭 & 집중 학습
+            </span>
+            <button onclick="togglePartnerCoachPanel('${escapeHtml(msg.msg_id)}')" class="p-1 text-slate-400 hover:text-slate-200 rounded transition" title="닫기">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Phrase target & Quick Save row -->
+          <div class="space-y-1.5">
+            <label class="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
+              <span>🎯 집중 질문/저장 대상 표현</span>
+              <span class="text-[10px] text-slate-500 font-normal">문장에서 드래그 후 [💬]를 누르면 자동 입력</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <input id="partnerPhraseInput_${escapeHtml(msg.msg_id)}" type="text" value="${escapeHtml(selectedPhrase)}" placeholder="궁금한 단어나 구문 입력 (비어있으면 전체 문장)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs md:text-sm text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+              <button onclick="savePartnerSelectedPhraseToDB('${escapeHtml(msg.msg_id)}')" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shrink-0 transition active:scale-95" title="입력된 표현만 오답노트에 저장">
+                <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                <span>이 표현 저장</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Question Chips -->
+          <div class="space-y-1">
+            <span class="text-[11px] text-slate-400 font-semibold">💡 원클릭 퀵 질문:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'nuance')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
+                뉘앙스 & 해석
+              </button>
+              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'formality')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
+                비즈니스 격식도
+              </button>
+              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'alternative')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
+                세련된 대안 표현
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Question Input -->
+          <div class="flex items-center gap-2 pt-1">
+            <input id="partnerCoachQInput_${escapeHtml(msg.msg_id)}" onkeydown="handlePartnerCoachKeydown(event, '${escapeHtml(msg.msg_id)}')" type="text" placeholder="코치에게 직접 질문하기 (예: 실무 이메일에서도 쓰나요?)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+            <button onclick="submitPartnerCoachQuestion('${escapeHtml(msg.msg_id)}')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shrink-0 transition active:scale-95">
+              질문하기
+            </button>
+          </div>
+
+          ${msg.coach_loading ? `
+            <div class="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/30 flex items-center gap-2 text-xs text-indigo-300">
+              <div class="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0"></div>
+              <span>Executive Coach 엔진이 표현의 비즈니스 뉘앙스를 분석 중입니다...</span>
+            </div>
+          ` : ''}
+
+          <!-- QA Thread History -->
+          ${qaThreads.length > 0 ? `
+            <div class="space-y-2.5 pt-2 border-t border-slate-800">
+              ${qaThreads.map((qa, idx) => `
+                <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800/80 space-y-2 text-xs">
+                  <div class="font-bold text-indigo-300 flex items-start gap-1.5">
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-500/40 shrink-0">Q</span>
+                    <span>${escapeHtml(qa.question)}</span>
+                  </div>
+                  <div class="text-slate-300 leading-relaxed pl-5 whitespace-pre-line border-l-2 border-indigo-500/30">
+                    ${escapeHtml(qa.answer)}
+                  </div>
+                  ${qa.suggested_english ? `
+                    <div class="mt-2 pt-2 border-t border-slate-800/80 pl-5 space-y-1">
+                      ${qa.suggested_korean ? `<div class="text-[11px] font-semibold text-amber-200/90">🇰🇷 ${escapeHtml(qa.suggested_korean)}</div>` : ''}
+                      <div class="text-xs sm:text-sm font-bold text-emerald-300">🇺🇸 "${escapeHtml(qa.suggested_english)}"</div>
+                      <div class="flex items-center gap-1.5 pt-1">
+                        <button onclick="speakEnglishText(${JSON.stringify(qa.suggested_english).replace(/"/g, '&quot;')}, this)" class="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-indigo-300 border border-slate-700" title="발음 듣기">
+                          <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="savePartnerQaExpressionToDB('${escapeHtml(msg.msg_id)}', '${escapeHtml(qa.qa_id)}')" class="p-1 rounded-lg ${qa.saved_to_db ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500 text-slate-950 font-bold'} transition" title="${qa.saved_to_db ? '오답노트 저장됨' : '이 추천 표현도 오답노트에 저장'}">
+                          <i data-lucide="star" class="w-3.5 h-3.5 ${qa.saved_to_db ? 'fill-current' : ''}"></i>
+                        </button>
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
     /*************************************************************************
      * 7. UI RENDERING & MULTI-SESSION MANAGEMENT
      *************************************************************************/
@@ -3581,15 +3902,15 @@ ${dialogueText}
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 ${cs.key_expressions.map(exp => `
                   <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800/80 flex items-center justify-between gap-2">
-                    <div class="min-w-0 flex-1">
-                      <p class="text-xs sm:text-sm font-bold text-emerald-300 truncate">"${escapeHtml(exp.english)}"</p>
-                      <p class="text-[11px] text-amber-200/90 truncate">${escapeHtml(exp.korean)}</p>
+                    <div class="min-w-0 flex-1 select-text">
+                      <p class="text-xs sm:text-sm font-bold text-emerald-300 break-words leading-relaxed select-text">"${escapeHtml(exp.english)}"</p>
+                      <p class="text-[11px] text-amber-200/90 break-words leading-normal select-text mt-0.5">${escapeHtml(exp.korean)}</p>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                      <button onclick="speakEnglishText(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, this)" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800" title="발음 듣기">
+                      <button onclick="speakEnglishText(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, this)" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition" title="발음 듣기">
                         <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                       </button>
-                      <button onclick="saveCompactExpressionToDB(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, ${JSON.stringify(exp.korean).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800" title="오답노트에 저장">
+                      <button onclick="saveCompactExpressionToDB(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, ${JSON.stringify(exp.korean).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition" title="오답노트에 저장">
                         <i data-lucide="star" class="w-3.5 h-3.5"></i>
                       </button>
                     </div>
@@ -3684,16 +4005,23 @@ ${dialogueText}
                   <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}', this)" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
                     <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 이후 대화 모두 삭제하고 여기서부터 다시 대화" aria-label="이후 대화 삭제">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <button onclick="togglePartnerCoachPanel('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg ${msg.coach_open ? 'text-indigo-300 bg-indigo-950/60 border border-indigo-500/40' : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-900'} active:scale-95 transition flex items-center justify-center" title="코치에게 이 문장/표현 질문하기" aria-label="코치 질문">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="savePartnerSelectedPhraseToDB('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg ${msg.saved_to_db ? 'text-amber-400' : 'text-slate-400 hover:text-amber-300 hover:bg-slate-900'} active:scale-95 transition flex items-center justify-center" title="${msg.saved_to_db ? '오답노트에 저장됨' : '선택한 표현 또는 전체 문장 오답노트 저장'}" aria-label="표현 저장">
+                    <i data-lucide="star" class="w-3.5 h-3.5 ${msg.saved_to_db ? 'fill-current' : ''}"></i>
+                  </button>
+                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 지점부터 대화 다시 시작" aria-label="이 지점부터 대화 다시 시작">
+                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
                   </button>
                   <button onclick="deleteChatMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 삭제" aria-label="메시지 삭제">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
-                <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm">
+                <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm select-text">
                   ${escapeHtml(msg.text)}
                 </div>
+                ${renderPartnerCoachCardHtml(msg)}
               </div>
             </div>
           `;
@@ -3912,8 +4240,8 @@ ${dialogueText}
                   }">
                     ${fbBtnLabel}
                   </button>
-                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 발언 이후 대화 모두 삭제하고 여기서부터 다시 대화" aria-label="이후 대화 삭제">
-                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 지점부터 대화 다시 시작" aria-label="이 지점부터 대화 다시 시작">
+                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
                   </button>
                   <button onclick="deleteChatMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 삭제" aria-label="메시지 삭제">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -4435,25 +4763,89 @@ ${dialogueText}
       return globalAudioCtx;
     }
 
-    function setTtsButtonState(btn, isPlaying) {
-      if (activeTtsBtn && activeTtsBtn !== btn) {
+    let isTtsPlaying = false;
+
+    function stopAllTtsAudio() {
+      ttsPlayToken += 1;
+      if (ttsCancelTimer) {
+        clearTimeout(ttsCancelTimer);
+        ttsCancelTimer = null;
+      }
+      if (ttsWatchdogTimer) {
+        clearTimeout(ttsWatchdogTimer);
+        ttsWatchdogTimer = null;
+      }
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (_) {}
+        activeAudioSource = null;
+      }
+      const audioEl = document.getElementById('ttsFallbackAudio');
+      if (audioEl) {
         try {
-          activeTtsBtn.classList.remove('text-indigo-400', 'animate-pulse', 'scale-110');
+          audioEl.pause();
+          audioEl.currentTime = 0;
         } catch (_) {}
+      }
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
+      }
+      if (activeTtsBtn) {
+        resetTtsButtonUi(activeTtsBtn);
         activeTtsBtn = null;
       }
-      if (!btn) return;
+      isTtsPlaying = false;
+    }
+
+    function setTtsButtonState(btn, isPlaying) {
+      if (activeTtsBtn && activeTtsBtn !== btn) {
+        resetTtsButtonUi(activeTtsBtn);
+        activeTtsBtn = null;
+      }
+      if (!btn) {
+        isTtsPlaying = Boolean(isPlaying);
+        return;
+      }
       if (isPlaying) {
         activeTtsBtn = btn;
+        isTtsPlaying = true;
         try {
           btn.classList.add('text-indigo-400', 'animate-pulse', 'scale-110');
+          btn.title = '재생 정지 (클릭 시 멈춤)';
+          btn.setAttribute('aria-label', '재생 정지');
+          const iconEl = btn.querySelector('svg, i');
+          if (iconEl && !btn.dataset.prevIconHtml) {
+            btn.dataset.prevIconHtml = iconEl.outerHTML;
+            const cls = iconEl.getAttribute('class') || 'w-3.5 h-3.5';
+            btn.innerHTML = `<i data-lucide="square" class="${cls}"></i>`;
+            if (window.lucide) lucide.createIcons({ root: btn });
+          }
         } catch (_) {}
       } else {
-        try {
-          btn.classList.remove('text-indigo-400', 'animate-pulse', 'scale-110');
-        } catch (_) {}
-        if (activeTtsBtn === btn) activeTtsBtn = null;
+        resetTtsButtonUi(btn);
+        if (activeTtsBtn === btn) {
+          activeTtsBtn = null;
+          isTtsPlaying = false;
+        }
       }
+    }
+
+    function resetTtsButtonUi(btn) {
+      if (!btn) return;
+      try {
+        btn.classList.remove('text-indigo-400', 'animate-pulse', 'scale-110');
+        btn.title = '발음 듣기';
+        btn.setAttribute('aria-label', '발음 듣기');
+        if (btn.dataset.prevIconHtml) {
+          btn.innerHTML = btn.dataset.prevIconHtml;
+          delete btn.dataset.prevIconHtml;
+          if (window.lucide) lucide.createIcons({ root: btn });
+        } else {
+          const iconEl = btn.querySelector('svg, i');
+          const cls = iconEl ? (iconEl.getAttribute('class') || 'w-3.5 h-3.5') : 'w-3.5 h-3.5';
+          btn.innerHTML = `<i data-lucide="volume-2" class="${cls}"></i>`;
+          if (window.lucide) lucide.createIcons({ root: btn });
+        }
+      } catch (_) {}
     }
 
     function primeAudioEngineSync() {
@@ -4718,15 +5110,28 @@ ${dialogueText}
       const rawClean = String(text || '').trim();
       if (!rawClean) return;
 
+      const btn = triggerEl || (window.event?.target?.closest ? window.event.target.closest('button') : null);
+
+      // TOGGLE CHECK: If user clicks the currently active playing button, stop playback immediately
+      if (isTtsPlaying && activeTtsBtn && btn && activeTtsBtn === btn) {
+        stopAllTtsAudio();
+        return;
+      }
+
+      // If another sound was playing, stop it cleanly first
+      if (isTtsPlaying) {
+        stopAllTtsAudio();
+      }
+
       // 1. Prime audio engine synchronously within the touch gesture call stack
       primeAudioEngineSync();
 
-      // 2. Resolve button element for immediate visual feedback
-      const btn = triggerEl || (window.event?.target?.closest ? window.event.target.closest('button') : null);
+      // 2. Resolve button element for immediate visual feedback (toggle to square/playing state)
       setTtsButtonState(btn, true);
 
       ttsPlayToken += 1;
       const myToken = ttsPlayToken;
+      isTtsPlaying = true;
 
       if (ttsCancelTimer) {
         clearTimeout(ttsCancelTimer);
