@@ -644,7 +644,7 @@
 
           <!-- Action Buttons inside Revealed State -->
           <div class="flex flex-wrap items-center justify-center gap-2 pt-1 shrink-0" onclick="event.stopPropagation()">
-            <button onclick="speakCurrentFlashcard()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
+            <button onclick="speakCurrentFlashcard(this)" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs md:text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 transition">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
               <span>발음<span class="hidden md:inline"> (S)</span></span>
             </button>
@@ -1058,7 +1058,7 @@
 
   <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-  <audio id="ttsFallbackAudio" playsinline preload="none" class="hidden"></audio>
+  <audio id="ttsFallbackAudio" playsinline preload="auto" class="hidden"></audio>
 
   <!-- ==================== APPLICATION LOGIC (VANILLA JS) ==================== -->
   <script>
@@ -3586,7 +3586,7 @@ ${dialogueText}
                       <p class="text-[11px] text-amber-200/90 truncate">${escapeHtml(exp.korean)}</p>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
-                      <button onclick="speakEnglishText(${JSON.stringify(exp.english).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800" title="발음 듣기">
+                      <button onclick="speakEnglishText(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, this)" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800" title="발음 듣기">
                         <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                       </button>
                       <button onclick="saveCompactExpressionToDB(${JSON.stringify(exp.english).replace(/"/g, '&quot;')}, ${JSON.stringify(exp.korean).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800" title="오답노트에 저장">
@@ -3681,7 +3681,7 @@ ${dialogueText}
                 <div class="flex items-center gap-1.5 mb-1">
                   <span class="text-xs font-bold text-slate-300">${escapeHtml(sess.partner_name)}</span>
                   <span class="text-[10px] text-slate-500">${timeStr}</span>
-                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
+                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}', this)" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
                     <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                   </button>
                   <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 메시지 이후 대화 모두 삭제하고 여기서부터 다시 대화" aria-label="이후 대화 삭제">
@@ -3761,7 +3761,7 @@ ${dialogueText}
 
                     <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
                       <div class="flex items-center gap-2 w-full">
-                        <button onclick="speakFeedbackAlternative('${escapeHtml(msg.msg_id)}')" class="flex-1 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 flex items-center justify-center transition active:scale-95" title="추천 문장 발음 듣기" aria-label="추천 문장 발음 듣기">
+                        <button onclick="speakFeedbackAlternative('${escapeHtml(msg.msg_id)}', this)" class="flex-1 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 flex items-center justify-center transition active:scale-95" title="추천 문장 발음 듣기" aria-label="추천 문장 발음 듣기">
                           <i data-lucide="volume-2" class="w-4 h-4"></i>
                         </button>
                         <button onclick="toggleFeedbackInlineEdit('${escapeHtml(msg.msg_id)}')" class="flex-1 py-2 rounded-lg ${
@@ -3831,7 +3831,7 @@ ${dialogueText}
                                         ${qa.suggested_korean ? `<div class="text-[13px] sm:text-sm text-amber-200/90 font-semibold">🇰🇷 ${escapeHtml(qa.suggested_korean)}</div>` : ''}
                                         <div class="text-[15px] sm:text-base font-bold text-emerald-300">🇺🇸 "${escapeHtml(qa.suggested_english)}"</div>
                                         <div class="flex items-center gap-2 pt-1">
-                                          <button onclick="speakFollowUpSuggestion('${escapeHtml(msg.msg_id)}', '${escapeHtml(qa.qa_id)}')" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 flex items-center justify-center transition active:scale-95" title="추천 표현 발음 듣기" aria-label="추천 표현 발음 듣기">
+                                          <button onclick="speakFollowUpSuggestion('${escapeHtml(msg.msg_id)}', '${escapeHtml(qa.qa_id)}', this)" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 flex items-center justify-center transition active:scale-95" title="추천 표현 발음 듣기" aria-label="추천 표현 발음 듣기">
                                             <i data-lucide="volume-2" class="w-4 h-4"></i>
                                           </button>
                                           ${
@@ -3901,7 +3901,7 @@ ${dialogueText}
                   ${escapeHtml(msg.text)}
                 </div>
                 <div class="mt-1.5 flex items-center justify-end gap-1.5">
-                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}')" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-900 transition">
+                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}', this)" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-900 transition">
                     <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                     <span>내 문장 듣기</span>
                   </button>
@@ -4394,15 +4394,15 @@ ${dialogueText}
       }
     }
 
-    function speakCurrentFlashcard() {
+    function speakCurrentFlashcard(triggerEl = null) {
       const item = getCurrentFlashcardItem();
       if (!item) return;
       const pureEng = String(item.english || '').split('>>')[0].trim();
-      speakEnglishText(pureEng || item.english);
+      speakEnglishText(pureEng || item.english, triggerEl);
     }
 
     /*************************************************************************
-     * 9. WEB SPEECH API (TTS PRONUNCIATION + iOS AUDIO FALLBACK & STT)
+     * 9. WEB SPEECH API (TTS PRONUNCIATION + DUAL AUDIO CONTEXT & MOBILE FALLBACK)
      *************************************************************************/
     let cachedTtsVoice = null;
     let activeUtterance = null;
@@ -4410,34 +4410,108 @@ ${dialogueText}
     let ttsWatchdogTimer = null;
     let ttsPlayToken = 0;
     let ttsFallbackAudioUnlocked = false;
-    let preferAudioFallbackOnIOS = false;
     let silentWavBlobUrl = null;
     const ttsAudioBlobCache = new Map();
 
+    let globalAudioCtx = null;
+    let activeAudioSource = null;
+    let activeTtsBtn = null;
+
     function isIOSDevice() {
+      if (typeof navigator === 'undefined') return false;
       return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     }
 
-    function speakSessionMessage(msgId) {
-      const sess = getActiveSession();
-      const msg = sess?.messages?.find(m => m.msg_id === msgId);
-      if (msg?.text) speakEnglishText(msg.text);
+    let preferAudioFallbackOnIOS = isIOSDevice();
+
+    function getGlobalAudioContext() {
+      if (!globalAudioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          globalAudioCtx = new AudioCtx();
+        }
+      }
+      return globalAudioCtx;
     }
 
-    function speakFeedbackAlternative(msgId) {
+    function setTtsButtonState(btn, isPlaying) {
+      if (activeTtsBtn && activeTtsBtn !== btn) {
+        try {
+          activeTtsBtn.classList.remove('text-indigo-400', 'animate-pulse', 'scale-110');
+        } catch (_) {}
+        activeTtsBtn = null;
+      }
+      if (!btn) return;
+      if (isPlaying) {
+        activeTtsBtn = btn;
+        try {
+          btn.classList.add('text-indigo-400', 'animate-pulse', 'scale-110');
+        } catch (_) {}
+      } else {
+        try {
+          btn.classList.remove('text-indigo-400', 'animate-pulse', 'scale-110');
+        } catch (_) {}
+        if (activeTtsBtn === btn) activeTtsBtn = null;
+      }
+    }
+
+    function primeAudioEngineSync() {
+      // 1. Synchronously unlock Web Audio Context within user tap gesture call stack
+      try {
+        const ctx = getGlobalAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      } catch (_) {}
+
+      // 2. Synchronously prime HTMLAudioElement with digital silence
+      try {
+        const audioEl = document.getElementById('ttsFallbackAudio');
+        if (audioEl) {
+          if (!silentWavBlobUrl) {
+            silentWavBlobUrl = pcmBytesToWavBlobUrl(new Uint8Array(1600), 8000, 1, 16);
+          }
+          if (audioEl.paused) {
+            audioEl.src = silentWavBlobUrl;
+            audioEl.muted = false;
+            const p = audioEl.play();
+            if (p && typeof p.then === 'function') {
+              p.then(() => { ttsFallbackAudioUnlocked = true; }).catch(() => {});
+            } else {
+              ttsFallbackAudioUnlocked = true;
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 3. WebSpeech engine resume on Android/Chrome to clear stuck paused state
+      if ('speechSynthesis' in window) {
+        try {
+          if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+        } catch (_) {}
+      }
+    }
+
+    function speakSessionMessage(msgId, triggerEl = null) {
+      const sess = getActiveSession();
+      const msg = sess?.messages?.find(m => m.msg_id === msgId);
+      if (msg?.text) speakEnglishText(msg.text, triggerEl);
+    }
+
+    function speakFeedbackAlternative(msgId, triggerEl = null) {
       const sess = getActiveSession();
       const msg = sess?.messages?.find(m => m.msg_id === msgId);
       const engInput = document.getElementById(`fbEditEng_${msgId}`);
       const txt = engInput ? engInput.value : msg?.feedback?.better_alternative;
-      if (txt) speakEnglishText(txt);
+      if (txt) speakEnglishText(txt, triggerEl);
     }
 
-    function speakFollowUpSuggestion(msgId, qaId) {
+    function speakFollowUpSuggestion(msgId, qaId, triggerEl = null) {
       const sess = getActiveSession();
       const msg = sess?.messages?.find(m => m.msg_id === msgId);
       const qa = msg?.feedback?.qa_threads?.find(q => q.qa_id === qaId);
-      if (qa?.suggested_english) speakEnglishText(qa.suggested_english);
+      if (qa?.suggested_english) speakEnglishText(qa.suggested_english, triggerEl);
     }
 
     function pcmBytesToWavBlobUrl(pcmBytes, sampleRate = 24000, channels = 1, bitsPerSample = 16) {
@@ -4483,26 +4557,7 @@ ${dialogueText}
     }
 
     function unlockTtsAudioOnGesture(forceReprime = false) {
-      const audioEl = document.getElementById('ttsFallbackAudio');
-      if (!audioEl) return;
-      try {
-        audioEl.pause();
-      } catch (_) {}
-      if (ttsFallbackAudioUnlocked && !forceReprime) return;
-      try {
-        if (!silentWavBlobUrl) {
-          // 16-bit signed zero PCM (0x0000 = digital silence; 8-bit 0x00 causes a DC click/pop)
-          silentWavBlobUrl = pcmBytesToWavBlobUrl(new Uint8Array(1600), 8000, 1, 16);
-        }
-        audioEl.src = silentWavBlobUrl;
-        audioEl.muted = false;
-        const p = audioEl.play();
-        if (p && typeof p.then === 'function') {
-          p.then(() => { ttsFallbackAudioUnlocked = true; }).catch(() => {});
-        } else {
-          ttsFallbackAudioUnlocked = true;
-        }
-      } catch (_) {}
+      primeAudioEngineSync();
     }
 
     async function speakWithGeminiAudioFallback(text, token) {
@@ -4543,24 +4598,66 @@ ${dialogueText}
 
         if (token !== ttsPlayToken) return false;
         if (!blobUrl) {
-          preferAudioFallbackOnIOS = false;
-          showToast('모바일 음성 재생을 시작할 수 없습니다. 무음 모드 해제 및 API 키 설정을 확인하세요.', 'error');
+          setTtsButtonState(activeTtsBtn, false);
+          if (isIOSDevice()) {
+            showToast('💡 음성이 나오지 않을 경우 아이폰 측면 무음 스위치를 확인하세요.', 'info');
+          } else {
+            showToast('음성 데이터를 불러올 수 없습니다. 네트워크 및 설정을 확인하세요.', 'error');
+          }
           return false;
         }
 
-        audioEl.src = blobUrl;
-        audioEl.playbackRate = Number(AppState.settings.ttsSpeed || 1.0);
-        await audioEl.play();
+        const playSpeed = Number(AppState.settings.ttsSpeed || 1.0);
+
+        // Priority 1: High-fidelity Web Audio API playback (immune to mobile autoplay blocks)
+        let playedViaContext = false;
+        try {
+          const ctx = getGlobalAudioContext();
+          if (ctx) {
+            if (ctx.state === 'suspended') {
+              await ctx.resume();
+            }
+            const res = await fetch(blobUrl);
+            const arrayBuf = await res.arrayBuffer();
+            const audioBuf = await ctx.decodeAudioData(arrayBuf);
+            if (token !== ttsPlayToken) return false;
+            if (activeAudioSource) {
+              try { activeAudioSource.stop(); } catch (_) {}
+              activeAudioSource = null;
+            }
+            const srcNode = ctx.createBufferSource();
+            srcNode.buffer = audioBuf;
+            srcNode.playbackRate.value = playSpeed;
+            srcNode.connect(ctx.destination);
+            activeAudioSource = srcNode;
+            srcNode.onended = () => {
+              if (activeAudioSource === srcNode) activeAudioSource = null;
+              setTtsButtonState(activeTtsBtn, false);
+            };
+            srcNode.start(0);
+            playedViaContext = true;
+          }
+        } catch (ctxErr) {
+          console.warn('AudioContext playback fallback to audio element:', ctxErr);
+        }
+
+        // Priority 2: Pre-primed HTMLMediaElement fallback
+        if (!playedViaContext) {
+          audioEl.src = blobUrl;
+          audioEl.playbackRate = playSpeed;
+          audioEl.onended = () => setTtsButtonState(activeTtsBtn, false);
+          audioEl.onerror = () => setTtsButtonState(activeTtsBtn, false);
+          await audioEl.play();
+        }
         return true;
       } catch (err) {
         console.warn('Gemini audio fallback playback failed:', err);
+        setTtsButtonState(activeTtsBtn, false);
         if (err && err.name === 'NotAllowedError') {
           ttsFallbackAudioUnlocked = false;
-          if (isIOSDevice()) preferAudioFallbackOnIOS = true;
-          showToast('모바일 브라우저 정책으로 스피커 버튼을 한 번 더 눌러주세요.', 'info');
+          showToast('모바일 오디오 정책으로 스피커 버튼을 한 번 더 눌러주세요.', 'info');
         } else {
-          preferAudioFallbackOnIOS = false;
-          showToast('음성 재생에 실패했습니다. 다시 눌러 시도해 주세요.', 'error');
+          showToast('음성 재생에 실패했습니다. 다시 시도해 주세요.', 'error');
         }
         return false;
       }
@@ -4573,7 +4670,7 @@ ${dialogueText}
     function warmUpAudioEngineOnFirstInteraction() {
       if (hasGlobalAudioWarmedUp) return;
       hasGlobalAudioWarmedUp = true;
-      unlockTtsAudioOnGesture(true);
+      primeAudioEngineSync();
       if ('speechSynthesis' in window) {
         try {
           if (window.speechSynthesis.paused) window.speechSynthesis.resume();
@@ -4617,9 +4714,16 @@ ${dialogueText}
       }
     }
 
-    function speakEnglishText(text) {
+    function speakEnglishText(text, triggerEl = null) {
       const rawClean = String(text || '').trim();
       if (!rawClean) return;
+
+      // 1. Prime audio engine synchronously within the touch gesture call stack
+      primeAudioEngineSync();
+
+      // 2. Resolve button element for immediate visual feedback
+      const btn = triggerEl || (window.event?.target?.closest ? window.event.target.closest('button') : null);
+      setTtsButtonState(btn, true);
 
       ttsPlayToken += 1;
       const myToken = ttsPlayToken;
@@ -4632,9 +4736,14 @@ ${dialogueText}
         clearTimeout(ttsWatchdogTimer);
         ttsWatchdogTimer = null;
       }
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (_) {}
+        activeAudioSource = null;
+      }
 
       const isIOS = isIOSDevice();
-      const useFallbackDirectly = !('speechSynthesis' in window) || (isIOS && preferAudioFallbackOnIOS);
+      // On iOS devices, physical mute switch silences WebSpeech ambient audio, so default to Gemini Audio media playback
+      const useFallbackDirectly = !('speechSynthesis' in window) || isIOS || preferAudioFallbackOnIOS;
 
       // WebSpeech voice queue: if engine is still asynchronously loading voices, queue briefly instead of silent failure
       if (!useFallbackDirectly && 'speechSynthesis' in window && !cachedTtsVoice && !isIOS) {
@@ -4655,23 +4764,8 @@ ${dialogueText}
         }
       }
 
-      if (useFallbackDirectly) {
-        if ('speechSynthesis' in window) {
-          try { window.speechSynthesis.cancel(); } catch (_) {}
-        }
-        if (!ttsAudioBlobCache.has(rawClean)) {
-          unlockTtsAudioOnGesture(true);
-        }
-        speakWithGeminiAudioFallback(rawClean, myToken);
-        return;
-      }
-
       const synth = window.speechSynthesis;
-      const wasSpeaking = synth.speaking || synth.pending;
-
-      if (!cachedTtsVoice && !isIOS) {
-        initTtsVoices();
-      }
+      const wasSpeaking = synth && (synth.speaking || synth.pending);
 
       let fallbackTriggered = false;
       const triggerFallback = () => {
@@ -4681,10 +4775,10 @@ ${dialogueText}
           clearTimeout(ttsWatchdogTimer);
           ttsWatchdogTimer = null;
         }
-        try { synth.cancel(); } catch (_) {}
+        try { if (synth) synth.cancel(); } catch (_) {}
         speakWithGeminiAudioFallback(rawClean, myToken).then((played) => {
-          if (isIOS && myToken === ttsPlayToken) {
-            preferAudioFallbackOnIOS = Boolean(played);
+          if (!played) {
+            setTtsButtonState(btn, false);
           }
         });
       };
@@ -4692,7 +4786,7 @@ ${dialogueText}
       const startSpeak = () => {
         if (myToken !== ttsPlayToken) return;
         try {
-          if (synth.paused) {
+          if (synth && synth.paused) {
             synth.resume();
           }
           const utterance = new SpeechSynthesisUtterance(rawClean);
@@ -4724,6 +4818,8 @@ ${dialogueText}
             const elapsed = didStart ? (performance.now() - startedAt) : 0;
             if (!didStart || (elapsed < 160 && rawClean.length > 8)) {
               triggerFallback();
+            } else {
+              setTtsButtonState(btn, false);
             }
           };
           utterance.onerror = (e) => {
@@ -4731,10 +4827,12 @@ ${dialogueText}
             if (e.error !== 'interrupted' && e.error !== 'canceled') {
               console.warn('TTS 발음 오류, Gemini 오디오 폴백 전환:', e);
               triggerFallback();
+            } else {
+              setTtsButtonState(btn, false);
             }
           };
 
-          synth.speak(utterance);
+          if (synth) synth.speak(utterance);
 
           // Watchdog: give mobile OS (especially iOS AVSpeechSynthesizer cold start) 1500ms before switching to Gemini Audio WAV
           ttsWatchdogTimer = setTimeout(() => {
@@ -4749,7 +4847,23 @@ ${dialogueText}
         }
       };
 
-      if (wasSpeaking) {
+      if (useFallbackDirectly) {
+        if ('speechSynthesis' in window) {
+          try { window.speechSynthesis.cancel(); } catch (_) {}
+        }
+        speakWithGeminiAudioFallback(rawClean, myToken).then((played) => {
+          if (!played && 'speechSynthesis' in window) {
+            startSpeak();
+          }
+        });
+        return;
+      }
+
+      if (!cachedTtsVoice && !isIOS) {
+        initTtsVoices();
+      }
+
+      if (wasSpeaking && synth) {
         synth.cancel();
       }
 
@@ -5255,7 +5369,7 @@ ${dialogueText}
             ${item.notes ? `<p class="text-xs text-slate-400">💡 ${escapeHtml(item.notes)}</p>` : ''}
           </div>
           <div class="flex items-center gap-1.5 shrink-0 self-end md:self-center">
-            <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')})" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300" title="발음 듣기">
+            <button onclick="speakEnglishText(${JSON.stringify(item.english).replace(/"/g, '&quot;')}, this)" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300" title="발음 듣기">
               <i data-lucide="volume-2" class="w-4 h-4"></i>
             </button>
             <button onclick="toggleMemorizedInDBModal('${escapeHtml(item.id)}')" class="p-2 rounded-lg border ${
