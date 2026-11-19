@@ -2791,14 +2791,14 @@ ${dialogueText}
             }
             streamWrapper = document.createElement('div');
             streamWrapper.id = 'streamingPartnerBubbleRow';
-            streamWrapper.className = 'flex items-start gap-3 max-w-3xl';
+            streamWrapper.className = 'flex flex-col items-start';
             streamWrapper.innerHTML = `
-              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs shrink-0 mt-0.5 shadow">
-                ${escapeHtml(initials)}
-              </div>
-              <div class="flex-1 min-w-0">
+              <div class="max-w-2xl text-left">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-xs font-bold text-slate-300">${escapeHtml(session?.partner_name || 'AI Partner')}</span>
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow">
+                    ${escapeHtml(initials)}
+                  </div>
+                  <span class="text-xs font-bold text-indigo-300" title="${escapeHtml(session?.partner_name || 'AI Partner')}">${escapeHtml(initials)}</span>
                   <span class="text-[10px] text-slate-500">${timeStr}</span>
                 </div>
                 <div id="streamingPartnerBubbleText" class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm"></div>
@@ -3427,7 +3427,7 @@ ${dialogueText}
       const selectedPhrase = msg.coach_selected_phrase || '';
 
       return `
-        <div class="mt-2.5 max-w-2xl rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-4 shadow-xl space-y-3 text-left">
+        <div class="mt-2.5 max-w-2xl w-full mr-auto rounded-2xl bg-slate-900/95 border border-indigo-500/40 p-3.5 sm:p-4 shadow-xl space-y-3 text-left">
           <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
             <span class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
               <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -3446,25 +3446,8 @@ ${dialogueText}
             </label>
             <div class="flex items-center gap-2">
               <input id="partnerPhraseInput_${escapeHtml(msg.msg_id)}" type="text" value="${escapeHtml(selectedPhrase)}" placeholder="궁금한 단어나 구문 입력 (비어있으면 전체 문장)" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs md:text-sm text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
-              <button onclick="savePartnerSelectedPhraseToDB('${escapeHtml(msg.msg_id)}')" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shrink-0 transition active:scale-95" title="입력된 표현만 오답노트에 저장">
-                <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
-                <span>이 표현 저장</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Question Chips -->
-          <div class="space-y-1">
-            <span class="text-[11px] text-slate-400 font-semibold">💡 원클릭 퀵 질문:</span>
-            <div class="flex flex-wrap gap-1.5">
-              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'nuance')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
-                뉘앙스 & 해석
-              </button>
-              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'formality')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
-                비즈니스 격식도
-              </button>
-              <button onclick="askPartnerCoachQuick('${escapeHtml(msg.msg_id)}', 'alternative')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600/30 border border-slate-700 hover:border-indigo-400/50 text-[11px] text-slate-300 hover:text-indigo-200 transition">
-                세련된 대안 표현
+              <button onclick="savePartnerSelectedPhraseToDB('${escapeHtml(msg.msg_id)}')" class="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 transition active:scale-95" title="입력된 표현만 오답노트에 저장">
+                <i data-lucide="star" class="w-4 h-4 fill-current"></i>
               </button>
             </div>
           </div>
@@ -3994,22 +3977,29 @@ ${dialogueText}
 
         if (msg.role === 'partner') {
           return `
-            <div class="flex items-start gap-3 max-w-3xl">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs shrink-0 mt-0.5 shadow">
-                ${escapeHtml(initials)}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-1">
-                  <span class="text-xs font-bold text-slate-300">${escapeHtml(sess.partner_name)}</span>
+            <div class="flex flex-col items-start">
+              <div class="max-w-2xl text-left">
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow">
+                    ${escapeHtml(initials)}
+                  </div>
+                  <span class="text-xs font-bold text-indigo-300" title="${escapeHtml(sess.partner_name)}">${escapeHtml(initials)}</span>
                   <span class="text-[10px] text-slate-500">${timeStr}</span>
-                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}', this)" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="발음 듣기" aria-label="발음 듣기">
+                </div>
+                <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm select-text">
+                  ${escapeHtml(msg.text)}
+                </div>
+                <div class="mt-1.5 flex items-center justify-start gap-1.5">
+                  <button onclick="speakSessionMessage('${escapeHtml(msg.msg_id)}', this)" class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-900 transition">
                     <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                    <span>발음 듣기</span>
                   </button>
-                  <button onclick="togglePartnerCoachPanel('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg ${msg.coach_open ? 'text-indigo-300 bg-indigo-950/60 border border-indigo-500/40' : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-900'} active:scale-95 transition flex items-center justify-center" title="코치에게 이 문장/표현 질문하기" aria-label="코치 질문">
-                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button onclick="savePartnerSelectedPhraseToDB('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg ${msg.saved_to_db ? 'text-amber-400' : 'text-slate-400 hover:text-amber-300 hover:bg-slate-900'} active:scale-95 transition flex items-center justify-center" title="${msg.saved_to_db ? '오답노트에 저장됨' : '선택한 표현 또는 전체 문장 오답노트 저장'}" aria-label="표현 저장">
-                    <i data-lucide="star" class="w-3.5 h-3.5 ${msg.saved_to_db ? 'fill-current' : ''}"></i>
+                  <button onclick="togglePartnerCoachPanel('${escapeHtml(msg.msg_id)}')" class="px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition ${
+                    msg.coach_open
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                  }">
+                    ${msg.coach_open ? '💬 코치 질문 닫기 ▲' : '💬 코치 질문'}
                   </button>
                   <button onclick="rollbackChatFromMessage('${escapeHtml(msg.msg_id)}')" class="p-1 min-w-[28px] min-h-[28px] rounded-lg text-slate-500 hover:text-amber-300 hover:bg-slate-900 active:scale-95 transition flex items-center justify-center" title="이 지점부터 대화 다시 시작" aria-label="이 지점부터 대화 다시 시작">
                     <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
@@ -4018,11 +4008,8 @@ ${dialogueText}
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
-                <div class="inline-block rounded-2xl rounded-tl-xs bg-slate-900 border border-slate-800 px-4 py-3 text-[15.5px] md:text-base font-bold text-slate-100 leading-relaxed shadow-sm select-text">
-                  ${escapeHtml(msg.text)}
-                </div>
-                ${renderPartnerCoachCardHtml(msg)}
               </div>
+              ${renderPartnerCoachCardHtml(msg)}
             </div>
           `;
         } else {
